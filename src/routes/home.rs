@@ -81,7 +81,7 @@ pub fn Home() -> impl IntoView {
                         <Show when=show_phone fallback=|| {}>
                             <div class="modal" node_ref=phone_ref>
                                 <button class="close-button" on:click=close_popup>
-                                    <i class="fa-solid fa-xmark fa-xl" style="color: #ff3988;"></i>
+                                    "close"
                                 </button>
                                 <p class="phone-num">"00 386 40 396 727"</p>
                             </div>
@@ -92,7 +92,7 @@ pub fn Home() -> impl IntoView {
                         <Show when=show_fb fallback=|| {}>
                             <div class="modal" node_ref=fb_ref>
                                 <button class="close-button" on:click=close_popup>
-                                    <i class="fa-solid fa-xmark"></i>
+                                    "close"
                                 </button>
                                 <a href="https://www.facebook.com" target="_blank">
                                     "https://www.facebook.com"
@@ -105,7 +105,7 @@ pub fn Home() -> impl IntoView {
                         <Show when=show_mail fallback=|| {}>
                             <div class="modal" node_ref=mail_ref>
                                 <button class="close-button" on:click=close_popup>
-                                    <i class="fa-solid fa-xmark"></i>
+                                    "close"
                                 </button>
                                 <p>"maj-kavsek@mail.com"</p>
                             </div>
@@ -116,7 +116,7 @@ pub fn Home() -> impl IntoView {
                         <Show when=show_tiktok fallback=|| {}>
                             <div class="modal" node_ref=tiktok_ref>
                                 <button class="close-button" on:click=close_popup>
-                                    <i class="fa-solid fa-xmark"></i>
+                                    "close"
                                 </button>
                                 <a href="https://www.tiktok.com" target="_blank">
                                     "https://www.tiktok.com"
@@ -129,7 +129,7 @@ pub fn Home() -> impl IntoView {
                         <Show when=show_ig fallback=|| {}>
                             <div class="modal" node_ref=ig_ref>
                                 <button class="close-button" on:click=close_popup>
-                                    <i class="fa-solid fa-xmark"></i>
+                                    "close"
                                 </button>
                                 <a href="https://www.instagram.com" target="_blank">
                                     "https://www.instagram.com"

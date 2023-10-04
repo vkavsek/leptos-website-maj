@@ -10,14 +10,14 @@ pub fn About() -> impl IntoView {
         r"As a soloist, Maj has had the honour of performing with the 'Big Band Radio & Television Slovenia' on multiple occasions.  In 2019, he won the 1st prize at the TEMSIG musical competition with his quintet. In 2023, he received an invitation to perform with the 'Euroradio Jazz Orchestra' in Lithuania, further solidifying his status as a prominent musician in the international jazz scene.",
         r"Maj's influence in the music world extends beyond the academic realm. He has been an active participant in various jazz festivals, where he has taken on roles as both a band-leader and a side-man, collaborating with esteemed musicians such as Chris Pitsiokos, Philipp Gropper, Dré Hocevar, Bram De Looze, Felix Henkelhausen and others.",
     ];
-    let cntnt = cntnt.map(|line| view! {  <p>{line}</p> }).collect_view();
+    let cntnt = cntnt.map(|line| view! { <p>{line}</p> }).collect_view();
 
     view! {
         <Link rel="icon" href="/img/izkaznica.svg" type_="image/svg"/>
         <Title text="About Me"/>
         <div class="components">
             <div class="title" id="about-title">
-                //<h1>"About Me"</h1>
+                // <h1>"About Me"</h1>
                 <img class="title-img" id="about-img" src="/img/titles/about.svg"/>
             </div>
             <div class="contents" id="about-wrap">
@@ -86,10 +86,10 @@ pub fn ImagesAbout() -> impl IntoView {
             <div class="about-img-but-container">
                 <img class="about-img" src=first_src node_ref=img_ref/>
                 <button class="about-back-img" on:click=click_back>
-                    <i class="fa-solid fa-arrow-left"></i>
+                    "back"
                 </button>
                 <button class="about-next-img" on:click=click_next>
-                    <i class="fa-solid fa-arrow-right"></i>
+                    "next"
                 </button>
             </div>
         </div>
