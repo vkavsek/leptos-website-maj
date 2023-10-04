@@ -61,6 +61,10 @@ pub fn AudioPlayer() -> impl IntoView {
         move |_| {
             if let Some(audio) = audio_ref() {
                 let progress_bar = progress_ref().unwrap();
+                progress_bar.style(
+                    "width",
+                    format!("{}%", audio.current_time() / audio.duration() * 100.0),
+                );
                 set_time(audio.current_time() as u64);
                 if audio.ended() {
                     let play_btn = play_btn_ref().unwrap();
