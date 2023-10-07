@@ -16,55 +16,55 @@ pub fn Home() -> impl IntoView {
     let tiktok_ref = create_node_ref::<Div>();
 
     let phone_click = move |_| {
-        set_show_phone(true);
+        set_show_phone.set(true);
     };
     let mail_click = move |_| {
-        set_show_mail(true);
+        set_show_mail.set(true);
     };
     let fb_click = move |_| {
-        set_show_fb(true);
+        set_show_fb.set(true);
     };
     let tiktok_click = move |_| {
-        set_show_tiktok(true);
+        set_show_tiktok.set(true);
     };
     let ig_click = move |_| {
-        set_show_ig(true);
+        set_show_ig.set(true);
     };
 
     // TODO: This can only run on CSR so it may cause problems with SSR,
     // you can wrap in create_effect() to ensure it only runs on CSR if/when needed.
     create_effect(move |_| {
         leptos_use::on_click_outside(phone_ref, move |_| {
-            set_show_phone(false);
+            set_show_phone.set(false);
         })
     });
     create_effect(move |_| {
         leptos_use::on_click_outside(mail_ref, move |_| {
-            set_show_mail(false);
+            set_show_mail.set(false);
         })
     });
     create_effect(move |_| {
         leptos_use::on_click_outside(fb_ref, move |_| {
-            set_show_fb(false);
+            set_show_fb.set(false);
         })
     });
     create_effect(move |_| {
         leptos_use::on_click_outside(tiktok_ref, move |_| {
-            set_show_tiktok(false);
+            set_show_tiktok.set(false);
         })
     });
     create_effect(move |_| {
         leptos_use::on_click_outside(ig_ref, move |_| {
-            set_show_ig(false);
+            set_show_ig.set(false);
         })
     });
 
     let close_popup = move |_| {
-        set_show_phone(false);
-        set_show_mail(false);
-        set_show_fb(false);
-        set_show_tiktok(false);
-        set_show_ig(false);
+        set_show_phone.set(false);
+        set_show_mail.set(false);
+        set_show_fb.set(false);
+        set_show_tiktok.set(false);
+        set_show_ig.set(false);
     };
 
     view! {
@@ -78,7 +78,7 @@ pub fn Home() -> impl IntoView {
                 <div class="all-contacts">
                     <div class="contacts-wrap" on:click=phone_click>
                         <img class="contacts-img" src="/img/contact_icons/FON.svg"/>
-                        <Show when=show_phone fallback=|| {}>
+                        <Show when=move || show_phone.get() fallback=|| {}>
                             <div class="modal" node_ref=phone_ref>
                                 <button class="close-button" on:click=close_popup>
                                     "close"
@@ -89,7 +89,7 @@ pub fn Home() -> impl IntoView {
                     </div>
                     <div class="contacts-wrap" on:click=fb_click>
                         <img class="contacts-img" src="/img/contact_icons/FB.svg"/>
-                        <Show when=show_fb fallback=|| {}>
+                        <Show when=move || show_fb.get() fallback=|| {}>
                             <div class="modal" node_ref=fb_ref>
                                 <button class="close-button" on:click=close_popup>
                                     "close"
@@ -102,7 +102,7 @@ pub fn Home() -> impl IntoView {
                     </div>
                     <div class="contacts-wrap" on:click=mail_click>
                         <img class="contacts-img" src="/img/contact_icons/MAIL.svg"/>
-                        <Show when=show_mail fallback=|| {}>
+                        <Show when=move || show_mail.get() fallback=|| {}>
                             <div class="modal" node_ref=mail_ref>
                                 <button class="close-button" on:click=close_popup>
                                     "close"
@@ -113,7 +113,7 @@ pub fn Home() -> impl IntoView {
                     </div>
                     <div class="contacts-wrap" on:click=tiktok_click>
                         <img class="contacts-img" src="/img/contact_icons/TIKTOK.svg"/>
-                        <Show when=show_tiktok fallback=|| {}>
+                        <Show when=move || show_tiktok.get() fallback=|| {}>
                             <div class="modal" node_ref=tiktok_ref>
                                 <button class="close-button" on:click=close_popup>
                                     "close"
@@ -126,7 +126,7 @@ pub fn Home() -> impl IntoView {
                     </div>
                     <div class="contacts-wrap" on:click=ig_click>
                         <img class="contacts-img" src="/img/contact_icons/FON.svg"/>
-                        <Show when=show_ig fallback=|| {}>
+                        <Show when=move || show_ig.get() fallback=|| {}>
                             <div class="modal" node_ref=ig_ref>
                                 <button class="close-button" on:click=close_popup>
                                     "close"

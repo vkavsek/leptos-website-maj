@@ -10,33 +10,33 @@ pub fn Head(
 ) -> impl IntoView {
     let (home_page, set_home_page) = create_signal(false);
     let (shows_page, set_shows_page) = create_signal(false);
-    let set_home = move || if home_page() { "page" } else { "" };
-    let set_shows = move || if shows_page() { "page" } else { "" };
+    let set_home = move || if home_page.get() { "page" } else { "" };
+    let set_shows = move || if shows_page.get() { "page" } else { "" };
 
     // DOM should be built by the time we call this, so we can unwrap.
     let do_style = |bg_div_ref: NodeRef<Div>, style: &'static str, value: &'static str| {
-        bg_div_ref().unwrap().style(style, value);
+        bg_div_ref.get().unwrap().style(style, value);
     };
 
     let click_home = move |_| {
         do_style(bg_div_ref, "background-position", "46% 18%");
-        set_home_page(true);
-        set_shows_page(false);
+        set_home_page.set(true);
+        set_shows_page.set(false);
     };
     let click_about = move |_| {
         do_style(bg_div_ref, "background-position", "35% 60%");
-        set_home_page(false);
-        set_shows_page(false);
+        set_home_page.set(false);
+        set_shows_page.set(false);
     };
     let click_concerts = move |_| {
         do_style(bg_div_ref, "background-position", "0 top");
-        set_home_page(false);
-        set_shows_page(true);
+        set_home_page.set(false);
+        set_shows_page.set(true);
     };
     let click_media = move |_| {
         do_style(bg_div_ref, "background-position", "50% 90%");
-        set_home_page(false);
-        set_shows_page(false);
+        set_home_page.set(false);
+        set_shows_page.set(false);
     };
 
     view! {

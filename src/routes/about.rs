@@ -1,5 +1,9 @@
+#[allow(unused)]
+use anyhow::Result;
 use leptos::{html::Img, *};
 use leptos_meta::{Link, Title};
+#[allow(unused)]
+use std::path::{Path, PathBuf};
 
 #[component]
 pub fn About() -> impl IntoView {
@@ -28,63 +32,73 @@ pub fn About() -> impl IntoView {
     }
 }
 
-// TODO: will need to be modified for SSR
+// TODO: implement leptos_image and change the architecture
 #[component]
 pub fn ImagesAbout() -> impl IntoView {
-    static IMAGE_NAMES: [&str; 15] = [
-        "shared8.jpg",
-        "shared1.jpg",
-        "shared6.jpg",
-        "shared11.jpg",
-        "shared13.jpg",
-        "shared24.jpg",
-        "shared28.jpg",
-        "trumpet01.jpg",
-        "trumpet2.jpg",
-        "IMG_0131.jpg",
-        "IMG_0793.jpg",
-        "IMG_0794.jpg",
-        "IMG_0813.jpg",
-        "band.jpg",
-        "band2.jpg",
-    ];
+    // Set FIRST IMAGE TO SHOW
+    const FIRST_SRC: &str = "/img/about_pics/shared1.jpg";
 
     let img_ref = create_node_ref::<Img>();
-    let first_src = format!("/img/about_pics/{}", IMAGE_NAMES[0]);
     let (counter, set_counter) = create_signal(0);
 
+    let files = create_resource(
+        move || (),
+        |_| async move {
+            // TODO: Handle errors
+            read_files("./public/img/about_pics".to_string())
+                .await
+                .unwrap()
+        },
+    );
+
     let click_next = move |_| {
-        let img = img_ref().expect("the DOM is built by the time we click the button");
-        if let Some(&image_name) = IMAGE_NAMES.get(counter() + 1) {
-            set_counter.update(|c| *c += 1);
-            let img_src_fmt = format!("/img/about_pics/{}", image_name);
-            img.set_src(&img_src_fmt);
-        } else {
-            set_counter(0);
-            let first_src = format!("/img/about_pics/{}", IMAGE_NAMES[0]);
-            img.set_src(&first_src);
+        let img = img_ref
+            .get()
+            .expect("the DOM is built by the time we click the button");
+        if let Some(files) = files.get() {
+            if let Some(ref image_name) = files.get(counter.get() + 1) {
+                set_counter.update(|c| *c += 1);
+                let img_src_fmt = format!("/img/about_pics/{}", image_name);
+                img.set_src(&img_src_fmt);
+            } else {
+                let first_src = format!(
+                    "/img/about_pics/{}",
+                    files.get(0).cloned().unwrap_or_default()
+                );
+                set_counter.set(0);
+                img.set_src(&first_src);
+            }
         }
     };
 
     let click_back = move |_| {
-        let img = img_ref().expect("the DOM is built by the time we click the button");
-        if counter() > 0 {
-            if let Some(&image_name) = IMAGE_NAMES.get(counter() - 1) {
-                set_counter.update(|c| *c -= 1);
-                let img_src_fmt = format!("/img/about_pics/{}", image_name);
-                img.set_src(&img_src_fmt);
+        let img = img_ref
+            .get()
+            .expect("the DOM is built by the time we click the button");
+        if counter.get() > 0 {
+            if let Some(files) = files.get() {
+                if let Some(ref image_name) = files.get(counter.get() + 1) {
+                    set_counter.update(|c| *c += 1);
+                    let img_src_fmt = format!("/img/about_pics/{}", image_name);
+                    img.set_src(&img_src_fmt);
+                }
             }
         } else {
-            set_counter(IMAGE_NAMES.len() - 1);
-            let last_src = format!("/img/about_pics/{}", IMAGE_NAMES.last().unwrap());
+            set_counter.set(files.get().map(|f| f.len()).unwrap_or(1) - 1);
+            let last_src = format!(
+                "/img/about_pics/{}",
+                files
+                    .get()
+                    .and_then(|files| files.last().cloned())
+                    .unwrap_or_default()
+            );
             img.set_src(&last_src);
         }
     };
-
     view! {
         <div class="about-pics">
             <div class="about-img-but-container">
-                <img class="about-img" src=first_src node_ref=img_ref/>
+                <img class="about-img" src=FIRST_SRC node_ref=img_ref/>
                 <button class="about-back-img" on:click=click_back>
                     "back"
                 </button>
@@ -93,5 +107,28 @@ pub fn ImagesAbout() -> impl IntoView {
                 </button>
             </div>
         </div>
+    }
+}
+#[server(ReadFiles)]
+async fn read_files(path: String) -> Result<Vec<String>, ServerFnError> {
+    let mut files = tokio::fs::read_dir(&path).await?;
+    let mut res = Vec::new();
+    while let Some(file) = files.next_entry().await? {
+        res.push(extract_name(file.path().to_str()));
+    }
+    Ok(res)
+}
+
+/// Always returns a string, if it can't split by '/' or input is None it just returns an empty
+/// string: ""
+#[allow(dead_code)]
+fn extract_name(path: Option<&str>) -> String {
+    if let Some(path) = path {
+        match path.split('/').last().map(|res| res.to_owned()) {
+            Some(path) => path,
+            None => "".to_owned(),
+        }
+    } else {
+        "".to_owned()
     }
 }

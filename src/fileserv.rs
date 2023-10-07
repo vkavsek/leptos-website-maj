@@ -15,6 +15,7 @@ cfg_if! { if #[cfg(feature = "ssr")] {
 
     pub async fn file_and_error_handler(uri: Uri, State(options): State<LeptosOptions>, req: Request<Body>) -> AxumResponse {
         let root = options.site_root.clone();
+        // TODO: unwrap, handle error, maybe even return Result<Response>?
         let res = get_static_file(uri.clone(), &root).await.unwrap();
 
         if res.status() == StatusCode::OK {

@@ -1,21 +1,24 @@
 use cfg_if::cfg_if;
 use http::status::StatusCode;
 use leptos::*;
+use serde::Serialize;
 use thiserror::Error;
 
 #[cfg(feature = "ssr")]
 use leptos_axum::ResponseOptions;
 
-#[derive(Clone, Debug, Error)]
-pub enum AppError {
+#[derive(Serialize, Clone, Debug, Error)]
+pub enum ServerError {
     #[error("Not Found")]
     NotFound,
 }
 
-impl AppError {
+impl ServerError {
     pub fn status_code(&self) -> StatusCode {
+        #[allow(unreachable_patterns)]
         match self {
-            AppError::NotFound => StatusCode::NOT_FOUND,
+            ServerError::NotFound => StatusCode::NOT_FOUND,
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }
@@ -38,11 +41,13 @@ pub fn ErrorTemplate(
     let errors = errors.get_untracked();
 
     // Downcast lets us take a type that implements `std::error::Error`
-    let errors: Vec<AppError> = errors
+    let errors: Vec<ServerError> = errors
         .into_iter()
-        .filter_map(|(_k, v)| v.downcast_ref::<AppError>().cloned())
+        .filter_map(|(_k, e)| e.downcast_ref::<ServerError>().cloned())
         .collect();
-    println!("Errors: {errors:#?}");
+    // TODO: Delete this and handle split the server / client errors.
+    // Do the same in the view!
+    eprintln!("Errors: {errors:#?}");
 
     // Only the response code for the first error is actually sent from the server
     // this may be customized by the specific application

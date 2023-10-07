@@ -9,8 +9,9 @@ use player::AudioPlayer;
 
 #[component]
 pub fn AudioWrapper() -> impl IntoView {
-    // TODO: MAKE DYNAMIC!
-    // AudioList song list
+    // TODO: Remove all the unused shit, and move it into it's own component in a separate folder.
+    // Only keep the player, cause that's all that you need, simplify the player so it's easier to
+    // maintain.
     let names = vec![
         "Aya_Sean_edit-Mark_Babin.mp3",
         "Dumek-Mark_Babin-Forest_2022.mp3",
@@ -75,18 +76,4 @@ impl Song {
             album: parts.get(2).map(|s| s.to_owned()),
         }
     }
-}
-
-// Can't read on CSR ? IDK reimplement for SSR when doing that.. TODO: Delete?
-#[allow(unused)]
-fn files() -> Result<Vec<String>, std::io::Error> {
-    let dir_path = "./music";
-    let entries = std::fs::read_dir(dir_path)?;
-
-    log::debug!("{:?}", entries);
-
-    Ok(entries
-        .filter_map(|entry| entry.ok())
-        .filter_map(|entry| entry.path().to_str().map(|e| e.to_string()))
-        .collect())
 }

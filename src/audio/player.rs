@@ -17,11 +17,12 @@ pub fn AudioPlayer() -> impl IntoView {
     let (duration, set_duration) = create_signal(0u64);
     let (name, set_name) = create_signal::<Option<String>>(None);
     // Derived signals
-    let song_title = move || Song::from_filenamename(&name().unwrap_or(String::new())).title();
-    let song_artist = move || Song::from_filenamename(&name().unwrap_or(String::new())).artist();
-    let song_album = move || Song::from_filenamename(&name().unwrap_or(String::new())).album();
-    let time_fmt = move || fmt_sec_to_mmss(time());
-    let duration_fmt = move || fmt_sec_to_mmss(duration());
+    let song_title = move || Song::from_filenamename(&name.get().unwrap_or(String::new())).title();
+    let song_artist =
+        move || Song::from_filenamename(&name.get().unwrap_or(String::new())).artist();
+    let song_album = move || Song::from_filenamename(&name.get().unwrap_or(String::new())).album();
+    let time_fmt = move || fmt_sec_to_mmss(time.get());
+    let duration_fmt = move || fmt_sec_to_mmss(duration.get());
     // NodeRefs
     let audio_ref = create_node_ref::<Audio>();
     let vol_percent_ref = create_node_ref::<Div>();
@@ -40,7 +41,7 @@ pub fn AudioPlayer() -> impl IntoView {
     // Set Song Source
     let song_src = move || {
         let def = "/music/Aya_Sean_edit.mp3".to_string();
-        if let Some(name) = names().get(selector()) {
+        if let Some(name) = names.get().get(selector.get()) {
             format!("/music/{}", name)
         } else {
             def
@@ -59,20 +60,20 @@ pub fn AudioPlayer() -> impl IntoView {
         resume,
     } = use_raf_fn_with_options(
         move |_| {
-            if let Some(audio) = audio_ref() {
-                let progress_bar = progress_ref().unwrap();
+            if let Some(audio) = audio_ref.get() {
+                let progress_bar = progress_ref.get().unwrap();
                 progress_bar.style(
                     "width",
                     format!("{}%", audio.current_time() / audio.duration() * 100.0),
                 );
-                set_time(audio.current_time() as u64);
+                set_time.set(audio.current_time() as u64);
                 if audio.ended() {
-                    let play_btn = play_btn_ref().unwrap();
+                    let play_btn = play_btn_ref.get().unwrap();
                     play_btn.clone().class("pause", false);
                     play_btn.class("play", true);
                 }
-                if let Some(slider) = volume_slider_ref() {
-                    if let Some(vol_percent) = vol_percent_ref() {
+                if let Some(slider) = volume_slider_ref.get() {
+                    if let Some(vol_percent) = vol_percent_ref.get() {
                         let new_volume = audio.volume();
                         vol_percent.style("width", format!("{}%", (new_volume * 100.0) as u32));
                     }
@@ -97,11 +98,11 @@ pub fn AudioPlayer() -> impl IntoView {
     create_effect(move |_| {
         // subscribe to selector
         let _ = selector.get();
-        if let Some(play_btn) = play_btn_ref() {
+        if let Some(play_btn) = play_btn_ref.get() {
             play_btn.clone().class("pause", false);
             play_btn.class("play", true);
         }
-        if let Some(audio) = audio_ref() {
+        if let Some(audio) = audio_ref.get() {
             let _ = audio.pause();
         }
     });
@@ -109,28 +110,28 @@ pub fn AudioPlayer() -> impl IntoView {
     // When content loads
     let r = resume.clone();
     let audio_load = move |_| {
-        let vol_percent = vol_percent_ref().unwrap();
-        let audio = audio_ref().unwrap();
+        let vol_percent = vol_percent_ref.get().unwrap();
+        let audio = audio_ref.get().unwrap();
         let init_volume = 0.50;
 
         r();
         audio.set_volume(init_volume);
-        set_duration(audio.duration() as u64);
-        set_name(extract_name(audio.src()));
+        set_duration.set(audio.duration() as u64);
+        set_name.set(extract_name(audio.src()));
         vol_percent.style("width", format!("{}%", (init_volume * 100.0) as u32));
     };
 
     // Play
     let r = resume.clone();
     let play_click = move |_: MouseEvent| {
-        let audio = audio_ref().unwrap();
+        let audio = audio_ref.get().unwrap();
 
-        let play_btn = play_btn_ref().unwrap();
+        let play_btn = play_btn_ref.get().unwrap();
         if audio.paused() {
             play_btn.clone().class("play", false);
             play_btn.clone().class("pause", true);
             let _ = audio.play();
-            if !is_active() {
+            if !is_active.get() {
                 r();
             }
         } else {
@@ -142,8 +143,8 @@ pub fn AudioPlayer() -> impl IntoView {
 
     // Click timeline to skip around
     let timeline_click = move |ev: MouseEvent| {
-        let timeline = timeline_ref().unwrap();
-        let audio = audio_ref().unwrap();
+        let timeline = timeline_ref.get().unwrap();
+        let audio = audio_ref.get().unwrap();
 
         let t_width = window()
             .get_computed_style(&timeline)
@@ -157,9 +158,9 @@ pub fn AudioPlayer() -> impl IntoView {
 
     // Volume slider
     let volume_slide_click = move |ev: MouseEvent| {
-        let slider = volume_slider_ref().unwrap();
-        let audio = audio_ref().unwrap();
-        let vol_percent = vol_percent_ref().unwrap();
+        let slider = volume_slider_ref.get().unwrap();
+        let audio = audio_ref.get().unwrap();
+        let vol_percent = vol_percent_ref.get().unwrap();
 
         if let Ok(Some(slider_width)) = window().get_computed_style(&slider) {
             let slider_width = slider_width
@@ -176,9 +177,9 @@ pub fn AudioPlayer() -> impl IntoView {
 
     // Volume Button
     let vol_button_click = move |_| {
-        let audio = audio_ref().unwrap();
-        let vol_el = vol_el_ref().unwrap();
-        let vol_percent = vol_percent_ref().unwrap();
+        let audio = audio_ref.get().unwrap();
+        let vol_el = vol_el_ref.get().unwrap();
+        let vol_percent = vol_percent_ref.get().unwrap();
 
         audio.set_muted(!audio.muted());
 
@@ -230,40 +231,6 @@ pub fn AudioPlayer() -> impl IntoView {
                 </div>
             </div>
         </div>
-
-        /*
-        <div class="audio-player-center" on:unload=stop>
-            <div class="play-container-center">
-                <button class="play-center" on:click=play_click node_ref=play_btn_ref_center></button>
-            </div>
-            <div class="time-container-center">
-                <div class="timeline-center" node_ref=timeline_ref_center on:click=timeline_click_center>
-                    <div class="progress-center" node_ref=progress_ref_center></div>
-                </div>
-                <div class="time-center">
-                    <div class="current-time-center">{time_fmt}</div>
-                    <div class="duration-time-center">{duration_fmt}</div>
-                </div>
-            </div>
-            <div class="controls-center">
-                <div class="song-info-center"></div>
-                <div class="volume-container-center">
-                    <button
-                        class="ico-vol-med-center"
-                        on:click=vol_button_click
-                        node_ref=vol_el_ref_center
-                    ></button>
-                    <div
-                        class="volume-slider-center"
-                        on:click=volume_slide_click_center
-                        node_ref=volume_slider_ref_center
-                    >
-                        <div class="volume-percentage-center" node_ref=vol_percent_ref_center></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        */
     }
 }
 
