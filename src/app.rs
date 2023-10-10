@@ -6,20 +6,18 @@ use crate::{
 };
 use leptos::html::Div;
 use leptos::*;
-use leptos_image::*;
 use leptos_meta::*;
 use leptos_router::*;
 
 #[component]
 pub fn App() -> impl IntoView {
     provide_meta_context();
-    provide_image_context();
     let bg_div_ref = create_node_ref::<Div>();
 
     let formatter = |text| format!("{text} - Maj Kavšek");
     view! {
         <Stylesheet id="font-1" href="/styles/fonts/ibm-plex.css"/>
-        <Stylesheet id="font-2" href="/styles/fonts/brianjames.css"/>
+        <Stylesheet id="font-2" href="/styles/fonts/squabslab.css"/>
         <Stylesheet id="leptos" href="/styles/index.css"/>
         <Title formatter/>
 
@@ -46,9 +44,4 @@ pub fn App() -> impl IntoView {
             </div>
         </Router>
     }
-}
-
-#[component]
-fn InsertImage(src: &'static str, class: &'static str, width: u32, height: u32) -> impl IntoView {
-    view! { <Image src class width height quality=86 blur=true/> }
 }

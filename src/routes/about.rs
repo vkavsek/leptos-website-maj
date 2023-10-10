@@ -21,8 +21,8 @@ pub fn About() -> impl IntoView {
         <Title text="About Me"/>
         <div class="components">
             <div class="title" id="about-title">
-                // <h1>"About Me"</h1>
-                <img class="title-img" id="about-img" src="/img/titles/about.svg"/>
+                <h1>"About Me"</h1>
+                // <img class="title-img" id="about-img" src="/img/titles/about.svg"/>
             </div>
             <div class="contents" id="about-wrap">
                 <div class="about-text">{cntnt}</div>

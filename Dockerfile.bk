@@ -1,0 +1,46 @@
+# Chose the builder image
+# `gnu` is the default target for rust but needs a specific version of GLIBC on the target system
+# `musl` is the way smaller one which only need the linux kernel
+#
+# note: you may need to adopt the image in the 2nd stage down below, if you change this
+#FROM leptos-builder-gnu AS builder
+FROM maj-builder AS builder
+
+# I usually do testing with a real database deployed somewhere in the network
+# ARG TEST_ENV_IP=192.168.220.21
+# ENV DATABASE_URL="postgresql://localdev:123SuperSafe@$TEST_ENV_IP:5432/localdev"
+
+WORKDIR /work
+
+# IMPORTANT: have a `.dockerignore` file and exclude at least your `target`
+# directory to not copy huge amounts of data into the docker context
+#
+# !!! EVEN MORE IMPORTANT !!!
+# If you have any secrets in a `.env` file or something, add this to `.dockerignore` too!
+COPY . .
+
+# after successful tests, build it
+RUN cargo leptos build --release -vv
+
+FROM scratch as app
+
+USER 10001
+
+WORKDIR /app
+
+# /target/site contains our JS/WASM/CSS, etc.
+COPY --chown=10001:10001 --from=builder /work/target/site/ ./site/
+# Copy the server binary to the /app directory
+COPY --chown=10001:10001 --from=builder /work/target/server/release/maj-fullstack .
+# Copy Cargo.toml if it’s needed at runtime
+COPY --chown=10001:10001 --from=builder /app/Cargo.toml /app/
+
+# Set any required env variables and
+ENV RUST_LOG="info"
+ENV APP_ENVIRONMENT="production"
+ENV LEPTOS_SITE_ADDR="0.0.0.0:3000"
+ENV LEPTOS_RELOAD_PORT=3001
+ENV LEPTOS_SITE_ROOT="site"
+EXPOSE 3000
+# Run the server
+ENTRYPOINT ["/app/maj-fullstack"]

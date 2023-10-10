@@ -24,8 +24,8 @@ pub fn Concerts() -> impl IntoView {
         <Title text="Shows"/>
         <div class="components">
             <div class="title" id="shows-title">
-                //<h1>"Shows"</h1>
-                <img class="title-img" id="shows-img" src="/img/titles/shows.svg"/>
+                <h1>"Shows"</h1>
+                // <img class="title-img" id="shows-img" src="/img/titles/shows.svg"/>
             </div>
             <div class="contents" id="shows-contents">
                 <nav class="shows-nav">

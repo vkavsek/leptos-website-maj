@@ -16,7 +16,6 @@ leptos_axum = { version = "0.5", optional = true }
 leptos_meta = { version = "0.5" }
 leptos_router = { version = "0.5" }
 leptos-use = "0.7"
-leptos_image = { path = "./leptos_image" }
 log = "0.4"
 simple_logger = "4"
 tokio = { version = "1.25.0", optional = true, features = ["fs"] }
@@ -32,12 +31,7 @@ chrono = "0.4.31"
 anyhow = "1.0.75"
 
 [features]
-hydrate = [
-  "leptos/hydrate",
-  "leptos_meta/hydrate",
-  "leptos_router/hydrate",
-  "leptos_image/hydrate",
-]
+hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate"]
 ssr = [
   "dep:axum",
   "dep:tokio",
@@ -47,7 +41,6 @@ ssr = [
   "leptos/ssr",
   "leptos_meta/ssr",
   "leptos_router/ssr",
-  "leptos_image/ssr",
   "dep:tracing",
 ]
 
@@ -79,7 +72,7 @@ site-pkg-dir = "pkg"
 assets-dir = "public"
 
 # The IP and port (ex: 127.0.0.1:3000) where the server serves the content. Use it in your server setup.
-site-addr = "127.0.0.1:8080"
+site-addr = "127.0.0.1:3000"
 
 # The port to use for automatic reload monitoring
 reload-port = 3001

@@ -8,7 +8,8 @@ pub fn Media() -> impl IntoView {
         <Title text="Media"/>
         <div class="components" id="media-components">
             <div class="title" id="media-title">
-                <img class="title-img" id="media-img" src="/img/titles/media.svg"/>
+                // <img class="title-img" id="media-img" src="/img/titles/media.svg"/>
+                <h1>"Media"</h1>
             </div>
             <div class="contents" class="media-contents">
                 <div class="youtube-video video-1">

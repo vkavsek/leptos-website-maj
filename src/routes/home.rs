@@ -3,103 +3,34 @@ use leptos_meta::{Link, Title};
 
 #[component]
 pub fn Home() -> impl IntoView {
-    let (show_phone, set_show_phone) = create_signal(false);
     let (show_mail, set_show_mail) = create_signal(false);
-    let (show_fb, set_show_fb) = create_signal(false);
-    let (show_ig, set_show_ig) = create_signal(false);
-    let (show_tiktok, set_show_tiktok) = create_signal(false);
 
-    let phone_ref = create_node_ref::<Div>();
     let mail_ref = create_node_ref::<Div>();
-    let fb_ref = create_node_ref::<Div>();
-    let ig_ref = create_node_ref::<Div>();
-    let tiktok_ref = create_node_ref::<Div>();
 
-    let phone_click = move |_| {
-        set_show_phone.set(true);
-    };
     let mail_click = move |_| {
         set_show_mail.set(true);
     };
-    let fb_click = move |_| {
-        set_show_fb.set(true);
-    };
-    let tiktok_click = move |_| {
-        set_show_tiktok.set(true);
-    };
-    let ig_click = move |_| {
-        set_show_ig.set(true);
-    };
 
-    // TODO: This can only run on CSR so it may cause problems with SSR,
-    // you can wrap in create_effect() to ensure it only runs on CSR if/when needed.
-    create_effect(move |_| {
-        leptos_use::on_click_outside(phone_ref, move |_| {
-            set_show_phone.set(false);
-        })
-    });
     create_effect(move |_| {
         leptos_use::on_click_outside(mail_ref, move |_| {
             set_show_mail.set(false);
         })
     });
-    create_effect(move |_| {
-        leptos_use::on_click_outside(fb_ref, move |_| {
-            set_show_fb.set(false);
-        })
-    });
-    create_effect(move |_| {
-        leptos_use::on_click_outside(tiktok_ref, move |_| {
-            set_show_tiktok.set(false);
-        })
-    });
-    create_effect(move |_| {
-        leptos_use::on_click_outside(ig_ref, move |_| {
-            set_show_ig.set(false);
-        })
-    });
 
     let close_popup = move |_| {
-        set_show_phone.set(false);
         set_show_mail.set(false);
-        set_show_fb.set(false);
-        set_show_tiktok.set(false);
-        set_show_ig.set(false);
     };
 
     view! {
         <Link rel="icon" href="/img/trobenta.svg" type_="image/svg"/>
         <Title text="Home"/>
-        <div class="components" id="home-components">
+        <footer class="components" id="home-components">
             <div class="title" id="home-title">
-                <img class="title-img" id="home-img" src="/img/titles/maj_kavsek.svg"/>
+                // <img class="title-img" id="home-img" src="/img/titles/maj_kavsek.svg"/>
+                <h1>"Maj Kavšek"</h1>
             </div>
             <div class="contents" id="home-wrap">
                 <div class="all-contacts">
-                    <div class="contacts-wrap" on:click=phone_click>
-                        <img class="contacts-img" src="/img/contact_icons/FON.svg"/>
-                        <Show when=move || show_phone.get() fallback=|| {}>
-                            <div class="modal" node_ref=phone_ref>
-                                <button class="close-button" on:click=close_popup>
-                                    "close"
-                                </button>
-                                <p class="phone-num">"00 386 40 396 727"</p>
-                            </div>
-                        </Show>
-                    </div>
-                    <div class="contacts-wrap" on:click=fb_click>
-                        <img class="contacts-img" src="/img/contact_icons/FB.svg"/>
-                        <Show when=move || show_fb.get() fallback=|| {}>
-                            <div class="modal" node_ref=fb_ref>
-                                <button class="close-button" on:click=close_popup>
-                                    "close"
-                                </button>
-                                <a href="https://www.facebook.com" target="_blank">
-                                    "https://www.facebook.com"
-                                </a>
-                            </div>
-                        </Show>
-                    </div>
                     <div class="contacts-wrap" on:click=mail_click>
                         <img class="contacts-img" src="/img/contact_icons/MAIL.svg"/>
                         <Show when=move || show_mail.get() fallback=|| {}>
@@ -111,34 +42,23 @@ pub fn Home() -> impl IntoView {
                             </div>
                         </Show>
                     </div>
-                    <div class="contacts-wrap" on:click=tiktok_click>
-                        <img class="contacts-img" src="/img/contact_icons/TIKTOK.svg"/>
-                        <Show when=move || show_tiktok.get() fallback=|| {}>
-                            <div class="modal" node_ref=tiktok_ref>
-                                <button class="close-button" on:click=close_popup>
-                                    "close"
-                                </button>
-                                <a href="https://www.tiktok.com" target="_blank">
-                                    "https://www.tiktok.com"
-                                </a>
-                            </div>
-                        </Show>
+                    <div class="contacts-wrap">
+                        <a href="https://www.facebook.com" target="_blank">
+                            <img class="contacts-img" src="/img/contact_icons/FB.svg"/>
+                        </a>
                     </div>
-                    <div class="contacts-wrap" on:click=ig_click>
-                        <img class="contacts-img" src="/img/contact_icons/FON.svg"/>
-                        <Show when=move || show_ig.get() fallback=|| {}>
-                            <div class="modal" node_ref=ig_ref>
-                                <button class="close-button" on:click=close_popup>
-                                    "close"
-                                </button>
-                                <a href="https://www.instagram.com" target="_blank">
-                                    "https://www.instagram.com"
-                                </a>
-                            </div>
-                        </Show>
+                    <div class="contacts-wrap">
+                        <a href="https://www.tiktok.com" target="_blank">
+                            <img class="contacts-img" src="/img/contact_icons/TIKTOK.svg"/>
+                        </a>
+                    </div>
+                    <div class="contacts-wrap">
+                        <a href="https://www.instagram.com" target="_blank">
+                            <img class="contacts-img" src="/img/contact_icons/FON.svg"/>
+                        </a>
                     </div>
                 </div>
             </div>
-        </div>
+        </footer>
     }
 }

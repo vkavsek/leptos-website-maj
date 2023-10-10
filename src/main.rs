@@ -1,13 +1,9 @@
 #[cfg(feature = "ssr")]
 #[tokio::main]
 async fn main() {
-    use axum::{
-        routing::{get, post},
-        Router,
-    };
+    use axum::{routing::post, Router};
     use leptos::*;
     use leptos_axum::{generate_route_list, LeptosRoutes};
-    use leptos_image::{cache_app_images, image_cache_handler};
     use maj_fullstack::app::App;
     use maj_fullstack::fileserv::file_and_error_handler;
 
@@ -23,18 +19,12 @@ async fn main() {
     let leptos_options = conf.leptos_options;
     let addr = leptos_options.site_addr;
     let routes = generate_route_list(|| view! { <App/> });
-    let root = leptos_options.site_root.clone();
-
-    cache_app_images(root, || view! { <App/> }, 1, || (), || ())
-        .await
-        .expect("Failed to cache images");
 
     // build our application with a route
     let app = Router::new()
         .route("/api/*fn_name", post(leptos_axum::handle_server_fns))
         .leptos_routes(&leptos_options, routes, App)
         // Add route for image cache.
-        .route("/cache/image", get(image_cache_handler))
         .fallback(file_and_error_handler)
         .with_state(leptos_options);
 

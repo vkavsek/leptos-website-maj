@@ -14,10 +14,10 @@
 @media (orientation: portrait) {
   .audio-player {
     position: absolute;
-    height: 4rem;
+    height: 6rem;
     width: 100%;
 	  justify-content: space-around;
-    bottom: 7vh;
+    bottom: 9vh;
     background-color: rgba(9, 4, 21, 0.7);
     /* background: rgba(255, 57, 136, .6); */
     left: 0;
