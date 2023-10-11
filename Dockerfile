@@ -1,16 +1,12 @@
 # If you’re using stable, use this instead
 FROM rust:1.73-bullseye as builder
 
-# Install cargo-binstall, which makes it easier to install other
-# cargo extensions like cargo-leptos
-RUN wget https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-unknown-linux-musl.tgz
-RUN tar -xvf cargo-binstall-x86_64-unknown-linux-musl.tgz
-RUN cp cargo-binstall /usr/local/cargo/bin
+RUN apt update && \
+  apt install -y binaryen npm protobuf-compiler libssl-dev pkg-config musl-tools \
+  && rm -rf /var/lib/apt/lists/*
 
-# Install cargo-leptos
-RUN cargo binstall cargo-leptos -y
-
-# Add the WASM target
+RUN cargo install --locked cargo-leptos
+RUN rustup component add rust-src
 RUN rustup target add wasm32-unknown-unknown
 
 # Make an /app dir, which everything will eventually live in
