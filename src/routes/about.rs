@@ -45,7 +45,10 @@ pub fn ImagesAbout() -> impl IntoView {
         move || (),
         |_| async move {
             // TODO: Handle errors
-            read_files("/img/about_pics".to_string()).await.unwrap()
+            // NOTE: this only works in Docker
+            read_files("/app/site/img/about_pics".to_string())
+                .await
+                .unwrap()
         },
     );
 
@@ -112,6 +115,10 @@ async fn read_files(path: String) -> Result<Vec<String>, ServerFnError> {
     let mut files = tokio::fs::read_dir(&path).await?;
     let mut res = Vec::new();
     while let Some(file) = files.next_entry().await? {
+        log::info!(
+            "path to file{}",
+            file.path().to_str().expect("filename empty")
+        );
         res.push(extract_name(file.path().to_str()));
     }
     Ok(res)
