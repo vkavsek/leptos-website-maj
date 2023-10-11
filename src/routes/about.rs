@@ -22,7 +22,7 @@ pub fn About() -> impl IntoView {
         <div class="components">
             <div class="title" id="about-title">
                 <h1>"About Me"</h1>
-                // <img class="title-img" id="about-img" src="/img/titles/about.svg"/>
+            // <img class="title-img" id="about-img" src="/img/titles/about.svg"/>
             </div>
             <div class="contents" id="about-wrap">
                 <div class="about-text">{cntnt}</div>
@@ -36,7 +36,6 @@ pub fn About() -> impl IntoView {
 #[component]
 pub fn ImagesAbout() -> impl IntoView {
     // Set FIRST IMAGE TO SHOW
-    const FIRST_SRC: &str = "/img/about_pics/shared1.jpg";
 
     let img_ref = create_node_ref::<Img>();
     let (counter, set_counter) = create_signal(0);
@@ -47,8 +46,19 @@ pub fn ImagesAbout() -> impl IntoView {
             // TODO: Handle errors
             // NOTE: this only works in Docker
             read_files("/app/site/img/about_pics".to_string())
+                // read_files("./public/img/about_pics".to_string())
                 .await
                 .unwrap()
+        },
+    );
+
+    let first_src = files.get().map_or_else(
+        || "/img/about_pics/shared28.jpg".to_string(),
+        |files| {
+            format!(
+                "/img/about_pics/{}",
+                files.get(0).expect("no pictures in ABOUTME dir!")
+            )
         },
     );
 
@@ -78,8 +88,8 @@ pub fn ImagesAbout() -> impl IntoView {
             .expect("the DOM is built by the time we click the button");
         if counter.get() > 0 {
             if let Some(files) = files.get() {
-                if let Some(ref image_name) = files.get(counter.get() + 1) {
-                    set_counter.update(|c| *c += 1);
+                if let Some(ref image_name) = files.get(counter.get() - 1) {
+                    set_counter.update(|c| *c -= 1);
                     let img_src_fmt = format!("/img/about_pics/{}", image_name);
                     img.set_src(&img_src_fmt);
                 }
@@ -99,12 +109,12 @@ pub fn ImagesAbout() -> impl IntoView {
     view! {
         <div class="about-pics">
             <div class="about-img-but-container">
-                <img class="about-img" src=FIRST_SRC node_ref=img_ref/>
+                <img class="about-img" src=first_src node_ref=img_ref/>
                 <button class="about-back-img" on:click=click_back>
-                    "back"
+                    <img src="/img/icon/back.svg" class="about-navigation-img about-back"/>
                 </button>
                 <button class="about-next-img" on:click=click_next>
-                    "next"
+                    <img src="/img/icon/back.svg" class="about-navigation-img about-next"/>
                 </button>
             </div>
         </div>

@@ -66,7 +66,6 @@
   background-color: rgba(9, 4, 21, 0.7);
 }
 .all-contacts > * {
-  cursor: pointer;
   display: flex;
   justify-content: center;
   align-content: center;
@@ -84,6 +83,7 @@
 }
 
 .contacts-img {
+  cursor: pointer;
   width: 80%;
 }
 
@@ -105,28 +105,57 @@
 }
 .modal { 
    position: absolute;
-   display: grid;
+   display: flex;
+   grid-auto-flow: column;
+
+   justify-content: center;
    align-items: center;
    text-align: center;
 
    color: rgb(205,46,112);
    background: rgba(9, 4, 21, 0.96);
    border-radius: 30px;
+
+   font-size: 1.5rem;
 }
 
 .modal > * {
-  padding: 5rem;
+  padding: 1rem;
 }
+
 .modal a {
   color: rgb(205,46,112);
 }
 .close-button {
   all: unset;
   cursor: pointer;
+  font-size: 1rem;
 
   position: absolute;
   top: 1rem;
   right: 1rem;
+}
+.copy-and-confirm {
+  display: grid;
+  justify-items: center;
+}
+.copy-button {
+  all: unset;
+  display: grid;
+
+  cursor: pointer;
+  align-items: center;
+  justify-items: center;
+  background: rgba(15, 8, 80, 0.9);
+  border-radius: 15px;
+  width: fit-content;
+}
+.copy-img {
+  width: 35px;
+  padding: 8px;
+}
+.span-copied {
+  font-size: 1rem;
 }
 
 /* routes/about.rs ------ ABOUT ME LAYOUT */
@@ -144,11 +173,10 @@
   #about-wrap {
     flex-direction: column-reverse;
     align-items: center;
-    justify-items: center;
     gap: 2rem;
   }
   .about-pics {
-    width: 40%;
+    width: 60%;
   }
   .about-text {
     width: 80%;
@@ -156,7 +184,7 @@
 }
 @media (max-width: 700px) {
   .about-pics {
-    width: 50%;
+    width: 60%;
   }
 }
 @media (orientation: landscape) {
@@ -168,6 +196,11 @@
   }
   .about-text {
     width: 50%;
+  }
+}
+@media screen and (orientation: landscape) and (max-height: 700px) {
+  .about-pics {
+    width: 25%;
   }
 }
 
@@ -208,7 +241,7 @@
   position: absolute;
   font-size: 1rem;
 
-  height: 70%;
+  height: 40%;
   top: 50%;
   transform: translateY(-50%);
 
@@ -216,9 +249,24 @@
   color: rgb(205,46,112);
 
   padding: 15px;
-  border-radius: 15px;
+  border-radius: 100%;
   cursor: pointer;
 }
+
+@media screen and (orientation: landscape) {
+  .about-navigation-img {
+    width: 2vw;
+  }
+}
+@media screen and (orientation: portrait) {
+  .about-navigation-img {
+    width: 7vw;
+  }
+}
+.about-next {
+  transform:rotate(180deg);
+}
+
 .about-back-img {
     left: 0;
   border-top-left-radius: 0;
@@ -245,15 +293,6 @@
   flex-direction: column;
   width: 98%;
   overflow: hidden;
-}
-/* #shows-title { */
-/*   height: 80%; */
-/* } */
-
-@media (orientation: portrait) {
-  /* #shows-title { */
-  /*   margin-top: 15%; */
-  /* } */
 }
 
 .shows-nav {
@@ -291,7 +330,7 @@
   text-decoration: underline;
 }
 .shows-nav > *[aria-current="page"] {
-  color: rgba(35.3, 187.4, 228, 1);
+  color: rgba(8, 200, 252, 1);
   /* color: #00ff75; */
 }
 .shows-nav > *:active {
