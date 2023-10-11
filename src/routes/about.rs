@@ -45,9 +45,7 @@ pub fn ImagesAbout() -> impl IntoView {
         move || (),
         |_| async move {
             // TODO: Handle errors
-            read_files("./public/img/about_pics".to_string())
-                .await
-                .unwrap()
+            read_files("/img/about_pics".to_string()).await.unwrap()
         },
     );
 

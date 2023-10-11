@@ -17,9 +17,9 @@ COPY . .
 # Build the app
 RUN cargo leptos build --release -vv
 
-FROM debian:bullseye as runner
+FROM rust:1.73-bullseye as runner
 # Copy the server binary to the /app directory
-COPY --from=builder /app/target/server/release/maj-fullstack /app/
+COPY --from=builder /app/target/release/maj-fullstack /app/
 # /target/site contains our JS/WASM/CSS, etc.
 COPY --from=builder /app/target/site /app/site
 # Copy Cargo.toml if it’s needed at runtime

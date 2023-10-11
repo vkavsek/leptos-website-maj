@@ -11,7 +11,7 @@ pub fn Media() -> impl IntoView {
                 // <img class="title-img" id="media-img" src="/img/titles/media.svg"/>
                 <h1>"Media"</h1>
             </div>
-            <div class="contents" class="media-contents">
+            <div class="contents" id="media-contents">
                 <div class="youtube-video video-1">
                     <iframe
                         src="https://www.youtube.com/embed/kR12N0Yfs-4?si=6TIcz6c7mYv43lbU"

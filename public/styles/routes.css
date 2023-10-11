@@ -109,7 +109,7 @@
    align-items: center;
    text-align: center;
 
-   color: #ff3988;
+   color: rgb(205,46,112);
    background: rgba(9, 4, 21, 0.96);
    border-radius: 30px;
 }
@@ -118,7 +118,7 @@
   padding: 5rem;
 }
 .modal a {
-  color: #ff3988;
+  color: rgb(205,46,112);
 }
 .close-button {
   all: unset;
@@ -177,7 +177,7 @@
 
   background: rgba(9, 4, 21, 0.7);
   border-radius: 4%;
-  color: #ff3988;
+  color: rgb(205,46,112);
 
   max-height: 100%;
   overflow: auto;
@@ -213,7 +213,7 @@
   transform: translateY(-50%);
 
   background-color: rgba(0, 0, 0, 0);
-  color: #ff3988;
+  color: rgb(205,46,112);
 
   padding: 15px;
   border-radius: 15px;
@@ -278,7 +278,7 @@
   /*
   background: rgba(255, 57, 136, 1);
   */
-  color: #fad549;
+  color: rgb(250,213,73);
   padding: 10px;
 
   text-align: center;
@@ -334,12 +334,12 @@
 
 }
 #show-container-id > * {
-  color: #fad549;
+  color: rgb(250,213,73);
   font-size: 1.2rem;
   background: rgba(9, 4, 21, 1);
 }
 .show-container > * {
-  color: #ff3988;
+  color: rgb(205,46,112);
   padding: 15px 10px;
   text-align: center;
   font-size: 1rem;
@@ -357,7 +357,7 @@
   width: 33%;
 }
 
-.media-contents {
+#media-contents {
   margin-left: 5%;
   margin-right: 5%;
 
@@ -367,11 +367,7 @@
 
 /*  TODO: Make this better !  */
 @media(orientation: portrait) {
-  /* #media-title { */
-  /*   margin: 5%; */
-  /*   margin-top: 20%; */
-  /* } */
-  .media-contents {
+  #media-contents {
     overflow: auto;
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: repeat(20, 1fr);
@@ -396,10 +392,7 @@
   #media-components {
     overflow: auto;
   }
-  /* #media-title { */
-  /*   margin: 3%; */
-  /* } */
-  .media-contents {
+  #media-contents {
     grid-template-columns: repeat(5, 1fr);
     grid-template-rows: repeat(8,  1fr);
   }
