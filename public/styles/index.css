@@ -70,6 +70,7 @@ iframe {
     position: fixed;
 
     display: grid;
+    grid-template-rows: 1fr 1fr 1fr 1fr;
     justify-items: center;
     gap: 2%;
   }
@@ -148,7 +149,7 @@ iframe {
 }
 
 .nav-icon {
-  width: 60%;
+  width: 50%;
   min-width: 20px;
   max-width: 100px;
   transition: filter 0.1s;
@@ -174,17 +175,17 @@ iframe {
   font-family: SquabSlab, sans-serif;
 }
 
-@media (orientation: portrait) {
+@media screen and (orientation: portrait) {
   .title {
     font-size: 2rem;
   }
 }
-@media (orientation: landscape) {
+@media screen and (orientation: landscape) {
   .title {
-    font-size: 6rem;
+    font-size: 4rem;
   }
 }
-@media screen and (orientation: landscape) and (max-height: 800px){
+@media screen and (orientation: landscape) and (max-height: 600px){
   .title {
     font-size: 2.5rem;
   }
