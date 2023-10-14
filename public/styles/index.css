@@ -1,13 +1,24 @@
 @import url("/styles/routes.css");
 @import url("/styles/audio_player.css");
+@import url('https://fonts.googleapis.com/css2?family=Lilita+One&display=swap');
 
 /* app.rs ------ MAIN LAYOUT */
+::-webkit-scrollbar { 
+  width: 2em;
+}
+::-webkit-scrollbar-track {
+  background: red;
+}
+::-webkit-scrollbar-thumb { 
+  background-color: green;
+}
+
 body {
   margin: 0;
   padding: 0;
   background-color: rgb(10, 10, 10);
   font-family: 'IBM Plex Mono', sans-serif;
-  color: rgb(250,213,73);
+  color: #fad549;
  
   font-size: 1rem;
   font-weight: 400;
@@ -20,11 +31,6 @@ main {
 p {
   padding: 0;
   margin: 0;
-}
-h1 {
-  text-align: center;
-  margin-top: 5%;
-  margin-bottom: 5%;
 }
 
 img {
@@ -117,7 +123,6 @@ iframe {
   .components{
     margin-left: 15%;
     height: 100%;
-    grid-template-rows: 1fr 2fr;
   }
   .nav-icon-1 {
     translate: 0%;
@@ -172,22 +177,29 @@ iframe {
 .title {
   display: flex;
   justify-content: center;
-  font-family: SquabSlab, sans-serif;
+  /* font-family: SquabSlab, sans-serif; */
+  font-family: 'Lilita One', sans-serif;
+}
+.title h1 {
+  all: unset;
+  text-align: center;
+  margin-top: 5%;
+  margin-bottom: 3%;
 }
 
 @media screen and (orientation: portrait) {
   .title {
-    font-size: 2rem;
+    font-size: 4rem;
   }
 }
 @media screen and (orientation: landscape) {
   .title {
-    font-size: 4rem;
+    font-size: 8rem;
   }
 }
 @media screen and (orientation: landscape) and (max-height: 600px){
   .title {
-    font-size: 2.5rem;
+    font-size: 4rem;
   }
 }
 
