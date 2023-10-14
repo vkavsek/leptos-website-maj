@@ -22,9 +22,6 @@
     justify-content: flex-end;
     margin-left: 0;
   }
-  /* #home-title { */
-  /*   height: 25vh; */
-  /* } */
   .all-contacts {
     width: 100%;
   }
@@ -39,9 +36,9 @@
     justify-content: flex-end;
     align-items:center;
   }
-  /* #home-title { */
-  /*   height: 35vh; */
-  /* } */
+  #home-title {
+    font-size: 10rem;
+  }
   .all-contacts {
     border-radius: 1rem;
     border-bottom-left-radius: 0;
@@ -336,7 +333,7 @@
 
 @media screen and (orientation: landscape) {
   .about-navigation-img {
-    width: 2vw;
+    width: 1.5vw;
   }
 }
 @media screen and (orientation: portrait) {

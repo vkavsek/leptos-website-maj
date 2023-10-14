@@ -10,9 +10,9 @@ pub fn Home() -> impl IntoView {
         <Link rel="icon" href="/img/trobenta.svg" type_="image/svg"/>
         <Title text="Home"/>
         <footer class="components" id="home-components">
-            <div class="title" id="home-title">
+            <div class="title">
                 // <img class="title-img" id="home-img" src="/img/titles/maj_kavsek.svg"/>
-                <h1>"Maj Kavšek"</h1>
+                <h1 id="home-title">"Maj Kavšek"</h1>
             </div>
             <div class="contents" id="home-wrap">
                 <div class="all-contacts">
@@ -33,6 +33,37 @@ pub fn Home() -> impl IntoView {
         </footer>
     }
 }
+
+// TODO:
+// SEND MAIL
+//
+// #[server(SendMail)]
+// async fn send_mail() -> Result<(), ServerFnError> {
+//     use lettre::{
+//         message::header::ContentType, transport::smtp::authentication::Credentials,
+//         AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
+//     };
+//
+//     let email = Message::builder()
+//         .from("Vid <vkavsek@gmail.com>".parse().unwrap())
+//         .to("VK <vkavsek@gmail.com>".parse().unwrap())
+//         .subject("Hola")
+//         .header(ContentType::TEXT_PLAIN)
+//         .body("Hello".to_string())?;
+//
+//     let creds = Credentials::new("smtp_username".to_owned(), "smtp_password".to_owned());
+//
+//     // Open a remote connection to gmail
+//     let mailer = AsyncSmtpTransport::<Tokio1Executor>::relay("smtp.gmail.com")?
+//         .credentials(creds)
+//         .build();
+//
+//     // Send the email
+//     let _ = mailer.send(email).await?;
+//     log::info!("Sent mail!");
+//
+//     Ok(())
+// }
 
 #[component]
 fn Mail() -> impl IntoView {
@@ -68,6 +99,24 @@ fn Mail() -> impl IntoView {
     let close_popup = move |_| {
         set_show_mail.set(false);
     };
+
+    // let send_action = create_action(|_input: &()| send_mail());
+    //
+    // let send = move |ev: MouseEvent| {
+    //     ev.prevent_default();
+    //     send_action.dispatch(());
+    // };
+    //
+    // let t = move || {
+    //     if let Some(res) = send_action.value().get() {
+    //         match res {
+    //             Ok(_) => String::from("Sent MAIL!"),
+    //             Err(e) => format!("Error: {:?}", e),
+    //         }
+    //     } else {
+    //         "Nothing".to_string()
+    //     }
+    // };
 
     view! {
         <script>{copy_mail}</script>
