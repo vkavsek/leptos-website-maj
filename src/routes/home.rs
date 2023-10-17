@@ -4,6 +4,7 @@ use leptos::{
     *,
 };
 use leptos_meta::{Link, Title};
+use leptos_use::{use_interval_fn, utils::Pausable};
 
 #[component]
 pub fn Home() -> impl IntoView {
@@ -49,17 +50,47 @@ fn Mail() -> impl IntoView {
             }}"#,
         EMAIL_ADDR
     );
-
     let (show_mail, set_show_mail) = create_signal(false);
     let (copied, set_copied) = create_signal(false);
 
     let mail_ref = create_node_ref::<Div>();
     let copy_ref = create_node_ref::<Img>();
 
+    let counter = create_rw_signal(0);
+    let copy_loop = move || {
+        if let Some(copy_img) = copy_ref.get() {
+            if counter.get() > 5 {
+                counter.set(0);
+                set_copied.set(false);
+                copy_img.set_src("/img/icon/copy.svg");
+            }
+            counter.update(|count| *count += 1);
+        }
+    };
+    #[allow(unused)]
+    let Pausable {
+        is_active,
+        pause,
+        resume,
+    } = use_interval_fn(copy_loop, 500);
+
+    // If copied is false stop the loop
+    create_effect(move |_| {
+        if !copied.get() {
+            pause();
+        }
+    });
+    // If copied is true start the loop
+    create_effect(move |_| {
+        if copied.get() {
+            resume();
+        }
+    });
     let mail_click = move |ev: MouseEvent| {
         ev.prevent_default();
         set_show_mail.set(true);
     };
+
     let click_copy = move |_| {
         let copy_img = copy_ref.get().expect("the Dom should be built");
         copy_img.set_src("/img/icon/kluk.svg");
