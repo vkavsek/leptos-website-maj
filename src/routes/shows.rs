@@ -22,7 +22,7 @@ pub fn Concerts() -> impl IntoView {
     view! {
         <Link rel="icon" href="/img/nota.svg" type_="image/svg"/>
         <Title text="Shows"/>
-        <div class="components">
+        <div class="components" id="shows-components">
             <div class="title" id="shows-title">
                 <h1>"Shows"</h1>
                 // <img class="title-img" id="shows-img" src="/img/titles/shows.svg"/>
@@ -90,7 +90,7 @@ pub fn Past() -> impl IntoView {
 }
 
 #[component]
-pub fn Future() -> impl IntoView {
+pub fn FutureEvents() -> impl IntoView {
     let shows: Shows = serde_json::from_str(SHOWS_JSON).expect("Valid Json 100%");
     let pivot_date = Utc::now();
     //NaiveDate::parse_from_str("23.01.2023", "%d.%m.%Y").expect("ok");

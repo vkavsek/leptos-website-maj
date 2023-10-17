@@ -1,13 +1,19 @@
 #[allow(unused)]
 use anyhow::Result;
 use leptos::{
-    html::{Button, Div, Img},
+    html::{Button, Div},
     *,
 };
+use leptos_image::*;
 use leptos_meta::{Link, Title};
 #[allow(unused)]
 use std::path::{Path, PathBuf};
+use web_sys::{ScrollBehavior, ScrollToOptions};
 
+enum Orient {
+    Portrait,
+    Landscape,
+}
 enum Color {
     #[allow(dead_code)]
     Yellow,
@@ -83,18 +89,19 @@ pub fn About() -> impl IntoView {
             // <img class="title-img" id="about-img" src="/img/titles/about.svg"/>
             </div>
             <div class="contents" id="about-wrap">
-                <div class="about-images-scroller snaps-inline">
-                    <ImagesAbout/>
-                </div>
-                <div class="about-button-text">
-                    <button on:click=change_color style=init_color.clone() node_ref=button_ref>
+                <ImagesAbout/>
+                <div class="about-text" style=init_color.clone() node_ref=text_ref>
+                    {text_content}
+                    <button
+                        class="change-color-button"
+                        on:click=change_color
+                        style=init_color
+                        node_ref=button_ref
+                    >
                         <div class="color-box" style=init_bg_color node_ref=curr_col_ref></div>
                         <img src="/img/icon/back.svg" class="button-next-arrow"/>
                         <div class="color-box" style=init_next_bg_color node_ref=next_col_ref></div>
                     </button>
-                    <div class="about-text" style=init_color node_ref=text_ref>
-                        {text_content}
-                    </div>
                 </div>
             </div>
         </div>
@@ -104,105 +111,237 @@ pub fn About() -> impl IntoView {
 // TODO: implement leptos_image and change the architecture
 #[component]
 pub fn ImagesAbout() -> impl IntoView {
-    // Set FIRST IMAGE TO SHOW
-    // let img_ref = create_node_ref::<Img>();
-    // let (counter, set_counter) = create_signal(0);
-
     let files = create_resource(
         move || (),
         |_| async move {
             // TODO: Handle errors
             // NOTE: this only works in Docker
-            // read_files("/app/site/img/about_pics".to_string())
-            read_files("./public/img/about_pics".to_string())
+            read_files("/app/site/img/about_pics".to_string())
+                // read_files("./public/img/about_pics".to_string())
                 .await
                 .unwrap()
         },
     );
 
-    // let first_src = files.get().map_or_else(
-    //     || "/img/about_pics/shared28.jpg".to_string(),
-    //     |files| {
-    //         format!(
-    //             "/img/about_pics/{}",
-    //             files.get(0).expect("no pictures in ABOUTME dir!")
-    //         )
-    //     },
-    // );
+    let gallery_ref = create_node_ref::<Div>();
+    let get_orient = move || {
+        let in_width = window()
+            .inner_width()
+            .expect("error getting inner width")
+            .as_f64()
+            .expect("width should be a number");
+        let in_height = window()
+            .inner_height()
+            .expect("error getting inner height")
+            .as_f64()
+            .expect("height should be a number");
+        if in_width > in_height {
+            Orient::Landscape
+        } else {
+            Orient::Portrait
+        }
+    };
 
-    // let click_next = move |_| {
-    //     let img = img_ref
-    //         .get()
-    //         .expect("the DOM is built by the time we click the button");
-    //     if let Some(files) = files.get() {
-    //         if let Some(ref image_name) = files.get(counter.get() + 1) {
-    //             set_counter.update(|c| *c += 1);
-    //             let img_src_fmt = format!("/img/about_pics/{}", image_name);
-    //             img.set_src(&img_src_fmt);
-    //         } else {
-    //             let first_src = format!(
-    //                 "/img/about_pics/{}",
-    //                 files.get(0).cloned().unwrap_or_default()
-    //             );
-    //             set_counter.set(0);
-    //             img.set_src(&first_src);
-    //         }
-    //     }
-    // };
-    //
-    // let click_back = move |_| {
-    //     let img = img_ref
-    //         .get()
-    //         .expect("the DOM is built by the time we click the button");
-    //     if counter.get() > 0 {
-    //         if let Some(files) = files.get() {
-    //             if let Some(ref image_name) = files.get(counter.get() - 1) {
-    //                 set_counter.update(|c| *c -= 1);
-    //                 let img_src_fmt = format!("/img/about_pics/{}", image_name);
-    //                 img.set_src(&img_src_fmt);
-    //             }
-    //         }
-    //     } else {
-    //         set_counter.set(files.get().map(|f| f.len()).unwrap_or(1) - 1);
-    //         let last_src = format!(
-    //             "/img/about_pics/{}",
-    //             files
-    //                 .get()
-    //                 .and_then(|files| files.last().cloned())
-    //                 .unwrap_or_default()
-    //         );
-    //         img.set_src(&last_src);
-    //     }
-    // };
-    //
-    // use leptos_image::*;
+    let match_orient_el_width_gal_width = move || match get_orient() {
+        Orient::Portrait => (1.0, 5.),
+        Orient::Landscape => (0.33, 1.5),
+    };
+
+    let (counter, set_counter) = create_signal::<i32>(0);
+    let move_next = move |_| {
+        let gallery = gallery_ref.get().expect("the DOM should be built by now");
+        let (grid_element_width, gallery_width_multi) = match_orient_el_width_gal_width();
+        if (counter.get() as u32) < gallery.children().length() {
+            set_counter.update(|count| *count += 1);
+
+            let offset =
+                (counter.get() as f64) * gallery.offset_width() as f64 * grid_element_width;
+
+            // log::info!(
+            //     "Acceptable width: {}\nCurrent offset: {}",
+            //     gallery.offset_width() as f64 * gallery_width_multi,
+            //     offset
+            // );
+            //
+            if offset >= gallery.offset_width() as f64 * gallery_width_multi {
+                set_counter.update(|count| *count -= 1);
+            }
+            gallery.scroll_to_with_scroll_to_options(
+                ScrollToOptions::new()
+                    .left(offset)
+                    .behavior(ScrollBehavior::Smooth),
+            );
+        }
+    };
+    let move_back = move |_| {
+        let gallery = gallery_ref.get().expect("the DOM should be built by now");
+        let (grid_element_width, _) = match_orient_el_width_gal_width();
+        if counter.get() > 0 {
+            set_counter.update(|count| *count -= 1);
+
+            let offset =
+                (counter.get() as f64) * gallery.offset_width() as f64 * grid_element_width;
+            gallery.scroll_to_with_scroll_to_options(
+                ScrollToOptions::new()
+                    .left(offset)
+                    .behavior(ScrollBehavior::Smooth),
+            );
+        }
+    };
+
+    // We need this because Transition / Suspense aren't currently working
+    // TODO: Change to Suspense when possible
+    let (loaded, set_loaded) = create_signal(false);
+    create_effect(move |_| {
+        request_animation_frame(move || set_loaded.set(true));
+    });
+
+    // Click on image to make it fullscreen.
+    let (show_img, set_show_img) = create_signal(false);
+    let (current_img, set_current_img) = create_signal::<Option<String>>(None);
+    let fullscreen_ref = create_node_ref::<Div>();
+
+    let close_fullscreen = move |_| {
+        set_show_img.set(false);
+    };
+
+    let next = move || {
+        if let Some(img) = current_img.get() {
+            if let Some(files) = files.get() {
+                let pos = files
+                    .iter()
+                    .position(|file_path| file_path.contains(&img))
+                    .unwrap_or_default();
+
+                let next_file = if let Some(file) = files.get(pos + 1) {
+                    file.clone()
+                } else {
+                    files[0].clone()
+                };
+                set_current_img.set(Some(next_file));
+            }
+        }
+    };
+    let fullscreen_next = move |_| {
+        next();
+    };
+    let back = move || {
+        if let Some(img) = current_img.get() {
+            if let Some(files) = files.get() {
+                let pos = files
+                    .iter()
+                    .position(|file_path| file_path.contains(&img))
+                    .unwrap_or_default();
+
+                let next_file = if pos > 0 && files.get(pos - 1).is_some() {
+                    files[pos - 1].clone()
+                } else {
+                    files[files.len() - 1].clone()
+                };
+                set_current_img.set(Some(next_file));
+            }
+        }
+    };
+    let fullscreen_back = move |_| {
+        back();
+    };
+
+    // TODO:
+    let keydown_next = move |ev: leptos::ev::KeyboardEvent| {
+        if ev.key().contains("Enter") {
+            next();
+        }
+    };
+    let keydown_back = |_| {};
+
+    let fullscreen_img = move || {
+        if let Some(path) = current_img.get() {
+            view! {
+                <div
+                    style:display="flex"
+                    node_ref=fullscreen_ref
+                    class="fullscreen-img-buttons"
+                >
+                    <img src=path class="fullscreen-img"/>
+                    <button on:click=close_fullscreen class="fullscreen-close">
+                        "close"
+                    </button>
+                    <button on:click=fullscreen_back on:keydown=keydown_next class="fullscreen-nav-button back-button">
+                        <img class="nav-button-img back-img" src="/img/icon/back.svg" alt="back"/>
+                    </button>
+                    <button on:click=fullscreen_next on:keydown=keydown_back class="fullscreen-nav-button next-button">
+                        <img class="nav-button-img next-img" src="/img/icon/back.svg" alt="back"/>
+                    </button>
+                </div>
+            }
+            .into_view()
+        } else {
+            view! { <p>"Sorry we couldn't load the image!"</p> }.into_view()
+        }
+    };
+
+    // Close img on click outside
+    create_effect(move |_| {
+        leptos_use::on_click_outside(fullscreen_ref, move |_| {
+            set_show_img.set(false);
+        })
+    });
+
     view! {
-        <Suspense fallback=move || {}>
-            {move || {
-                files
-                    .get()
-                    .map(|files| {
+        <Show when=move || { show_img.get() }>
+            <div class="fullscreen-container">{fullscreen_img}</div>
+        </Show>
+        <div class="about-gallery">
+            <button on:click=move_back class="about-nav-button">
+                <img class="nav-button-img" src="/img/icon/back.svg" alt="back"/>
+            </button>
+            <div node_ref=gallery_ref class="about-images-scroller snaps-inline">
+                <Show when=move || {
+                    loaded.get()
+                }>
+                    {move || {
                         files
-                            .iter()
-                            .map(|file| {
-                                let source = format!("/img/about_pics/{}", file);
-                                view! { <img src=source class="image-about"/> }
+                            .get()
+                            .map(|files| {
+                                files
+                                    .iter()
+                                    .map(|file| {
+                                        let file_c = file.clone();
+                                        let click_image = move |ev: leptos::ev::MouseEvent| {
+                                            ev.prevent_default();
+                                            set_current_img.set(Some(file_c.clone()));
+                                            set_show_img.set(true);
+                                        };
+                                        view! {
+                                            // TODO: Try to avoid cloning 3 times ...
+                                            <a on:click=click_image>
+                                                <Image
+                                                    src=file
+                                                    blur=false
+                                                    width=150
+                                                    height=150
+                                                    quality=50
+                                                    class="image-about"
+                                                />
+                                            </a>
+                                        }
+                                    })
+                                    .collect_view()
                             })
-                            .collect_view()
-                    })
-            }}
+                    }}
 
-        </Suspense>
+                </Show>
+            </div>
+            <button on:click=move_next class="about-nav-button">
+                <img
+                    class="nav-button-img"
+                    src="/img/icon/back.svg"
+                    style:transform="rotate(180deg)"
+                    alt="back"
+                />
+            </button>
+        </div>
     }
-    // <div class="about-img-but-container">
-    //     <img class="about-img" src=first_src node_ref=img_ref/>
-    //     <button class="about-back-img" on:click=click_back>
-    //         <img src="/img/icon/back.svg" class="about-navigation-img about-back"/>
-    //     </button>
-    //     <button class="about-next-img" on:click=click_next>
-    //         <img src="/img/icon/back.svg" class="about-navigation-img about-next"/>
-    //     </button>
-    // </div>
 }
 
 #[server(ReadFiles)]
@@ -224,7 +363,7 @@ async fn read_files(path: String) -> Result<Vec<String>, ServerFnError> {
 fn extract_name(path: Option<&str>) -> String {
     if let Some(path) = path {
         match path.split('/').last().map(|res| res.to_owned()) {
-            Some(path) => path,
+            Some(path) => format!("/img/about_pics/{}", path),
             None => "".to_owned(),
         }
     } else {

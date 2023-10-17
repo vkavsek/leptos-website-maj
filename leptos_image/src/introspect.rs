@@ -73,6 +73,7 @@ where
             let app_fn = app_fn.clone();
             let before_mount = before_mount.clone();
             let after_mount = after_mount.clone();
+
             let integration = leptos_router::ServerIntegration { path };
 
             provide_context(leptos_router::RouterIntegrationContext::new(integration));

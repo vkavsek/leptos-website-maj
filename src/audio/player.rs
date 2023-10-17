@@ -1,12 +1,15 @@
 #![allow(unused)]
 use super::Song;
 use leptos::ev::MouseEvent;
+use leptos::leptos_dom::helpers::IntervalHandle;
 use leptos::{
     html::{Audio, Button, Div},
     *,
 };
-use leptos_use::{use_raf_fn_with_options, utils::Pausable, UseRafFnOptions};
+use leptos_use::UseRafFnOptions;
+use leptos_use::{use_raf_fn, use_raf_fn_with_options, utils::Pausable};
 use std::rc::Rc;
+use std::time::Duration;
 
 // ------> AUDIO PLAYER
 // TODO: If end of song next song or make button PAUSE
@@ -51,47 +54,29 @@ pub fn AudioPlayer() -> impl IntoView {
     // DOM should be built by the time we call the closures so we unwrap them all
     //
     // Check audio percentage and update time accordingly
-    // Doesn't start by default, you have to call resume()
-    // FIX: Getting a lot of warnings, ID the cause and try to remove them.
-    #[allow(unused_variables)]
-    let Pausable {
-        is_active,
-        pause,
-        resume,
-    } = use_raf_fn_with_options(
-        move |_| {
-            if let Some(audio) = audio_ref.get() {
-                let progress_bar = progress_ref.get().unwrap();
-                progress_bar.style(
-                    "width",
-                    format!("{}%", audio.current_time() / audio.duration() * 100.0),
-                );
-                set_time.set(audio.current_time() as u64);
-                if audio.ended() {
-                    let play_btn = play_btn_ref.get().unwrap();
-                    play_btn.clone().class("pause", false);
-                    play_btn.class("play", true);
-                }
-                if let Some(slider) = volume_slider_ref.get() {
-                    if let Some(vol_percent) = vol_percent_ref.get() {
-                        let new_volume = audio.volume();
-                        vol_percent.style("width", format!("{}%", (new_volume * 100.0) as u32));
-                    }
+    let audio_loop = move || {
+        if let Some(audio) = audio_ref.get_untracked() {
+            let progress_bar = progress_ref.get_untracked().unwrap();
+            progress_bar.style(
+                "width",
+                format!("{}%", audio.current_time() / audio.duration() * 100.0),
+            );
+            set_time.set(audio.current_time() as u64);
+            if audio.ended() {
+                let play_btn = play_btn_ref.get_untracked().unwrap();
+                play_btn.clone().class("pause", false);
+                play_btn.class("play", true);
+            }
+            if let Some(slider) = volume_slider_ref.get_untracked() {
+                if let Some(vol_percent) = vol_percent_ref.get_untracked() {
+                    let new_volume = audio.volume();
+                    vol_percent.style("width", format!("{}%", (new_volume * 100.0) as u32));
                 }
             }
-        },
-        UseRafFnOptions::default().immediate(false),
-    );
-
-    // Create RC pointers then clone them before any closure.
-    // TODO: Is this even OK/relevant? ASK
-    let pause = Rc::new(pause);
-    let resume = Rc::new(resume);
-
-    let p = pause.clone();
-    let stop = move |_| {
-        p();
+        }
     };
+    // NOTE: here the main audio loop gets initialized
+    use_interval(10, audio_loop);
 
     // TODO: this only runs on CSR what if SSR ?
     // Reset play button when you change the song
@@ -108,13 +93,11 @@ pub fn AudioPlayer() -> impl IntoView {
     });
 
     // When content loads
-    let r = resume.clone();
     let audio_load = move |_| {
         let vol_percent = vol_percent_ref.get().unwrap();
         let audio = audio_ref.get().unwrap();
         let init_volume = 0.50;
 
-        r();
         audio.set_volume(init_volume);
         set_duration.set(audio.duration() as u64);
         set_name.set(extract_name(audio.src()));
@@ -122,7 +105,6 @@ pub fn AudioPlayer() -> impl IntoView {
     };
 
     // Play
-    let r = resume.clone();
     let play_click = move |_: MouseEvent| {
         let audio = audio_ref.get().unwrap();
 
@@ -131,9 +113,6 @@ pub fn AudioPlayer() -> impl IntoView {
             play_btn.clone().class("play", false);
             play_btn.clone().class("pause", true);
             let _ = audio.play();
-            if !is_active.get() {
-                r();
-            }
         } else {
             play_btn.clone().class("pause", false);
             play_btn.class("play", true);
@@ -197,12 +176,12 @@ pub fn AudioPlayer() -> impl IntoView {
 
     // TODO: add NextSong, PrevSong buttons?
     view! {
-        <div class="audio-player" on:unload=stop.clone()>
+        <div class="audio-player">
             <audio node_ref=audio_ref on:loadeddata=audio_load src=song_src>
                 "Audio Player"
             </audio>
             <div class="play-container">
-                <button class="play" on:click=play_click.clone() node_ref=play_btn_ref></button>
+                <button class="play" on:click=play_click node_ref=play_btn_ref></button>
             </div>
             <div class="time-container">
                 <div class="timeline" node_ref=timeline_ref on:click=timeline_click>
@@ -232,6 +211,31 @@ pub fn AudioPlayer() -> impl IntoView {
             </div>
         </div>
     }
+}
+
+pub fn use_interval<T, F>(interval_millis: T, f: F)
+where
+    F: Fn() + Clone + 'static,
+    T: Into<MaybeSignal<u64>> + 'static,
+{
+    let interval_millis = interval_millis.into();
+    create_effect(move |prev_handle: Option<IntervalHandle>| {
+        // effects get their previous return value as an argument
+        // each time the effect runs, it will return the interval handle
+        // so if we have a previous one, we cancel it
+        if let Some(prev_handle) = prev_handle {
+            prev_handle.clear();
+        };
+
+        // here, we return the handle
+        set_interval_with_handle(
+            f.clone(),
+            // this is the only reactive access, so this effect will only
+            // re-run when the interval changes
+            Duration::from_millis(interval_millis.get()),
+        )
+        .expect("could not create interval")
+    });
 }
 
 fn extract_name(path: String) -> Option<String> {

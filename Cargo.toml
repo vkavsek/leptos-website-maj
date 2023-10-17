@@ -15,7 +15,7 @@ leptos = { version = "0.5" }
 leptos_axum = { version = "0.5", optional = true }
 leptos_meta = { version = "0.5" }
 leptos_router = { version = "0.5" }
-# leptos_image = { path = "./leptos_image/" }
+leptos_image = { path = "./leptos_image/" }
 leptos-use = "0.7"
 log = "0.4"
 simple_logger = "4"
@@ -30,9 +30,9 @@ serde = { version = "1.0.188", features = ["derive"] }
 serde_json = "1.0.107"
 chrono = "0.4.31"
 anyhow = "1.0.75"
-lettre = { version = "0.10.4", optional = true, features = [
-  "tokio1",
-  "tokio1-native-tls",
+web-sys = { version = "0.3.64", features = [
+  "ScrollBehavior",
+  "ScrollToOptions",
 ] }
 
 [features]
@@ -40,14 +40,13 @@ hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate"]
 ssr = [
   "dep:axum",
   "dep:tokio",
-  "dep:lettre",
   "dep:tower",
   "dep:tower-http",
   "dep:leptos_axum",
   "leptos/ssr",
   "leptos_meta/ssr",
   "leptos_router/ssr",
-  # "leptos_image/ssr",
+  "leptos_image/ssr",
   "dep:tracing",
 ]
 

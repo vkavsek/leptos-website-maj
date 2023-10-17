@@ -12,6 +12,7 @@ use leptos_router::*;
 #[component]
 pub fn App() -> impl IntoView {
     provide_meta_context();
+    leptos_image::provide_image_context();
     let bg_div_ref = create_node_ref::<Div>();
 
     let formatter = |text| format!("{text} - Maj Kavšek");
@@ -20,6 +21,7 @@ pub fn App() -> impl IntoView {
         <Stylesheet id="font-2" href="/styles/fonts/squabslab.css"/>
         <Stylesheet id="leptos" href="/styles/index.css"/>
         <Title formatter/>
+        <Meta name="viewport" content="width=device-width, initial-scale=1"/>
 
         <Router fallback=|| {
             let mut outside_errors = Errors::default();
@@ -36,7 +38,7 @@ pub fn App() -> impl IntoView {
                         <Route path="/shows" view=Concerts>
                             <Route path="" view=ConcertsFallback/>
                             <Route path="/past" view=Past/>
-                            <Route path="/future" view=Future/>
+                            <Route path="/future" view=FutureEvents/>
                         </Route>
                         <Route path="/media" view=Media/>
                     </Routes>

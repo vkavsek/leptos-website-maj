@@ -1,4 +1,8 @@
-use leptos::{ev::MouseEvent, html::Div, *};
+use leptos::{
+    ev::MouseEvent,
+    html::{Div, Img},
+    *,
+};
 use leptos_meta::{Link, Title};
 
 #[component]
@@ -34,37 +38,6 @@ pub fn Home() -> impl IntoView {
     }
 }
 
-// TODO:
-// SEND MAIL
-//
-// #[server(SendMail)]
-// async fn send_mail() -> Result<(), ServerFnError> {
-//     use lettre::{
-//         message::header::ContentType, transport::smtp::authentication::Credentials,
-//         AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
-//     };
-//
-//     let email = Message::builder()
-//         .from("Vid <vkavsek@gmail.com>".parse().unwrap())
-//         .to("VK <vkavsek@gmail.com>".parse().unwrap())
-//         .subject("Hola")
-//         .header(ContentType::TEXT_PLAIN)
-//         .body("Hello".to_string())?;
-//
-//     let creds = Credentials::new("smtp_username".to_owned(), "smtp_password".to_owned());
-//
-//     // Open a remote connection to gmail
-//     let mailer = AsyncSmtpTransport::<Tokio1Executor>::relay("smtp.gmail.com")?
-//         .credentials(creds)
-//         .build();
-//
-//     // Send the email
-//     let _ = mailer.send(email).await?;
-//     log::info!("Sent mail!");
-//
-//     Ok(())
-// }
-
 #[component]
 fn Mail() -> impl IntoView {
     const EMAIL_ADDR: &str = "maj-kavsek@mail.com";
@@ -81,12 +54,15 @@ fn Mail() -> impl IntoView {
     let (copied, set_copied) = create_signal(false);
 
     let mail_ref = create_node_ref::<Div>();
+    let copy_ref = create_node_ref::<Img>();
 
     let mail_click = move |ev: MouseEvent| {
         ev.prevent_default();
         set_show_mail.set(true);
     };
     let click_copy = move |_| {
+        let copy_img = copy_ref.get().expect("the Dom should be built");
+        copy_img.set_src("/img/icon/kluk.svg");
         set_copied.set(true);
     };
 
@@ -99,24 +75,6 @@ fn Mail() -> impl IntoView {
     let close_popup = move |_| {
         set_show_mail.set(false);
     };
-
-    // let send_action = create_action(|_input: &()| send_mail());
-    //
-    // let send = move |ev: MouseEvent| {
-    //     ev.prevent_default();
-    //     send_action.dispatch(());
-    // };
-    //
-    // let t = move || {
-    //     if let Some(res) = send_action.value().get() {
-    //         match res {
-    //             Ok(_) => String::from("Sent MAIL!"),
-    //             Err(e) => format!("Error: {:?}", e),
-    //         }
-    //     } else {
-    //         "Nothing".to_string()
-    //     }
-    // };
 
     view! {
         <script>{copy_mail}</script>
@@ -132,7 +90,7 @@ fn Mail() -> impl IntoView {
                 <a href=mailto>{EMAIL_ADDR}</a>
                 <div class="copy-and-confirm">
                     <button class="copy-button" onclick="copy_mail()" on:click=click_copy>
-                        <img src="/img/icon/copy.svg" class="copy-img"/>
+                        <img src="/img/icon/copy.svg" class="copy-img" node_ref=copy_ref/>
                     </button>
                     <Show when=move || copied.get() fallback=|| {}>
                         <span class="span-copied">"copied"</span>
