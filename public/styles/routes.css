@@ -264,14 +264,6 @@
 #about-components {
   gap: 5px;
 }
-#about-wrap {
-  width: 100%;
-  overflow: hidden;
-  margin: 0;
-  display: grid;
-  justify-items: center;
-}
-
 @media screen and (orientation: portrait) and (max-height: 700px) {
   #about-components {
     height: 85%;
@@ -283,43 +275,30 @@
   }
 }
 
+#about-wrap {
+  width: 100%;
+  overflow: hidden;
+  margin: 0;
+}
+
 @media screen and (orientation: portrait) {
   /* #about-title { */
   /*   margin-top: 20%; */
   /* } */
   #about-wrap {
     max-height: 100%;
-  }
-  .about-images-scroller {
-    grid-auto-columns: 25%;
-    gap: 16px;
-    height: 65px;
-    padding: 16px;
-    width: 100%;
+    display: grid;
+    justify-items: center;
   }
 }
 @media screen and (orientation: landscape){
   #about-wrap {
     max-height: 100%;
-  }
-  .about-images-scroller {
-    grid-auto-columns: 15%;
-    gap: 32px;
-    width: 80%;
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: space-evenly;
   }
 }
-@media screen and (orientation: landscape) and (min-height: 700px) {
-  .about-images-scroller {
-    padding: 1rem;
-    height: 150px;
-  }
-}
-@media screen and (orientation: landscape) and (max-height: 700px){
-  .about-images-scroller {
-    height: 90px;
-  }
-}
-
 .fullscreen-container {
   position: absolute;
   top: 0;
@@ -343,7 +322,8 @@
   border-radius: 10px;
   height: 4rem;
   width: 4rem;
-  background-color: rgba(9, 4, 21, 0);
+  padding: 0;
+  background-color: rgba(9, 4, 21, 0.7);
   color: var(--maj-pink);
   cursor: pointer;
   position: absolute;
@@ -383,18 +363,12 @@
   transform: rotate(180deg);
 }
 
-.about-gallery {
-  display: flex;
-  justify-content: space-evenly;
-  align-items: center;
-}
-
 @media screen and (orientation: portrait) {
   .about-gallery {
+    display: grid;
+    justify-items: center; 
+    align-items: center;
     width: 100%;
-  }
-  .about-nav-button {
-    display: none;
   }
   .about-text{
     padding: 1rem;
@@ -404,16 +378,55 @@
   .about-text > * {
     padding: 0.5rem;
   }
+  .about-images-scroller {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 25%;
+    gap: 16px;
+    height: 65px;
+    width: 100%;
+    padding: 16px;
+    align-items: center;
+    margin-bottom: 30px;
+
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+  }
+  .snaps-inline {
+    scroll-snap-type: inline mandatory;
+    scroll-padding-inline: 1rem;
+  }
+  .snaps-inline > * {
+    scroll-snap-align: start;
+  }
+}
+@media screen and (orientation: landscape) {
+  .about-gallery {
+    height: 90%;
+    width: 40%;
+  }
+  .about-images-scroller {
+    display: grid;
+    grid-auto-rows: 35%;
+    gap: 32px;
+    width: 80%;
+    height: 80%;
+    justify-items: center;
+    margin-bottom: 30px;
+
+    overflow-y: auto;
+    overscroll-behavior-block: contain;
+  }
+  .snaps-inline {
+    scroll-snap-type: block mandatory;
+    scroll-padding-block: 30px;
+  }
+  .snaps-inline > * {
+    width: 80%;
+    scroll-snap-align: start;
+  }
 }
 @media screen and (orientation: landscape) and (min-height: 700px) {
-  .about-nav-button {
-    display: grid;
-    width: 3rem;
-    height: 6rem;
-  }
-  .about-nav-button > * {
-    display: block;
-  }
   .about-text{
     padding: 2rem;
     width: 80%;
@@ -422,12 +435,11 @@
   .about-text > * {
     padding: 1rem;
   }
+  .about-images-scroller {
+    padding: 2rem;
+  }
 }
 @media screen and (orientation: landscape) and (max-height: 700px) {
-  .about-nav-button {
-    width: 3rem;
-    height: 3rem;
-  }
   .about-text{
     padding: 2rem;
     width: 90%;
@@ -438,41 +450,11 @@
   }
 }
 
-.about-nav-button {
-  color: var(--maj-pink);
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-  border: 1px solid var(--maj-pink);
-  border-radius: 10px;
-  transition: 0.2s;
-  background-color: rgba(9, 4, 21, 0.7);
-}
-.about-nav-button:hover {
-  background-color: rgba(31, 12, 98, 1);
-  scale: 1.1;
-}
 .nav-button-img {
   width: 30px;
   height: 30px;
 }
 
-.about-images-scroller {
-  display: grid;
-  grid-auto-flow: column;
-  align-items: center;
-  margin-bottom: 30px;
-
-  overflow-x: auto;
-  overscroll-behavior-inline: contain;
-}
-.snaps-inline {
-  scroll-snap-type: inline mandatory;
-  scroll-padding-inline: 1rem;
-}
-.snaps-inline > * {
-  scroll-snap-align: start;
-}
 .image-about {
   border-radius: 10px;
   aspect-ratio: 16/9;
@@ -493,21 +475,29 @@
   background: rgba(9, 4, 25, 0.9);
 }
 
+.change-color-button {
+  all: unset;
+}
 
 @media screen and (orientation: portrait) {
   .change-color-button {
-    all: unset;
     width: 20%;
     bottom: 0.5rem;
     right: 0;
   }
 }
-@media screen and (orientation: landscape) {
+@media screen and (orientation: landscape) and (min-width: 800px) {
   .change-color-button {
-    all: unset;
     width: 10%;
     bottom: 2%;
     right: 2%;
+  }
+}
+@media screen and (orientation: landscape) and (max-width: 800px) {
+  .change-color-button {
+    width: 20%;
+    bottom: 0%;
+    right: 0%;
   }
 }
 .change-color-button {

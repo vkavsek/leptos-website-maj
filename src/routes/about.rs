@@ -8,11 +8,31 @@ use leptos::{
 use leptos_meta::{Link, Title};
 #[allow(unused)]
 use std::path::{Path, PathBuf};
-use web_sys::{ScrollBehavior, ScrollToOptions};
+use wasm_bindgen::JsValue;
+// use web_sys::{ScrollBehavior, ScrollToOptions};
 
+#[allow(unused)]
 enum Orient {
     Portrait,
     Landscape,
+}
+#[allow(unused)]
+impl Orient {
+    pub fn get() -> Result<Self, JsValue> {
+        let in_width = window()
+            .inner_width()?
+            .as_f64()
+            .expect("width should be a number");
+        let in_height = window()
+            .inner_height()?
+            .as_f64()
+            .expect("height should be a number");
+        if in_width > in_height {
+            Ok(Orient::Landscape)
+        } else {
+            Ok(Orient::Portrait)
+        }
+    }
 }
 enum Color {
     #[allow(dead_code)]
@@ -122,71 +142,54 @@ pub fn ImagesAbout() -> impl IntoView {
         },
     );
 
-    let gallery_ref = create_node_ref::<Div>();
-    let get_orient = move || {
-        let in_width = window()
-            .inner_width()
-            .expect("error getting inner width")
-            .as_f64()
-            .expect("width should be a number");
-        let in_height = window()
-            .inner_height()
-            .expect("error getting inner height")
-            .as_f64()
-            .expect("height should be a number");
-        if in_width > in_height {
-            Orient::Landscape
-        } else {
-            Orient::Portrait
-        }
-    };
+    let _gallery_ref = create_node_ref::<Div>();
 
-    let match_orient_el_width_gal_width = move || match get_orient() {
-        Orient::Portrait => (1.0, 5.),
-        Orient::Landscape => (0.33, 1.5),
-    };
+    // let match_orient_el_width_gal_width = move || match get_orient() {
+    //     Orient::Portrait => (1.0, 5.),
+    //     Orient::Landscape => (0.33, 1.5),
+    // };
 
-    let (counter, set_counter) = create_signal::<i32>(0);
-    let move_next = move |_| {
-        let gallery = gallery_ref.get().expect("the DOM should be built by now");
-        let (grid_element_width, gallery_width_multi) = match_orient_el_width_gal_width();
-        if (counter.get() as u32) < gallery.children().length() {
-            set_counter.update(|count| *count += 1);
-
-            let offset =
-                (counter.get() as f64) * gallery.offset_width() as f64 * grid_element_width;
-
-            // log::info!(
-            //     "Acceptable width: {}\nCurrent offset: {}",
-            //     gallery.offset_width() as f64 * gallery_width_multi,
-            //     offset
-            // );
-            //
-            if offset >= gallery.offset_width() as f64 * gallery_width_multi {
-                set_counter.update(|count| *count -= 1);
-            }
-            gallery.scroll_to_with_scroll_to_options(
-                ScrollToOptions::new()
-                    .left(offset)
-                    .behavior(ScrollBehavior::Smooth),
-            );
-        }
-    };
-    let move_back = move |_| {
-        let gallery = gallery_ref.get().expect("the DOM should be built by now");
-        let (grid_element_width, _) = match_orient_el_width_gal_width();
-        if counter.get() > 0 {
-            set_counter.update(|count| *count -= 1);
-
-            let offset =
-                (counter.get() as f64) * gallery.offset_width() as f64 * grid_element_width;
-            gallery.scroll_to_with_scroll_to_options(
-                ScrollToOptions::new()
-                    .left(offset)
-                    .behavior(ScrollBehavior::Smooth),
-            );
-        }
-    };
+    // let (counter, set_counter) = create_signal::<i32>(0);
+    // let move_next = move |_| {
+    //     let gallery = gallery_ref.get().expect("the DOM should be built by now");
+    //     let (grid_element_width, gallery_width_multi) = match_orient_el_width_gal_width();
+    //     if (counter.get() as u32) < gallery.children().length() {
+    //         set_counter.update(|count| *count += 1);
+    //
+    //         let offset =
+    //             (counter.get() as f64) * gallery.offset_width() as f64 * grid_element_width;
+    //
+    //         // log::info!(
+    //         //     "Acceptable width: {}\nCurrent offset: {}",
+    //         //     gallery.offset_width() as f64 * gallery_width_multi,
+    //         //     offset
+    //         // );
+    //         //
+    //         if offset >= gallery.offset_width() as f64 * gallery_width_multi {
+    //             set_counter.update(|count| *count -= 1);
+    //         }
+    //         gallery.scroll_to_with_scroll_to_options(
+    //             ScrollToOptions::new()
+    //                 .left(offset)
+    //                 .behavior(ScrollBehavior::Smooth),
+    //         );
+    //     }
+    // };
+    // let move_back = move |_| {
+    //     let gallery = gallery_ref.get().expect("the DOM should be built by now");
+    //     let (grid_element_width, _) = match_orient_el_width_gal_width();
+    //     if counter.get() > 0 {
+    //         set_counter.update(|count| *count -= 1);
+    //
+    //         let offset =
+    //             (counter.get() as f64) * gallery.offset_width() as f64 * grid_element_width;
+    //         gallery.scroll_to_with_scroll_to_options(
+    //             ScrollToOptions::new()
+    //                 .left(offset)
+    //                 .behavior(ScrollBehavior::Smooth),
+    //         );
+    //     }
+    // };
 
     // Click on image to make it fullscreen.
     let (show_img, set_show_img) = create_signal(false);
@@ -244,7 +247,12 @@ pub fn ImagesAbout() -> impl IntoView {
                 <div style:display="flex" node_ref=fullscreen_ref class="fullscreen-img-buttons">
                     <img src=path class="fullscreen-img"/>
                     <button on:click=close_fullscreen class="fullscreen-close">
-                        <img src="/img/icon/cross.svg" alt="close" style:width="1rem" style:opacity="70%"/>
+                        <img
+                            src="/img/icon/cross.svg"
+                            alt="close"
+                            style:width="1rem"
+                            style:opacity="70%"
+                        />
                     </button>
                     <button on:click=fullscreen_back class="fullscreen-nav-button back-button">
                         <img class="nav-button-img back-img" src="/img/icon/back.svg" alt="back"/>
@@ -272,10 +280,10 @@ pub fn ImagesAbout() -> impl IntoView {
             <div class="fullscreen-container">{fullscreen_img}</div>
         </Show>
         <div class="about-gallery">
-            <button on:click=move_back class="about-nav-button">
-                <img class="nav-button-img" src="/img/icon/back.svg" alt="back"/>
-            </button>
-            <div node_ref=gallery_ref class="about-images-scroller snaps-inline">
+            // <button on:click=move_back class="about-nav-button">
+            // <img class="nav-button-img" src="/img/icon/back.svg" alt="back"/>
+            // </button>
+            <div node_ref=_gallery_ref class="about-images-scroller snaps-inline">
                 // TODO: Add proper loading screen with Transition/Suspense
                 <Suspense fallback=move || {
                     view! { <p>"Loading"</p> }
@@ -313,14 +321,14 @@ pub fn ImagesAbout() -> impl IntoView {
 
                 </Suspense>
             </div>
-            <button on:click=move_next class="about-nav-button">
-                <img
-                    class="nav-button-img"
-                    src="/img/icon/back.svg"
-                    style:transform="rotate(180deg)"
-                    alt="back"
-                />
-            </button>
+        // <button on:click=move_next class="about-nav-button">
+        // <img
+        // class="nav-button-img"
+        // src="/img/icon/back.svg"
+        // style:transform="rotate(180deg)"
+        // alt="back"
+        // />
+        // </button>
         </div>
     }
 }
