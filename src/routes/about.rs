@@ -244,7 +244,7 @@ pub fn ImagesAbout() -> impl IntoView {
                 <div style:display="flex" node_ref=fullscreen_ref class="fullscreen-img-buttons">
                     <img src=path class="fullscreen-img"/>
                     <button on:click=close_fullscreen class="fullscreen-close">
-                        "close"
+                        <img src="/img/icon/cross.svg" alt="close" style:width="1rem" style:opacity="70%"/>
                     </button>
                     <button on:click=fullscreen_back class="fullscreen-nav-button back-button">
                         <img class="nav-button-img back-img" src="/img/icon/back.svg" alt="back"/>

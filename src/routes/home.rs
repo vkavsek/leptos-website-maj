@@ -116,7 +116,7 @@ fn Mail() -> impl IntoView {
             <div class="modal-overlay"></div>
             <div class="modal" node_ref=mail_ref>
                 <button class="close-button" on:click=close_popup>
-                    "close"
+                    <img src="/img/icon/cross.svg" alt="close" style:width="1rem" style:opacity="70%"/>
                 </button>
                 <a href=mailto>{EMAIL_ADDR}</a>
                 <div class="copy-and-confirm">
