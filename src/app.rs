@@ -23,6 +23,7 @@ pub fn App() -> impl IntoView {
         <Stylesheet id="font-2" href="/styles/fonts/squabslab.css"/>
         <Stylesheet id="leptos" href="/styles/index.css"/>
         <Link rel="preload" href="/img/bg/bg.webp" as_="image"/>
+        <Link rel="shortcut icon" type_="image/svg" href="/img/trobenta.svg"/>
         <Title formatter/>
         <Meta name="viewport" content="width=device-width, initial-scale=1"/>
 

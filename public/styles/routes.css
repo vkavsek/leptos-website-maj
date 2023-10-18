@@ -342,7 +342,7 @@
 .fullscreen-nav-button {
   background-color: rgba(9, 4, 21, 0.7);
   border-radius: 15px;
-  border: 1px solid var(--maj-pink);
+  /* border: 1px solid var(--maj-pink); */
   height: 20%;
   cursor: pointer;
 }
@@ -419,7 +419,7 @@
   }
   .snaps-inline {
     scroll-snap-type: block mandatory;
-    scroll-padding-block: 30px;
+    scroll-padding-block: 8px;
   }
   .snaps-inline > * {
     width: 80%;

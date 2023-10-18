@@ -43,6 +43,7 @@ pub fn Concerts() -> impl IntoView {
 #[component]
 pub fn ConcertsFallback() -> impl IntoView {
     view! {
+        <Link rel="icon" href="/img/nota.svg" type_="image/svg"/>
         <p class="shows-no-shows">"Select past or future events by clicking on the link above!"</p>
     }
 }
@@ -66,6 +67,7 @@ pub fn Past() -> impl IntoView {
         })
         .map(|show| {
             view! {
+                <Link rel="icon" href="/img/nota.svg" type_="image/svg"/>
                 <li class="show-container">
                     <p>{show.date.as_ref().unwrap()}</p>
                     <p>{show.name.as_ref().unwrap()}</p>
@@ -135,6 +137,7 @@ pub fn FutureEvents() -> impl IntoView {
     let check = after_view.is_some();
 
     view! {
+        <Link rel="icon" href="/img/nota.svg" type_="image/svg"/>
         <Show
             when=move || check
             fallback=|| {
