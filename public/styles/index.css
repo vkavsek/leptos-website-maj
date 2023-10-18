@@ -74,7 +74,7 @@ iframe {
   border-radius: 20px;
 }
 
-@media (orientation: portrait) {
+@media screen and (orientation: portrait) {
   .bg-wrapper {
     display: flex;
   }
@@ -92,7 +92,7 @@ iframe {
   }
 }
 
-@media (orientation: landscape) {
+@media screen and (orientation: landscape) {
   .bg-wrapper {
     display: flex;
   }
@@ -129,7 +129,7 @@ iframe {
   right: 0;
   left: 0;
 
-  background-image: url("/img/bg/bg.png");
+  background-image: url("/img/bg/bg_redux.png");
   background-position: 46% 18%;
   background-size: 290%;
   background-repeat: no-repeat;
@@ -139,7 +139,7 @@ iframe {
   display: grid;
   justify-items: center;
 }
-@media (orientation: portrait) {
+@media screen and (orientation: portrait) {
   .components{
     height: 80%;
     width: 100%;
@@ -150,7 +150,7 @@ iframe {
     margin-top: 13%;
   }
 }
-@media (orientation: landscape) {
+@media screen and (orientation: landscape) {
   .components{
     margin-left: 15%;
     height: 100%;

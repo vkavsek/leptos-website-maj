@@ -44,7 +44,7 @@
     width: 2.3vw;
   }
   .audio-player:hover {
-    width: 20%;
+    width: 30%;
   }
 }
 @media screen and (orientation: landscape) and (max-width: 700px){
@@ -81,6 +81,12 @@
     background: rgba(255, 57, 136, .6);
     height: 8%;
     padding-left: 30px;
+  }
+  .audio-player > * {
+    transition: 0.2s;
+  }
+  .audio-player:hover > *{
+    margin: 10px;
   }
   .time-container {
     width: 90%;
@@ -206,7 +212,7 @@
   }
 }
 @media screen and (orientation: landscape) and (min-width: 800px){
-  .controls {
+  .controls:hover {
     width: 30%;
   }
   .ico-vol-med {
@@ -219,7 +225,7 @@
   }
 }
 @media screen and (orientation: landscape) and (max-width: 800px) {
-  .controls {
+  .controls:hover {
     width: 30%;
   }
   .ico-vol-med {

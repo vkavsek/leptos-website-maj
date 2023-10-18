@@ -668,7 +668,7 @@
 }
 
 /*  TODO: Make this better !  */
-@media(orientation: portrait) {
+@media screen and (orientation: portrait) {
   #media-contents {
     overflow: auto;
     grid-template-columns: repeat(3, 1fr);
@@ -690,7 +690,7 @@
     grid-row: span 2;
   }
 }
-@media(orientation: landscape) {
+@media screen and (orientation: landscape) {
   #media-components {
     overflow: auto;
     overflow-x: hidden;

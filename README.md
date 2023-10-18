@@ -1,5 +1,4 @@
-TODO: 
-  add a check mark for copied. 
-  about me, click for yellow : ALMOST
-  images improve!
-  add images to the media page
+## TODO: 
+  * fix audio player
+  * fix background image
+  * fix leptos_image ? 
