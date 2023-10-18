@@ -1,27 +1,25 @@
 /* ————————————————————— AUDIO ————————————————————— */
 
 .audio-player {
+	display: flex;
+	max-height: 95%;
+
 	text-align: center;
 	background: rgba(9, 4, 21, 0.1);
 	transition: 0.3s;
-
-	max-height: 95%;
-
-	display: flex;
   align-items: center;
+  font-size: 0.75rem;
 }
 
-@media (orientation: portrait) {
+@media screen and (orientation: portrait) {
   .audio-player {
-    position: absolute;
     height: 6rem;
     width: 100%;
-	  justify-content: space-around;
-    bottom: 7vh;
-    background-color: rgba(9, 4, 21, 0.7);
-    /* background: rgba(255, 57, 136, .6); */
+    position: absolute;
+    bottom: 0;
     left: 0;
-    padding-left: 30px;
+	  justify-content: space-evenly;
+    background-color: rgba(9, 4, 21, 0.7);
   }
   .play {
     height: 4vh;
@@ -32,11 +30,37 @@
     width: 4vh;
   }
   .time-container {
-    width: 70%;
+    width: 60%;
     padding-top: 10px;
   }
 }
-@media (orientation: landscape) {
+@media screen and (orientation: landscape) and (min-width: 700px){
+  .play {
+    height: 2.3vw;
+    width: 2.3vw;
+  }
+  .pause {
+    height: 2.3vw;
+    width: 2.3vw;
+  }
+  .audio-player:hover {
+    width: 20%;
+  }
+}
+@media screen and (orientation: landscape) and (max-width: 700px){
+  .play {
+    height: 3.3vw;
+    width: 3.3vw;
+  }
+  .pause {
+    height: 3.3vw;
+    width: 3.3vw;
+  }
+  .audio-player:hover {
+    width: 40%;
+  }
+}
+@media screen and (orientation: landscape) {
   .audio-player {
     position: fixed;
 
@@ -53,17 +77,8 @@
     left: 0;
     top: 4%;
   }
-  .play {
-    height: 2.3vw;
-    width: 2.3vw;
-  }
-  .pause {
-    height: 2.3vw;
-    width: 2.3vw;
-  }
   .audio-player:hover {
     background: rgba(255, 57, 136, .6);
-    width: 20%;
     height: 8%;
     padding-left: 30px;
   }
@@ -72,16 +87,6 @@
   }
   .audio-player > *:not(.play-container) {
     display: none;
-  }
-}
-@media screen and (orientation: landscape) and (max-height: 600px) {
-  .audio-player {
-    height: 1rem;
-  }
-  .audio-player:hover {
-    width: 30%;
-    height: 4%;
-    padding-left: 30px;
   }
 }
 
@@ -127,9 +132,6 @@
   display: unset;
 }
 
-.time-container {
-  margin: 30px;
-}
 .timeline {
 	height: 8px;
 	width: 100%;
@@ -166,9 +168,6 @@
 	padding: 4px;
 }
 
-.controls {
-	width: 30%;
-}
 .audio-player:hover .controls {
   display: unset;
 }
@@ -189,7 +188,10 @@
 	transform: translate(0px, -5px);
 }
 
-@media (orientation: portrait) {
+@media screen and (orientation: portrait) {
+  .controls:hover {
+    width: 20%;
+  }
   .ico-vol-med {
     height: 3vh;
     width: 3vh;
@@ -203,7 +205,10 @@
     display: grid;
   }
 }
-@media (orientation: landscape) {
+@media screen and (orientation: landscape) and (min-width: 800px){
+  .controls {
+    width: 30%;
+  }
   .ico-vol-med {
     height: 2vw;
     width: 2vw;
@@ -212,6 +217,21 @@
     height: 2vw;
     width: 2vw;
   }
+}
+@media screen and (orientation: landscape) and (max-width: 800px) {
+  .controls {
+    width: 30%;
+  }
+  .ico-vol-med {
+    height: 2.5vw;
+    width: 2.5vw;
+  }
+  .ico-vol-mute {
+    height: 2.5vw;
+    width: 2.5vw;
+  }
+}
+@media screen and (orientation: landscape) {
   .volume-container {
     width: 100%;
     display: none;

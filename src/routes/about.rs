@@ -4,7 +4,7 @@ use leptos::{
     html::{Button, Div},
     *,
 };
-use leptos_image::*;
+// use leptos_image::*;
 use leptos_meta::{Link, Title};
 #[allow(unused)]
 use std::path::{Path, PathBuf};
@@ -108,7 +108,6 @@ pub fn About() -> impl IntoView {
     }
 }
 
-// TODO: implement leptos_image and change the architecture
 #[component]
 pub fn ImagesAbout() -> impl IntoView {
     let files = create_resource(
@@ -189,13 +188,6 @@ pub fn ImagesAbout() -> impl IntoView {
         }
     };
 
-    // We need this because Transition / Suspense aren't currently working
-    // TODO: Change to Suspense when possible
-    let (loaded, set_loaded) = create_signal(false);
-    create_effect(move |_| {
-        request_animation_frame(move || set_loaded.set(true));
-    });
-
     // Click on image to make it fullscreen.
     let (show_img, set_show_img) = create_signal(false);
     let (current_img, set_current_img) = create_signal::<Option<String>>(None);
@@ -246,30 +238,18 @@ pub fn ImagesAbout() -> impl IntoView {
         back();
     };
 
-    // TODO:
-    let keydown_next = move |ev: leptos::ev::KeyboardEvent| {
-        if ev.key().contains("Enter") {
-            next();
-        }
-    };
-    let keydown_back = |_| {};
-
     let fullscreen_img = move || {
         if let Some(path) = current_img.get() {
             view! {
-                <div
-                    style:display="flex"
-                    node_ref=fullscreen_ref
-                    class="fullscreen-img-buttons"
-                >
+                <div style:display="flex" node_ref=fullscreen_ref class="fullscreen-img-buttons">
                     <img src=path class="fullscreen-img"/>
                     <button on:click=close_fullscreen class="fullscreen-close">
                         "close"
                     </button>
-                    <button on:click=fullscreen_back on:keydown=keydown_next class="fullscreen-nav-button back-button">
+                    <button on:click=fullscreen_back class="fullscreen-nav-button back-button">
                         <img class="nav-button-img back-img" src="/img/icon/back.svg" alt="back"/>
                     </button>
-                    <button on:click=fullscreen_next on:keydown=keydown_back class="fullscreen-nav-button next-button">
+                    <button on:click=fullscreen_next class="fullscreen-nav-button next-button">
                         <img class="nav-button-img next-img" src="/img/icon/back.svg" alt="back"/>
                     </button>
                 </div>
@@ -296,8 +276,9 @@ pub fn ImagesAbout() -> impl IntoView {
                 <img class="nav-button-img" src="/img/icon/back.svg" alt="back"/>
             </button>
             <div node_ref=gallery_ref class="about-images-scroller snaps-inline">
-                <Show when=move || {
-                    loaded.get()
+                // TODO: Add proper loading screen with Transition/Suspense
+                <Suspense fallback=move || {
+                    view! { <p>"Loading"</p> }
                 }>
                     {move || {
                         files
@@ -313,16 +294,16 @@ pub fn ImagesAbout() -> impl IntoView {
                                             set_show_img.set(true);
                                         };
                                         view! {
-                                            // TODO: Try to avoid cloning 3 times ...
                                             <a on:click=click_image>
-                                                <Image
-                                                    src=file
-                                                    blur=false
-                                                    width=150
-                                                    height=150
-                                                    quality=50
-                                                    class="image-about"
-                                                />
+                                                <img src=file class="image-about"/>
+                                            // <Image
+                                            // src=file
+                                            // blur=false
+                                            // width=250
+                                            // height=250
+                                            // quality=70
+                                            // class="image-about"
+                                            // />
                                             </a>
                                         }
                                     })
@@ -330,7 +311,7 @@ pub fn ImagesAbout() -> impl IntoView {
                             })
                     }}
 
-                </Show>
+                </Suspense>
             </div>
             <button on:click=move_next class="about-nav-button">
                 <img
