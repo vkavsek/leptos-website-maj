@@ -22,6 +22,7 @@ pub fn App() -> impl IntoView {
         <Stylesheet id="font-1" href="/styles/fonts/ibm-plex.css"/>
         <Stylesheet id="font-2" href="/styles/fonts/squabslab.css"/>
         <Stylesheet id="leptos" href="/styles/index.css"/>
+        <Link rel="preload" href="/img/bg/bg.webp" as_="image"/>
         <Title formatter/>
         <Meta name="viewport" content="width=device-width, initial-scale=1"/>
 
