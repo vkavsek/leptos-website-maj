@@ -121,7 +121,7 @@ fn Mail() -> impl IntoView {
                 <a href=mailto>{EMAIL_ADDR}</a>
                 <div class="copy-and-confirm">
                     <button class="copy-button" onclick="copy_mail()" on:click=click_copy>
-                        <img src="/img/icon/copy.svg" class="copy-img" node_ref=copy_ref/>
+                        <img src="/img/icon/copy.svg" class="copy-img" alt="copy" node_ref=copy_ref/>
                     </button>
                     <Show when=move || copied.get() fallback=|| {}>
                         <span class="span-copied">"copied"</span>

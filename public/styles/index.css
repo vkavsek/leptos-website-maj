@@ -50,7 +50,7 @@
 body {
   margin: 0;
   padding: 0;
-  background-color: rgb(10, 10, 10);
+  background-color: rgba(9, 4, 21, 1);
   font-family: 'IBM Plex Mono', sans-serif;
   color: var(--maj-yel);
  

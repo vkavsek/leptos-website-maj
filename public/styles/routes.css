@@ -553,10 +553,19 @@
   display: flex;
   flex-direction: column;
   width: 98%;
-  max-height: 65%;
+  max-height: 90%;
   overflow: hidden;
 }
-
+@media screen and (orientation: portrait) {
+  #shows-contents {
+    height: 85%;
+  }
+}
+@media screen and (orientation: landscape) {
+  #shows-contents {
+    height: 62%;
+  }
+}
 .shows-nav {
   margin: 0;
   width: 100%;
