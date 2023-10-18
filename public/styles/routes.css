@@ -293,7 +293,7 @@
   .about-images-scroller {
     grid-auto-columns: 25%;
     gap: 16px;
-    height: 63px;
+    height: 65px;
     padding: 16px;
     width: 100%;
   }
