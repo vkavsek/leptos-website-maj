@@ -10,8 +10,11 @@
 }
 
 ::-webkit-scrollbar { 
-  width: 9px;
-  height: 9px;
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-corner { 
+  background: transparent;
 }
 ::-webkit-scrollbar-track {
   background: rgba(9, 4, 21, 0.6);

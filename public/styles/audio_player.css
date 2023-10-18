@@ -8,7 +8,6 @@
 	background: rgba(9, 4, 21, 0.1);
 	transition: 0.3s;
   align-items: center;
-  font-size: 0.75rem;
 }
 
 @media screen and (orientation: portrait) {
@@ -20,6 +19,7 @@
     left: 0;
 	  justify-content: space-evenly;
     background-color: rgba(9, 4, 21, 0.7);
+    font-size: 0.75rem;
   }
   .play {
     height: 4vh;
@@ -74,6 +74,7 @@
 
     padding: 23px;
     padding-left: 5%;
+    font-size: 1rem;
     left: 0;
     top: 4%;
   }
