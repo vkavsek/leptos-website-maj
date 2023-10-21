@@ -42,7 +42,7 @@ pub fn AudioPlayer() -> impl IntoView {
 
     // Set Song Source
     let song_src = move || {
-        let def = "/music/Aya_Sean_edit.mp3".to_string();
+        let def = "/music/Practical_Anxiety_MASTER.mp3".to_string();
         if let Some(name) = names.get().get(selector.get()) {
             format!("/music/{}", name)
         } else {

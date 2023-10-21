@@ -14,7 +14,6 @@ use leptos_router::*;
 #[component]
 pub fn App() -> impl IntoView {
     provide_meta_context();
-    leptos_image::provide_image_context();
     let bg_div_ref = create_node_ref::<Div>();
 
     let formatter = |text| format!("{text} - Maj Kavšek");

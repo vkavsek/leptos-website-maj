@@ -1,6 +1,6 @@
 [package]
 name = "maj-fullstack"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 
 [lib]
@@ -14,8 +14,7 @@ cfg-if = "1"
 leptos = { version = "0.5" }
 leptos_axum = { version = "0.5", optional = true }
 leptos_meta = { version = "0.5" }
-leptos_router = { version = "0.5" }
-leptos_image = { path = "./leptos_image/" }
+leptos_router = { version = "0.5.*" }
 leptos-use = "0.7"
 log = "0.4"
 simple_logger = "4"
@@ -46,7 +45,6 @@ ssr = [
   "leptos/ssr",
   "leptos_meta/ssr",
   "leptos_router/ssr",
-  "leptos_image/ssr",
   "leptos-use/ssr",
   "dep:tracing",
 ]
@@ -79,7 +77,7 @@ site-pkg-dir = "pkg"
 assets-dir = "public"
 
 # The IP and port (ex: 127.0.0.1:3000) where the server serves the content. Use it in your server setup.
-site-addr = "0.0.0.0:8080"
+site-addr = "0.0.0.0:3000"
 
 # The port to use for automatic reload monitoring
 reload-port = 8081

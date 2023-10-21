@@ -4,7 +4,6 @@ use leptos::{
     html::{Button, Div},
     *,
 };
-// use leptos_image::*;
 use leptos_meta::{Link, Title};
 #[allow(unused)]
 use std::path::{Path, PathBuf};
@@ -304,14 +303,6 @@ pub fn ImagesAbout() -> impl IntoView {
                                         view! {
                                             <a on:click=click_image>
                                                 <img src=file class="image-about"/>
-                                            // <Image
-                                            // src=file
-                                            // blur=false
-                                            // width=250
-                                            // height=250
-                                            // quality=70
-                                            // class="image-about"
-                                            // />
                                             </a>
                                         }
                                     })

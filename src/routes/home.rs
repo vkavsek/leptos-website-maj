@@ -41,7 +41,7 @@ pub fn Home() -> impl IntoView {
 
 #[component]
 fn Mail() -> impl IntoView {
-    const EMAIL_ADDR: &str = "maj-kavsek@mail.com";
+    const EMAIL_ADDR: &str = "kavsekmaj@gmail.com";
     let mailto = || format!("mailto:{}", EMAIL_ADDR);
     let copy_mail = format!(
         r#"function copy_mail() {{
@@ -189,9 +189,18 @@ impl LinkLocation {
     /// Returns a tuple in the form of: (HREF_TARGET, IMAGE_LOCATION)
     fn process(&self) -> (&'static str, &'static str) {
         match self {
-            LinkLocation::Fb => ("https://www.facebook.com", "/img/contact_icons/FB.svg"),
-            LinkLocation::TikTok => ("https://www.tiktok.com", "/img/contact_icons/TIKTOK.svg"),
-            LinkLocation::Ig => ("https://www.instagram.com", "/img/contact_icons/insta.svg"),
+            LinkLocation::Fb => (
+                "https://www.facebook.com/majkavsek",
+                "/img/contact_icons/FB.svg",
+            ),
+            LinkLocation::TikTok => (
+                "https://www.tiktok.com/@majkavsek?lang=en",
+                "/img/contact_icons/TIKTOK.svg",
+            ),
+            LinkLocation::Ig => (
+                "https://www.instagram.com/maj.kavsek/",
+                "/img/contact_icons/insta.svg",
+            ),
         }
     }
 }

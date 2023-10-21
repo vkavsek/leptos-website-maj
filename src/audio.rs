@@ -13,12 +13,9 @@ pub fn AudioWrapper() -> impl IntoView {
     // Only keep the player, cause that's all that you need, simplify the player so it's easier to
     // maintain.
     let names = vec![
+        "Practical_Anxiety_MASTER.mp3",
         "Aya_Sean_edit-Mark_Babin.mp3",
-        "Dumek-Mark_Babin-Forest_2022.mp3",
         "Silicon-Mark.mp3",
-        "Peach_Scone-Hobo_Johnson.mp3",
-        "Fegs_Final-Mark_Babin.mp3",
-        "Peach_Scone_(Live)-Hobo_Johnson.mp3",
     ];
     let names = names
         .into_iter()

@@ -340,27 +340,36 @@
   max-width: 90%;
 }
 .fullscreen-nav-button {
+  all: unset;
   background-color: rgba(9, 4, 21, 0.7);
   border-radius: 15px;
-  /* border: 1px solid var(--maj-pink); */
+  border: 1px solid var(--maj-pink);
   height: 20%;
   cursor: pointer;
 }
 .fullscreen-nav-button:hover {
   background-color: rgba(31, 12, 98, 1);
 }
+
 .fullscreen-nav-button.next-button {
   position: absolute;
-  right: 0;
+  right: 7%;
   top: 40%;
 }
 .fullscreen-nav-button.back-button {
   position: absolute;
-  left: 0;
+  left: 7%;
   top: 40%;
 }
+.fullscreen-nav-button > * {
+  padding: 1rem;
+}
+.back-img {
+  transform: scale(1.2);
+}
+
 .next-img {
-  transform: rotate(180deg);
+  transform: scale(1.2) rotate(180deg);
 }
 
 @media screen and (orientation: portrait) {
@@ -443,7 +452,7 @@
   .about-text{
     padding: 2rem;
     width: 90%;
-    max-height: 50%;
+    max-height: 75%;
   }
   .about-text > * {
     padding: 1rem;

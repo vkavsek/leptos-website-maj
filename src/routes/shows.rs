@@ -169,8 +169,8 @@ const SHOWS_JSON: &str = r#"
   "location": "Ljubljana, Slovenia"
 },{
   "date": "23.06.2023",
-  "name": "Collector",
-  "club": "Ramiro Zayas - Donau115",
+  "name": "Collector - Ramiro Zayas",
+  "club": "Donau115",
   "location": "Berlin, Germany"
 },{
   "date": "17.06.2023",
