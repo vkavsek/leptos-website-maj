@@ -115,6 +115,10 @@
  }
 }
 .modal { 
+   top: 5%;
+   bottom: 5%;
+   left: 5%;
+   right: 5%;
    position: fixed;
    display: flex;
    flex-direction: column;
@@ -254,10 +258,94 @@
   font-family: 'IBM Plex Mono';
   color: var(--maj-pink);
   border: 1px solid rgba(205,46,112,0.7);
+  border-radius: 8px;
   background-color: rgba(0, 0, 0, 0);
 }
 .link-buttons button:hover {
   background-color: rgba(15, 8, 80, 0.9);
+}
+
+.email-form {
+  font-size: 0.9rem;
+  height: 80%;
+  width: 80%;
+  display: grid;
+  grid-template-rows: 1fr 1fr 1fr 6fr 0.5fr;
+  justify-items: center;
+  gap: 12px;
+}
+.email-form > * {
+  width: 100%;
+}
+.form-div {
+  display: grid;
+  justify-items: center;
+}
+.form-div > * {
+  height: fit-content;
+  width: 100%;
+}
+
+input[type="text"] {
+  width: 100%;
+  font-family: 'IBM Plex Mono', sans-serif;
+  padding: 5px;
+}
+input[type="email"] {
+  width: 100%;
+  font-family: 'IBM Plex Mono', sans-serif;
+  padding: 5px;
+}
+
+.form-div > input {
+  border: none;
+  font-size: 0.9rem;
+  background-color: rgba(10, 30, 51, 1);
+  color: var(--maj-yel);
+  border-radius: 10px;
+  width: 100%;
+}
+.email-form > textarea {
+  resize: none;
+  font-size: 0.9rem;
+  background-color: rgba(10, 30, 51, 1);
+  color: var(--maj-yel);
+  padding: 1rem;
+  border: none;
+  border-radius: 10px;
+  width: 100%;
+}
+
+.submit-button {
+  font-weight: 800;
+  font-size: 1.2rem;
+  border: none;
+  border-radius: 10px;
+  background-color: rgba(10, 30, 51, 1);
+  color: var(--maj-yel);
+  font-family: 'IBM Plex Mono', sans-serif;
+  padding: 10px;
+  cursor: pointer;
+  transition: 0.2s ease-in-out;
+}
+.submit-button:hover {
+  background-color: rgba(15, 20, 80, 1);
+}
+submit-button:active {
+  background-color: rgba(45, 8, 80, 1);
+}
+
+.email-sending {
+  width: 30px;
+  height: 30px;
+  background: linear-gradient(var(--maj-yel), var(--maj-pink));
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
 /* routes/about.rs ------ ABOUT ME LAYOUT */
