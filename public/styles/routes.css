@@ -207,10 +207,10 @@
 }
 @media screen and (orientation: landscape) and (min-height: 700px){
   .link-modal {
-    left: 35%;
-    right: 35%;
-    top: 36%;
-    bottom: 36%;
+    left: 25%;
+    right: 25%;
+    top: 26%;
+    bottom: 26%;
   }
   .link-modal p {
     padding: 10px;
@@ -798,6 +798,9 @@ submit-button:active {
 
 /*  TODO: Make this better !  */
 @media screen and (orientation: portrait) {
+  #media-components {
+    height: 90%;
+  }
   #media-contents {
     overflow: auto;
     grid-template-columns: repeat(3, 1fr);

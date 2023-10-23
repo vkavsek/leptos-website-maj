@@ -80,6 +80,7 @@ iframe {
 @media screen and (orientation: portrait) {
   .bg-wrapper {
     display: flex;
+    background-size: 300%;
   }
   nav {
     width: 100%;
@@ -98,6 +99,7 @@ iframe {
 @media screen and (orientation: landscape) {
   .bg-wrapper {
     display: flex;
+    background-size: 150%;
   }
   nav {
     width: 12%;
@@ -132,9 +134,8 @@ iframe {
   right: 0;
   left: 0;
 
-  background-image: url("/img/bg/bg.webp");
-  background-position: 46% 18%;
-  background-size: 290%;
+  background-image: url("/img/bg/bg_small.webp");
+  background-position: 48% 8%;
   background-repeat: no-repeat;
 }
 /* routes.rs ------ GENERAL LAYOUT */

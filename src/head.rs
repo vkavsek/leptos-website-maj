@@ -14,16 +14,16 @@ pub fn Head(
     };
 
     let click_home = move |_| {
-        do_style(bg_div_ref, "background-position", "46% 18%");
+        do_style(bg_div_ref, "background-position", "48% 8%");
     };
     let click_about = move |_| {
         do_style(bg_div_ref, "background-position", "35% 60%");
     };
     let click_concerts = move |_| {
-        do_style(bg_div_ref, "background-position", "0 top");
+        do_style(bg_div_ref, "background-position", "0 bottom");
     };
     let click_media = move |_| {
-        do_style(bg_div_ref, "background-position", "50% 90%");
+        do_style(bg_div_ref, "background-position", "100% 90%");
     };
 
     view! {
