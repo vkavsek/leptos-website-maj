@@ -12,7 +12,7 @@
 
 @media screen and (orientation: portrait) {
   .audio-player {
-    height: 6rem;
+    height: 4rem;
     width: 100%;
     position: absolute;
     bottom: 0;

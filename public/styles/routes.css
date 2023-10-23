@@ -24,7 +24,7 @@
   }
   .all-contacts {
     position: relative;
-    bottom: 6rem;
+    bottom: 4rem;
     width: 100%;
   }
   .all-contacts > * {
@@ -441,23 +441,14 @@ submit-button:active {
 
 .fullscreen-nav-button.next-button {
   position: absolute;
-  right: 7%;
   top: 40%;
 }
 .fullscreen-nav-button.back-button {
   position: absolute;
-  left: 7%;
   top: 40%;
 }
-.fullscreen-nav-button > * {
-  padding: 1rem;
-}
-.back-img {
-  transform: scale(1.2);
-}
-
 .next-img {
-  transform: scale(1.2) rotate(180deg);
+  transform: rotate(180deg);
 }
 
 @media screen and (orientation: portrait) {
@@ -470,7 +461,7 @@ submit-button:active {
   .about-text{
     padding: 1rem;
     width: 85vw;
-    max-height: 75%;
+    max-height: 100%;
   }
   .about-text > * {
     padding: 0.5rem;
@@ -496,6 +487,15 @@ submit-button:active {
   .snaps-inline > * {
     scroll-snap-align: start;
   }
+  .fullscreen-nav-button.next-button {
+    right: 0;
+  }
+  .fullscreen-nav-button.back-button {
+    left: 0;
+  }
+  .fullscreen-nav-button > * {
+    padding: 0.5rem;
+  }
 }
 @media screen and (orientation: landscape) {
   .about-gallery {
@@ -504,10 +504,9 @@ submit-button:active {
   }
   .about-images-scroller {
     display: grid;
-    grid-auto-rows: 35%;
+    grid-auto-rows: 25%;
     gap: 32px;
     width: 80%;
-    height: 80%;
     justify-items: center;
     margin-bottom: 30px;
 
@@ -522,8 +521,26 @@ submit-button:active {
     width: 80%;
     scroll-snap-align: start;
   }
+  .fullscreen-nav-button.next-button {
+    right: 5vw;
+  }
+  .fullscreen-nav-button.back-button {
+    left: 5vw;
+  }
+  .fullscreen-nav-button > * {
+    padding: 1rem;
+  }
+  .back-img {
+    transform: scale(1.2);
+  }
+  .next-img {
+    transform: scale(1.2) rotate(180deg);
+  }
 }
 @media screen and (orientation: landscape) and (min-height: 700px) {
+  .about-images-scroller {
+    height: 80%;
+  }
   .about-text{
     padding: 2rem;
     width: 80%;
@@ -537,6 +554,9 @@ submit-button:active {
   }
 }
 @media screen and (orientation: landscape) and (max-height: 700px) {
+  .about-images-scroller {
+    height: 100%;
+  }
   .about-text{
     padding: 2rem;
     width: 90%;
@@ -679,7 +699,7 @@ submit-button:active {
   padding: 10px;
 
   text-align: center;
-  font-size: 1.6rem;
+  font-size: 1.45rem;
 
   cursor: pointer;
   width: 100% 
@@ -702,7 +722,7 @@ submit-button:active {
   border-radius: 30px;
   border-top-left-radius: 0;
   border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
+  border-bottom-right-radius: 15px;
   display: flex;
 
   font-size: 1rem;
@@ -733,20 +753,20 @@ submit-button:active {
 }
 #show-container-id > * {
   color: var(--maj-yel);
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   background: rgba(9, 4, 21, 1);
 }
 .show-container > * {
   color: var(--maj-pink);
   padding: 15px 10px;
   text-align: center;
-  font-size: 1rem;
+  font-size: 0.9rem;
 }
 .shows-no-shows {
   width: 100%;
   padding-block: 8rem;
   text-align: center;
-  font-size: 1.6rem;
+  font-size: 1.2rem;
   background: rgba(9, 4, 21, 0.9);
 }
 
