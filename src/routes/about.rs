@@ -143,53 +143,6 @@ pub fn ImagesAbout() -> impl IntoView {
 
     let _gallery_ref = create_node_ref::<Div>();
 
-    // let match_orient_el_width_gal_width = move || match get_orient() {
-    //     Orient::Portrait => (1.0, 5.),
-    //     Orient::Landscape => (0.33, 1.5),
-    // };
-
-    // let (counter, set_counter) = create_signal::<i32>(0);
-    // let move_next = move |_| {
-    //     let gallery = gallery_ref.get().expect("the DOM should be built by now");
-    //     let (grid_element_width, gallery_width_multi) = match_orient_el_width_gal_width();
-    //     if (counter.get() as u32) < gallery.children().length() {
-    //         set_counter.update(|count| *count += 1);
-    //
-    //         let offset =
-    //             (counter.get() as f64) * gallery.offset_width() as f64 * grid_element_width;
-    //
-    //         // log::info!(
-    //         //     "Acceptable width: {}\nCurrent offset: {}",
-    //         //     gallery.offset_width() as f64 * gallery_width_multi,
-    //         //     offset
-    //         // );
-    //         //
-    //         if offset >= gallery.offset_width() as f64 * gallery_width_multi {
-    //             set_counter.update(|count| *count -= 1);
-    //         }
-    //         gallery.scroll_to_with_scroll_to_options(
-    //             ScrollToOptions::new()
-    //                 .left(offset)
-    //                 .behavior(ScrollBehavior::Smooth),
-    //         );
-    //     }
-    // };
-    // let move_back = move |_| {
-    //     let gallery = gallery_ref.get().expect("the DOM should be built by now");
-    //     let (grid_element_width, _) = match_orient_el_width_gal_width();
-    //     if counter.get() > 0 {
-    //         set_counter.update(|count| *count -= 1);
-    //
-    //         let offset =
-    //             (counter.get() as f64) * gallery.offset_width() as f64 * grid_element_width;
-    //         gallery.scroll_to_with_scroll_to_options(
-    //             ScrollToOptions::new()
-    //                 .left(offset)
-    //                 .behavior(ScrollBehavior::Smooth),
-    //         );
-    //     }
-    // };
-
     // Click on image to make it fullscreen.
     let (show_img, set_show_img) = create_signal(false);
     let (current_img, set_current_img) = create_signal::<Option<String>>(None);
