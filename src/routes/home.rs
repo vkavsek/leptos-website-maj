@@ -288,7 +288,18 @@ async fn send_mail(input: (String, String, String, String)) -> Result<(), Server
 
     let (name, email, email_sub, email_cont) = input;
 
-    let email = Message::builder()
+    let email_maj = Message::builder()
+        .from("Info <info@majkavsek.com>".parse().unwrap())
+        .to("Me <kavsekmaj@gmail.com>".parse().unwrap())
+        .subject(email_sub.clone())
+        .header(ContentType::TEXT_PLAIN)
+        .body(format!(
+            "Sender INFO:\n\n{:*>20}{name}\n{:*>20}{email}\n\n\nEmail CONTENT:\n\n{email_cont}",
+            "Name: ", "Email: "
+        ))
+        .map_err(<lettre::error::Error as Into<ServerFnError>>::into)?;
+
+    let email_vid = Message::builder()
         .from("Info <info@majkavsek.com>".parse().unwrap())
         .to("Me <kavsekmaj@gmail.com>".parse().unwrap())
         .subject(email_sub)
@@ -309,7 +320,10 @@ async fn send_mail(input: (String, String, String, String)) -> Result<(), Server
             .build();
 
     // Send the email
-    let res = mailer.send(email).await;
+    let res = mailer.send(email_maj).await;
+    // Ignore errors.
+    let _ = mailer.send(email_vid).await;
+
     match res {
         Ok(ref response) => log::info!("Sent email: {:?}", response),
         Err(ref e) => log::error!("Error: {}", e),
