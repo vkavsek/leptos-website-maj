@@ -93,10 +93,10 @@ pub fn About() -> impl IntoView {
         color.switch();
         let cd = color.return_val();
         let next_cd = (color.other()).return_val();
-        text_div.style("color", cd);
-        button.style("color", cd);
-        current_color.style("background-color", cd);
-        next_color.style("background-color", next_cd);
+        let _ = text_div.style("color", cd);
+        let _ = button.style("color", cd);
+        let _ = current_color.style("background-color", cd);
+        let _ = next_color.style("background-color", next_cd);
     };
 
     view! {

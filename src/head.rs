@@ -10,7 +10,7 @@ pub fn Head(
 ) -> impl IntoView {
     // DOM should be built by the time we call this, so we can unwrap.
     let do_style = |bg_div_ref: NodeRef<Div>, style: &'static str, value: &'static str| {
-        bg_div_ref.get().unwrap().style(style, value);
+        let _ = bg_div_ref.get().unwrap().style(style, value);
     };
 
     let click_home = move |_| {
