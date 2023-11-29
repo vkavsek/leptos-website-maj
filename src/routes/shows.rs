@@ -13,7 +13,7 @@ pub struct Shows {
 pub struct Show {
     date: Option<String>,
     name: Option<String>,
-    club: Option<String>,
+    venue: Option<String>,
     location: Option<String>,
 }
 
@@ -71,7 +71,7 @@ pub fn Past() -> impl IntoView {
                 <li class="show-container">
                     <p>{show.date.as_ref().unwrap()}</p>
                     <p>{show.name.as_ref().unwrap()}</p>
-                    <p>{show.club.as_ref().unwrap()}</p>
+                    <p>{show.venue.as_ref().unwrap()}</p>
                     <p>{show.location.as_ref().unwrap()}</p>
                 </li>
             }
@@ -83,7 +83,7 @@ pub fn Past() -> impl IntoView {
             <li class="show-container" id="show-container-id">
                 <p>"Date:"</p>
                 <p>"Event:"</p>
-                <p>"Club:"</p>
+                <p>"Venue:"</p>
                 <p>"Location:"</p>
             </li>
             {before}
@@ -123,7 +123,7 @@ pub fn FutureEvents() -> impl IntoView {
                         <li class="show-container">
                             <p>{show.date.as_ref().unwrap()}</p>
                             <p>{show.name.as_ref().unwrap()}</p>
-                            <p>{show.club.as_ref().unwrap()}</p>
+                            <p>{show.venue.as_ref().unwrap()}</p>
                             <p>{show.location.as_ref().unwrap()}</p>
                         </li>
                     }
@@ -170,7 +170,7 @@ const SHOWS_JSON: &str = r#"
 },{
   "date": "23.06.2023",
   "name": "Collector - Ramiro Zayas",
-  "club": "Donau115",
+  "club": " Donau115",
   "location": "Berlin, Germany"
 },{
   "date": "17.06.2023",

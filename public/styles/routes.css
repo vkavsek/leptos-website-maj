@@ -365,7 +365,7 @@ submit-button:active {
 }
 @media screen and (orientation: portrait) and (min-height: 700px) {
   #about-components {
-    height: 92%;
+    height: 90%;
   }
 }
 
