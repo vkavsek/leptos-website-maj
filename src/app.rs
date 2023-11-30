@@ -18,11 +18,32 @@ pub fn App() -> impl IntoView {
 
     let formatter = |text| format!("{text} - Maj Kavšek");
     view! {
-        <Stylesheet id="font-1" href="/styles/fonts/ibm-plex.css"/>
-        <Stylesheet id="font-2" href="/styles/fonts/squabslab.css"/>
+        // Injecting critical styles for better performance
+        <Style>
+            r#"
+            @font-face {
+                font-family: "IBM Plex Mono";
+                font-style: normal;
+                font-weight: 400;
+                src:
+                    local("IBM Plex Mono"),
+                    local("IBMPlexMono"),
+                    url("/fonts/IBM-Plex-Mono/fonts/complete/woff2/IBMPlexMono-Regular.woff2")
+                    format("woff2"),
+                    url("../IBM-Plex-Mono/fonts/complete/woff/IBMPlexMono-Regular.woff")
+                    format("woff");
+            }
+            @font-face {
+                font-family: "LilitaOne";
+                font-style: normal;
+                font-weight: 400;
+                src: url("/fonts/Lilita_One/LilitaOne-Regular.ttf") format("truetype");
+            }"#
+        </Style>
         <Stylesheet id="leptos" href="/styles/index.css"/>
         <Link rel="preload" href="/img/bg/bg_small.webp" as_="image"/>
         <Link rel="shortcut icon" type_="image/svg" href="/img/trobenta.svg"/>
+
         <Title formatter/>
         <Meta name="viewport" content="width=device-width, initial-scale=1"/>
 

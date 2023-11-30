@@ -18,11 +18,10 @@ pub fn Media() -> impl IntoView {
             let id = format!("nat-vid-{}", i);
             view! {
                 <div class="video-wrapper">
-                    <video class=class(i) id=id.clone() controls preload="auto">
+                    <video class=class(i) id=id.clone() controls preload="metadata" loading="lazy">
                         <source src=format!("/videos/{}", name) type="video/mp4"/>
                         <p class="vjs-no-js">
-                            "To view this video please enable JavaScript, and consider upgrading to a
-                            web browser that supports HTML5 video."
+                            "To view this video please enable JavaScript, and consider upgrading to a web browser that supports HTML5 video."
                         </p>
                     </video>
                 </div>
@@ -40,9 +39,11 @@ pub fn Media() -> impl IntoView {
 
     view! {
         <Link rel="icon" href="/img/media.svg" type_="image/svg"/>
+        <Title text="Media"/>
+        // Include Video.js library
         <Link href="/video-js/video-js.css" rel="stylesheet"/>
         <Link href="/video-js/videojs-matrix.css" rel="stylesheet"/>
-        <Title text="Media"/>
+        <script src="/video-js/video.min.js"></script>
 
         <div class="components" id="media-components">
             <div class="title" id="media-title">
@@ -53,8 +54,7 @@ pub fn Media() -> impl IntoView {
                 {videos}
             </div>
         </div>
-        // Include Video.js library
-        <script src="/video-js/video.min.js"></script>
+
         <script>{video_init_script}</script>
     }
 }

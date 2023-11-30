@@ -1,6 +1,5 @@
 @import url("/styles/routes.css");
 @import url("/styles/audio_player.css");
-@import url('https://fonts.googleapis.com/css2?family=Lilita+One&display=swap');
 
 /* app.rs ------ MAIN LAYOUT */
 :root {
@@ -9,11 +8,11 @@
   --maj-pink: #ff3988;
 }
 
-::-webkit-scrollbar { 
+::-webkit-scrollbar {
   width: 5px;
   height: 5px;
 }
-::-webkit-scrollbar-corner { 
+::-webkit-scrollbar-corner {
   background: transparent;
 }
 ::-webkit-scrollbar-track {
@@ -30,20 +29,26 @@
   background: rgba(9, 4, 21, 0.9);
   border-top-right-radius: 0;
 }
-::-webkit-scrollbar-thumb { 
-  background-color: rgba(255, 57, 136, .5);
+::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 57, 136, 0.5);
   border-radius: 30px;
 }
-::-webkit-scrollbar-thumb:hover { 
+::-webkit-scrollbar-thumb:hover {
   background-color: var(--maj-pink);
 }
-::-webkit-scrollbar-thumb:active { 
+::-webkit-scrollbar-thumb:active {
   background-color: var(--maj-yel);
 }
 
+@font-face {
+  font-family: "LilitaOne";
+  font-style: normal;
+  font-weight: 400;
+  src: url("/fonts/Lilita_One/LilitaOne-Regular.ttf") format("truetype");
+}
 @supports (scrollbar-color: red blue) {
   * {
-    scrollbar-color: rgba(255, 57, 136, .5) rgba(9, 4, 21, 0.6);
+    scrollbar-color: rgba(255, 57, 136, 0.5) rgba(9, 4, 21, 0.6);
   }
 }
 
@@ -51,9 +56,9 @@ body {
   margin: 0;
   padding: 0;
   background-color: rgba(9, 4, 21, 1);
-  font-family: 'IBM Plex Mono', sans-serif;
+  font-family: "IBM Plex Mono", sans-serif;
   color: var(--maj-yel);
- 
+
   font-size: 1rem;
   font-weight: 400;
   line-height: 1.5;
@@ -85,7 +90,7 @@ iframe {
   nav {
     width: 100%;
     height: 10%;
-    
+
     position: fixed;
     top: 0;
 
@@ -117,7 +122,7 @@ iframe {
     gap: 2%;
   }
 }
-@media screen and (orientation: landscape) and (max-height: 600px){
+@media screen and (orientation: landscape) and (max-height: 600px) {
   nav {
     height: 65%;
     margin-top: 5%;
@@ -144,7 +149,7 @@ iframe {
   justify-items: center;
 }
 @media screen and (orientation: portrait) {
-  .components{
+  .components {
     height: 80%;
     width: 100%;
     gap: 2rem;
@@ -155,7 +160,7 @@ iframe {
   }
 }
 @media screen and (orientation: landscape) {
-  .components{
+  .components {
     margin-left: 15%;
     height: 100%;
   }
@@ -184,7 +189,7 @@ iframe {
   transform: scale(1.2);
 }
 
-.nav-link[aria-current="page"]{
+.nav-link[aria-current="page"] {
   transform: scale(1);
 }
 
@@ -193,7 +198,9 @@ iframe {
   min-width: 20px;
   max-width: 100px;
   transition: filter 0.1s;
-  transition: transform 0.2s ease-in-out, translate 0.2s ease-in-out;
+  transition:
+    transform 0.2s ease-in-out,
+    translate 0.2s ease-in-out;
   filter: hue-rotate(0deg);
 }
 
@@ -203,7 +210,7 @@ iframe {
   translate: 0;
 }
 
-.nav-link[aria-current="page"] .nav-icon{
+.nav-link[aria-current="page"] .nav-icon {
   transform: rotate(0deg) scale(1.2);
   filter: hue-rotate(295deg) saturate(380%) brightness(0.67) contrast(200%);
   translate: 0;
@@ -213,7 +220,7 @@ iframe {
   display: flex;
   justify-content: center;
   /* font-family: SquabSlab, sans-serif; */
-  font-family: 'Lilita One', sans-serif;
+  font-family: "LilitaOne", sans-serif;
 }
 .title h1 {
   all: unset;
@@ -232,7 +239,7 @@ iframe {
     font-size: 8rem;
   }
 }
-@media screen and (orientation: landscape) and (max-height: 600px){
+@media screen and (orientation: landscape) and (max-height: 600px) {
   .title {
     font-size: 4rem;
   }
