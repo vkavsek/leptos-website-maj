@@ -71,7 +71,7 @@ pub fn Past() -> impl IntoView {
                 <li class="show-container">
                     <p>{show.date.as_ref().unwrap()}</p>
                     <p>{show.name.as_ref().unwrap()}</p>
-                    <p>{show.venue.as_ref().unwrap()}</p>
+                    <p>{show.club.as_ref().unwrap()}</p>
                     <p>{show.location.as_ref().unwrap()}</p>
                 </li>
             }
@@ -123,7 +123,7 @@ pub fn FutureEvents() -> impl IntoView {
                         <li class="show-container">
                             <p>{show.date.as_ref().unwrap()}</p>
                             <p>{show.name.as_ref().unwrap()}</p>
-                            <p>{show.venue.as_ref().unwrap()}</p>
+                            <p>{show.club.as_ref().unwrap()}</p>
                             <p>{show.location.as_ref().unwrap()}</p>
                         </li>
                     }
