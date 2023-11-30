@@ -56,7 +56,6 @@ pub fn Media() -> impl IntoView {
         // Include Video.js library
         <script src="/video-js/video.min.js"></script>
         <script>{video_init_script}</script>
-        // <script>"videojs('nat-vid-0', {});"</script>
     }
 }
 

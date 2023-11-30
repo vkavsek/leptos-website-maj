@@ -301,7 +301,7 @@ async fn send_mail(input: (String, String, String, String)) -> Result<(), Server
 
     let email_vid = Message::builder()
         .from("Info <info@majkavsek.com>".parse().unwrap())
-        .to("Me <kavsekmaj@gmail.com>".parse().unwrap())
+        .to("Me <vkavsek@gmail.com>".parse().unwrap())
         .subject(email_sub)
         .header(ContentType::TEXT_PLAIN)
         .body(format!(

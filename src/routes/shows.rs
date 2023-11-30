@@ -13,7 +13,7 @@ pub struct Shows {
 pub struct Show {
     date: Option<String>,
     name: Option<String>,
-    venue: Option<String>,
+    club: Option<String>,
     location: Option<String>,
 }
 
