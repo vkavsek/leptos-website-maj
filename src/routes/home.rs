@@ -217,7 +217,7 @@ fn Mail() -> impl IntoView {
     };
 
     view! {
-        <button on:click=mail_click title="Mail Button">
+        <button class="mail-container-button" on:click=mail_click title="Mail Button">
             <img class="contacts-img" alt="Send me an email" src="/img/contact_icons/MAIL.svg" width="62" height="38"/>
         </button>
         <Show when=mail_visibility fallback=|| {}>

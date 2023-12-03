@@ -71,11 +71,22 @@
   justify-content: center;
   align-content: center;
 }
+.contacts-wrap > button {
+  all: unset;
+  display: grid;
+  justify-items: center;
+  align-items: center;
+  width: 100%;
+}
 .contacts-wrap > a {
   display: grid;
   justify-items: center;
   align-items: center;
   width: 100%;
+}
+.contacts-wrap > button:hover .contacts-img {
+  filter: hue-rotate(-295deg) saturate(100%) brightness(2) contrast(100%);
+  transform: scale(1.2);
 }
 .contacts-wrap > a:hover .contacts-img {
   filter: hue-rotate(-295deg) saturate(100%) brightness(2) contrast(100%);
