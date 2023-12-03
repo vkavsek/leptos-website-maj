@@ -17,10 +17,7 @@ pub fn App() -> impl IntoView {
     let bg_div_ref = create_node_ref::<Div>();
 
     let formatter = |text| format!("{text} - Maj Kavšek");
-    view! {
-        // Injecting critical styles for better performance
-        <Style>
-            r#"
+    let critical_styles_fonts = r#"
             @font-face {
                 font-family: "IBM Plex Mono";
                 font-style: normal;
@@ -40,13 +37,16 @@ pub fn App() -> impl IntoView {
                 font-weight: 400;
                 src: url("/fonts/Lilita_One/LilitaOne-Regular.woff2") format("woff2");
                 font-display: swap;
-            }"#
-        </Style>
+            }"#;
+    view! {
+        <Style>{critical_styles_fonts}</Style>
         <Stylesheet id="leptos" href="/styles/index.css"/>
         <Stylesheet id="leptos-routes" href="/styles/routes.css"/>
         <Stylesheet id="leptos-audio" href="/styles/audio_player.css"/>
         <Link rel="preload" href="/img/bg/bg_smallest.webp" as_="image"/>
         <Link rel="shortcut icon" type_="image/svg" href="/img/trobenta.svg"/>
+        <Html lang="en"/>
+        <Meta name="description" content="Personal portfolio page of Maj Kavšek."/>
 
         <Title formatter/>
         <Meta name="viewport" content="width=device-width, initial-scale=1"/>

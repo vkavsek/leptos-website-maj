@@ -180,7 +180,12 @@ pub fn AudioPlayer() -> impl IntoView {
                 "Audio Player"
             </audio>
             <div class="play-container">
-                <button class="play" on:click=play_click node_ref=play_btn_ref></button>
+                <button
+                    class="play"
+                    on:click=play_click
+                    node_ref=play_btn_ref
+                    title="Play / Pause"
+                ></button>
             </div>
             <div class="time-container">
                 <div class="timeline" node_ref=timeline_ref on:click=timeline_click>
@@ -198,6 +203,7 @@ pub fn AudioPlayer() -> impl IntoView {
                         class="ico-vol-med"
                         on:click=vol_button_click
                         node_ref=vol_el_ref
+                        title="Volume / Mute"
                     ></button>
                     <div
                         class="volume-slider"

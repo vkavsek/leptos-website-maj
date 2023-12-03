@@ -79,6 +79,12 @@ fn LinkWithModal(loc: LinkLocation) -> impl IntoView {
     let (visible, set_visible) = create_signal(false);
     let modal_ref = create_node_ref();
 
+    let alt = match loc {
+        LinkLocation::Fb => "A link to Facebook",
+        LinkLocation::Ig => "A link to Instagram",
+        LinkLocation::TikTok => "A link to TikTok",
+    };
+
     let click_on_link = move |ev: MouseEvent| {
         ev.prevent_default();
         set_visible.set(true);
@@ -100,7 +106,7 @@ fn LinkWithModal(loc: LinkLocation) -> impl IntoView {
 
     view! {
         <a href=href_target on:click=click_on_link>
-            <img class="contacts-img" src=src_target width=width height=height/>
+            <img class="contacts-img" src=src_target alt=alt width=width height=height/>
         </a>
         <Show when=move || visible.get() fallback=|| {}>
             <div class="modal-overlay"></div>
@@ -211,13 +217,13 @@ fn Mail() -> impl IntoView {
     };
 
     view! {
-        <a on:click=mail_click>
-            <img class="contacts-img" src="/img/contact_icons/MAIL.svg" width="62" height="38"/>
-        </a>
+        <button on:click=mail_click title="Mail Button">
+            <img class="contacts-img" alt="Send me an email" src="/img/contact_icons/MAIL.svg" width="62" height="38"/>
+        </button>
         <Show when=mail_visibility fallback=|| {}>
             <div class="modal-overlay"></div>
             <div class="modal" node_ref=mail_ref>
-                <button class="close-button" on:click=close_popup>
+                <button class="close-button" on:click=close_popup title="Close Button">
                     <img
                         src="/img/icon/cross.svg"
                         alt="close"
