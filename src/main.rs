@@ -24,6 +24,7 @@ async fn main() {
     let app = Router::new()
         .route("/api/*fn_name", post(leptos_axum::handle_server_fns))
         .leptos_routes(&leptos_options, routes, App)
+        .layer(tower_http::compression::CompressionLayer::new())
         .fallback(file_and_error_handler)
         .with_state(leptos_options);
 
