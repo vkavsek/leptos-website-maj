@@ -17,8 +17,6 @@ pub fn App() -> impl IntoView {
     let bg_div_ref = create_node_ref::<Div>();
 
     let formatter = |text| format!("{text} - Maj Kavšek");
-    let on_load = |_| {};
-
     view! {
         // Injecting critical styles for better performance
         <Style>
@@ -45,7 +43,7 @@ pub fn App() -> impl IntoView {
             }"#
         </Style>
         <Stylesheet id="leptos" href="/styles/index.css"/>
-        <Stylesheet id="leptos-routes" href="/styles/routes.css" on:load=on_load/>
+        <Stylesheet id="leptos-routes" href="/styles/routes.css"/>
         <Stylesheet id="leptos-audio" href="/styles/audio_player.css"/>
         <Link rel="preload" href="/img/bg/bg_smallest.webp" as_="image"/>
         <Link rel="shortcut icon" type_="image/svg" href="/img/trobenta.svg"/>
