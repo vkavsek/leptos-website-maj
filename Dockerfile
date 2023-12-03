@@ -1,8 +1,8 @@
 # If you’re using stable, use this instead
 FROM rust:1.73-bullseye as builder
 
-RUN apt update && \
-  apt install -y binaryen npm protobuf-compiler libssl-dev pkg-config musl-tools \
+RUN apt-get update && \
+  apt-get install -y binaryen npm protobuf-compiler libssl-dev pkg-config musl-tools \
   && rm -rf /var/lib/apt/lists/*
 
 RUN cargo install --locked cargo-leptos
