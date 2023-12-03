@@ -47,6 +47,7 @@
   .all-contacts > * {
     padding: 1rem;
     width: 3vw;
+    height: auto;
   }
   .contacts-img:hover {
     transform: scale(1.05);
@@ -84,6 +85,7 @@
 .contacts-img {
   cursor: pointer;
   width: 60%;
+  height: auto;
 }
 
 @media screen and (orientation: portrait) {

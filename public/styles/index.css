@@ -1,6 +1,3 @@
-@import url("/styles/routes.css");
-@import url("/styles/audio_player.css");
-
 /* app.rs ------ MAIN LAYOUT */
 :root {
   --webkit-color-scale: 0.7;
@@ -40,12 +37,6 @@
   background-color: var(--maj-yel);
 }
 
-@font-face {
-  font-family: "LilitaOne";
-  font-style: normal;
-  font-weight: 400;
-  src: url("/fonts/Lilita_One/LilitaOne-Regular.ttf") format("truetype");
-}
 @supports (scrollbar-color: red blue) {
   * {
     scrollbar-color: rgba(255, 57, 136, 0.5) rgba(9, 4, 21, 0.6);
@@ -139,7 +130,7 @@ iframe {
   right: 0;
   left: 0;
 
-  background-image: url("/img/bg/bg_small.webp");
+  background-image: url("/img/bg/bg_smallest.webp");
   background-position: 48% 8%;
   background-repeat: no-repeat;
 }
@@ -182,6 +173,7 @@ iframe {
   width: 40%;
   display: flex;
   justify-content: center;
+  align-items: center;
   transition: 0.2s ease-in-out;
 }
 
@@ -195,6 +187,7 @@ iframe {
 
 .nav-icon {
   width: 50%;
+  height: auto;
   min-width: 20px;
   max-width: 100px;
   transition: filter 0.1s;
