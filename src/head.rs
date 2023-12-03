@@ -35,16 +35,16 @@ pub fn Head(
                 // aria-current=set_home
                 on:click=click_home
             >
-                <img class="nav-icon nav-icon-1" src="/img/trobenta.svg"/>
+                <img class="nav-icon nav-icon-1" src="/img/trobenta.svg" width="512" height="217"/>
             </A>
             <A class="nav-link" href="/about_me" on:click=click_about>
-                <img class="nav-icon nav-icon-2" src="/img/izkaznica.svg"/>
+                <img class="nav-icon nav-icon-2" src="/img/izkaznica.svg" width="378" height="330"/>
             </A>
             <A class="nav-link" href="/shows" on:click=click_concerts>
-                <img class="nav-icon nav-icon-3" src="/img/nota.svg"/>
+                <img class="nav-icon nav-icon-3" src="/img/nota.svg" width="144" height="158"/>
             </A>
             <A class="nav-link" href="/media" on:click=click_media>
-                <img class="nav-icon nav-icon-4" src="/img/media.svg"/>
+                <img class="nav-icon nav-icon-4" src="/img/media.svg" width="395" height="336"/>
             </A>
         </nav>
     }

@@ -17,6 +17,8 @@ pub fn App() -> impl IntoView {
     let bg_div_ref = create_node_ref::<Div>();
 
     let formatter = |text| format!("{text} - Maj Kavšek");
+    let on_load = |_| {};
+
     view! {
         // Injecting critical styles for better performance
         <Style>
@@ -32,16 +34,20 @@ pub fn App() -> impl IntoView {
                     format("woff2"),
                     url("../IBM-Plex-Mono/fonts/complete/woff/IBMPlexMono-Regular.woff")
                     format("woff");
+                font-display: swap;
             }
             @font-face {
                 font-family: "LilitaOne";
                 font-style: normal;
                 font-weight: 400;
-                src: url("/fonts/Lilita_One/LilitaOne-Regular.ttf") format("truetype");
+                src: url("/fonts/Lilita_One/LilitaOne-Regular.woff2") format("woff2");
+                font-display: swap;
             }"#
         </Style>
         <Stylesheet id="leptos" href="/styles/index.css"/>
-        <Link rel="preload" href="/img/bg/bg_small.webp" as_="image"/>
+        <Stylesheet id="leptos-routes" href="/styles/routes.css" on:load=on_load/>
+        <Stylesheet id="leptos-audio" href="/styles/audio_player.css"/>
+        <Link rel="preload" href="/img/bg/bg_smallest.webp" as_="image"/>
         <Link rel="shortcut icon" type_="image/svg" href="/img/trobenta.svg"/>
 
         <Title formatter/>

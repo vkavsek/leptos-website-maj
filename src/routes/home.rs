@@ -17,19 +17,25 @@ enum LinkLocation {
 
 impl LinkLocation {
     /// Returns a tuple in the form of: (HREF_TARGET, IMAGE_LOCATION)
-    fn process(&self) -> (&'static str, &'static str) {
+    fn process(&self) -> (&'static str, &'static str, i32, i32) {
         match self {
             LinkLocation::Fb => (
                 "https://www.facebook.com/majkavsek",
                 "/img/contact_icons/FB.svg",
+                60,
+                60,
             ),
             LinkLocation::TikTok => (
                 "https://www.tiktok.com/@majkavsek?lang=en",
                 "/img/contact_icons/TIKTOK.svg",
+                60,
+                61,
             ),
             LinkLocation::Ig => (
                 "https://www.instagram.com/maj.kavsek/",
                 "/img/contact_icons/insta.svg",
+                179,
+                174,
             ),
         }
     }
@@ -69,7 +75,7 @@ pub fn Home() -> impl IntoView {
 }
 #[component]
 fn LinkWithModal(loc: LinkLocation) -> impl IntoView {
-    let (href_target, src_target) = loc.process();
+    let (href_target, src_target, width, height) = loc.process();
     let (visible, set_visible) = create_signal(false);
     let modal_ref = create_node_ref();
 
@@ -94,7 +100,7 @@ fn LinkWithModal(loc: LinkLocation) -> impl IntoView {
 
     view! {
         <a href=href_target on:click=click_on_link>
-            <img class="contacts-img" src=src_target/>
+            <img class="contacts-img" src=src_target width=width height=height/>
         </a>
         <Show when=move || visible.get() fallback=|| {}>
             <div class="modal-overlay"></div>
@@ -206,7 +212,7 @@ fn Mail() -> impl IntoView {
 
     view! {
         <a on:click=mail_click>
-            <img class="contacts-img" src="/img/contact_icons/MAIL.svg"/>
+            <img class="contacts-img" src="/img/contact_icons/MAIL.svg" width="62" height="38"/>
         </a>
         <Show when=mail_visibility fallback=|| {}>
             <div class="modal-overlay"></div>
