@@ -221,6 +221,7 @@ iframe {
   text-align: center;
   margin-top: 5%;
   margin-bottom: 3%;
+  text-shadow: 5px 5px var(--maj-pink);
 }
 
 @media screen and (orientation: portrait) {

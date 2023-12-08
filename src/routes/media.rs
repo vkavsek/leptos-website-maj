@@ -13,10 +13,9 @@ pub fn Media() -> impl IntoView {
                 <h1>"Media"</h1>
             </div>
             <div class="contents" id="media-contents">
+                <div class="yt-vid-container">
                     <iframe
                         class="yt-video hero-vid"
-                        width="960"
-                        height="615"
                         src="https://www.youtube-nocookie.com/embed/73KJzjvW_1Q?si=MQ4I2VTipAaEUayG"
                         title="YouTube video player"
                         frameborder="0"
@@ -24,10 +23,10 @@ pub fn Media() -> impl IntoView {
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                         allowfullscreen
                     ></iframe>
+                </div>
+                <div class="yt-vid-container">
                     <iframe
                         class="yt-video vid"
-                        width="560"
-                        height="315"
                         src="https://www.youtube-nocookie.com/embed/aaRGcLUQ4ss?si=5BEyXSQYtl6ogSCL"
                         title="YouTube video player"
                         frameborder="0"
@@ -35,10 +34,10 @@ pub fn Media() -> impl IntoView {
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                         allowfullscreen
                     ></iframe>
+                </div>
+                <div class="yt-vid-container">
                     <iframe
                         class="yt-video vid"
-                        width="560"
-                        height="315"
                         src="https://www.youtube-nocookie.com/embed/RBwe-c9T5sY?si=0m4cEVb4BktHR9Pr"
                         title="YouTube video player"
                         frameborder="0"
@@ -46,6 +45,7 @@ pub fn Media() -> impl IntoView {
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                         allowfullscreen
                     ></iframe>
+                </div>
             </div>
         </div>
     }

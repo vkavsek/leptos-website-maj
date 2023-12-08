@@ -42,12 +42,12 @@ pub fn AudioPlayer() -> impl IntoView {
 
     // Set Song Source
     let song_src = move || {
-        let def = "/music/Practical_Anxiety_MASTER.mp3".to_string();
-        if let Some(name) = names.get().get(selector.get()) {
-            format!("/music/{}", name)
-        } else {
-            def
-        }
+        // if let Some(name) = names.get().get(selector.get()) {
+        //     format!("/music/{}", name)
+        // } else {
+        // "/music/audio-promo_small.mp3".to_string()
+        // }
+        "/music/audio-promo_small.mp3"
     };
 
     // DOM should be built by the time we call the closures so we unwrap them all
