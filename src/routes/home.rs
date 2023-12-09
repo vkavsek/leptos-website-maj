@@ -13,6 +13,7 @@ enum LinkLocation {
     Fb,
     TikTok,
     Ig,
+    Yt,
 }
 
 impl LinkLocation {
@@ -37,6 +38,12 @@ impl LinkLocation {
                 179,
                 174,
             ),
+            LinkLocation::Yt => (
+                "https://www.youtube.com/@MajKavsek",
+                "/img/contact_icons/YT.svg",
+                177,
+                128,
+            ),
         }
     }
 }
@@ -46,6 +53,7 @@ pub fn Home() -> impl IntoView {
     const FB: LinkLocation = LinkLocation::Fb;
     const TIKTOK: LinkLocation = LinkLocation::TikTok;
     const IG: LinkLocation = LinkLocation::Ig;
+    const YT: LinkLocation = LinkLocation::Yt;
     view! {
         <Link rel="icon" href="/img/trobenta.svg" type_="image/svg"/>
         <Title text="Home"/>
@@ -68,6 +76,9 @@ pub fn Home() -> impl IntoView {
                     <div class="contacts-wrap">
                         <LinkWithModal loc=TIKTOK/>
                     </div>
+                    <div class="contacts-wrap">
+                        <LinkWithModal loc=YT/>
+                    </div>
                 </div>
             </div>
         </footer>
@@ -83,6 +94,7 @@ fn LinkWithModal(loc: LinkLocation) -> impl IntoView {
         LinkLocation::Fb => "A link to Facebook",
         LinkLocation::Ig => "A link to Instagram",
         LinkLocation::TikTok => "A link to TikTok",
+        LinkLocation::Yt => "A link to YouTube",
     };
 
     let click_on_link = move |ev: MouseEvent| {
