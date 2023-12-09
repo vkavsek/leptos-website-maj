@@ -243,6 +243,7 @@ fn Mail() -> impl IntoView {
                         style:opacity="70%"
                     />
                 </button>
+                <span style:color="var(--maj-yel)">"Contact for booking, teaching and collaborations."</span>
                 <form class="email-form" on:submit=on_submit>
                     <div class="form-div">
                         <label for="name" class="name-label">
