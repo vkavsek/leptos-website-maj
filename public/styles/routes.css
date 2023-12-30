@@ -13,6 +13,11 @@
   max-height: 100%;
 }
 
+/* #home-title { */
+/*   margin-top: 0; */
+/*   margin-bottom: 0; */
+/* } */
+
 @media screen and (orientation: portrait) {
   #home-components {
     height: 100%;

@@ -58,9 +58,11 @@ pub fn Home() -> impl IntoView {
         <Link rel="icon" href="/img/trobenta.svg" type_="image/svg"/>
         <Title text="Home"/>
         <footer class="components" id="home-components">
-            <div class="title">
-                // <img class="title-img" id="home-img" src="/img/titles/maj_kavsek.svg"/>
-                <h1 id="home-title">"Maj Kavšek"</h1>
+            <div>
+                <div class="title">
+                    <h1 id="home-title">"Maj Kavšek"</h1>
+                </div>
+                // <p  style="font-size: 1.25rem; font-weight: 700">"Trumpeter & composer"</p>
             </div>
             <div class="contents" id="home-wrap">
                 <div class="all-contacts">
@@ -230,7 +232,13 @@ fn Mail() -> impl IntoView {
 
     view! {
         <button class="mail-container-button" on:click=mail_click title="Mail Button">
-            <img class="contacts-img" alt="Send me an email" src="/img/contact_icons/MAIL.svg" width="62" height="38"/>
+            <img
+                class="contacts-img"
+                alt="Send me an email"
+                src="/img/contact_icons/MAIL.svg"
+                width="62"
+                height="38"
+            />
         </button>
         <Show when=mail_visibility fallback=|| {}>
             <div class="modal-overlay"></div>
@@ -243,7 +251,9 @@ fn Mail() -> impl IntoView {
                         style:opacity="70%"
                     />
                 </button>
-                <span style:color="var(--maj-yel)">"Contact for booking, teaching and collaborations."</span>
+                <span style:color="var(--maj-yel)">
+                    "Contact for booking, teaching and collaborations."
+                </span>
                 <form class="email-form" on:submit=on_submit>
                     <div class="form-div">
                         <label for="name" class="name-label">

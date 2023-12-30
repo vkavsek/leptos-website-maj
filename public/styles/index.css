@@ -213,10 +213,10 @@ iframe {
 .title {
   display: flex;
   justify-content: center;
-  /* font-family: SquabSlab, sans-serif; */
   font-family: "LilitaOne", sans-serif;
 }
 .title h1 {
+  font-family: "LilitaOne", sans-serif;
   all: unset;
   text-align: center;
   margin-top: 5%;
