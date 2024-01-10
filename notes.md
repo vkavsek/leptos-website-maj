@@ -1,3 +1,0 @@
-## IKONE 
-  bandcamp, 
-  instagram, 
