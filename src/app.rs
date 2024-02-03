@@ -1,6 +1,6 @@
 use crate::{
     audio::AudioWrapper,
-    error_template::{ErrorTemplate, ServerError},
+    error_template::{ErrorTemplate, MajServerError},
     head::*,
     routes::{about::*, home::*, media::*, shows::*},
 };
@@ -53,7 +53,7 @@ pub fn App() -> impl IntoView {
 
         <Router fallback=|| {
             let mut outside_errors = Errors::default();
-            outside_errors.insert_with_default_key(ServerError::NotFound);
+            outside_errors.insert_with_default_key(MajServerError::NotFound);
             view! { <ErrorTemplate outside_errors/> }.into_view()
         }>
             <div class="bg-wrapper" node_ref=bg_div_ref>

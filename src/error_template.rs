@@ -1,6 +1,6 @@
-use cfg_if::cfg_if;
 use http::status::StatusCode;
 use leptos::*;
+use leptos_router::A;
 use serde::Serialize;
 use thiserror::Error;
 
@@ -8,16 +8,16 @@ use thiserror::Error;
 use leptos_axum::ResponseOptions;
 
 #[derive(Serialize, Clone, Debug, Error)]
-pub enum ServerError {
+pub enum MajServerError {
     #[error("Not Found")]
     NotFound,
 }
 
-impl ServerError {
+impl MajServerError {
     pub fn status_code(&self) -> StatusCode {
         #[allow(unreachable_patterns)]
         match self {
-            ServerError::NotFound => StatusCode::NOT_FOUND,
+            MajServerError::NotFound => StatusCode::NOT_FOUND,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -41,9 +41,9 @@ pub fn ErrorTemplate(
     let errors = errors.get_untracked();
 
     // Downcast lets us take a type that implements `std::error::Error`
-    let errors: Vec<ServerError> = errors
+    let errors: Vec<MajServerError> = errors
         .into_iter()
-        .filter_map(|(_k, e)| e.downcast_ref::<ServerError>().cloned())
+        .filter_map(|(_k, e)| e.downcast_ref::<MajServerError>().cloned())
         .collect();
     // TODO: Delete this and handle split the server / client errors.
     // Do the same in the view!
@@ -51,29 +51,43 @@ pub fn ErrorTemplate(
 
     // Only the response code for the first error is actually sent from the server
     // this may be customized by the specific application
-    cfg_if! { if #[cfg(feature="ssr")] {
+    #[cfg(feature = "ssr")]
+    {
         let response = use_context::<ResponseOptions>();
         if let Some(response) = response {
             response.set_status(errors[0].status_code());
         }
-    }}
+    }
 
     view! {
-        <h1>{if errors.len() > 1 {"Errors"} else {"Error"}}</h1>
-        <For
-            // a function that returns the items we're iterating over; a signal is fine
-            each= move || {errors.clone().into_iter().enumerate()}
-            // a unique key for each item as a reference
-            key=|(index, _error)| *index
-            // renders each item to a view
-            children=move |error| {
-                let error_string = error.1.to_string();
-                let error_code= error.1.status_code();
-                view! {
-                    <h2>{error_code.to_string()}</h2>
-                    <p>"Error: " {error_string}</p>
-                }
-            }
-        />
+        <div class="error-wrap">
+            <div>
+                <h1 class="error-title">{if errors.len() > 1 { "Errors" } else { "Error" }}</h1>
+                <For
+                    // a function that returns the items we're iterating over; a signal is fine
+                    each=move || { errors.clone().into_iter().enumerate() }
+                    // a unique key for each item as a reference
+                    key=|(index, _error)| *index
+                    // renders each item to a view
+                    children=move |error| {
+                        let error_string = error.1.to_string();
+                        let error_code = error.1.status_code();
+                        if error_code == StatusCode::NOT_FOUND {
+                            view! {
+                                <h2 class="error-subtitle">{error_code.to_string()}</h2>
+                                <p>"The site you are looking for doesn't exist!"</p>
+                                <A href="/">"Go back to the home page."</A>
+                            }
+                        } else {
+                            view! {
+                                <h2 class="error-subtitle">{error_code.to_string()}</h2>
+                                <p>"Error: " {error_string}</p>
+                            }
+                        }
+                    }
+                />
+
+            </div>
+        </div>
     }
 }

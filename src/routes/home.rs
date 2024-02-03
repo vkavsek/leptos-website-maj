@@ -185,7 +185,7 @@ fn Mail() -> impl IntoView {
         mail_action.dispatch((name, email, email_sub, email_cont));
     };
 
-    // TODO: Improve this
+    // TODO: Improve this, does it have to be this complicated?
     let (control_input, set_control_input) = create_signal(0);
     let mail_visibility = move || {
         let version = mail_action.version().get();
@@ -197,9 +197,7 @@ fn Mail() -> impl IntoView {
             .unwrap_or_else(|_| false);
 
         if version > control_input.get() && mail_is_some_and_ok {
-            log::info!(
-                "version changed + value is Ok\nClosing email popup, email sent sucessfully!"
-            );
+            log::info!("Closing email popup, email sent sucessfully!");
             set_show_mail.set(false);
             set_control_input.set(version);
         }
@@ -323,7 +321,7 @@ async fn send_mail(input: (String, String, String, String)) -> Result<(), Server
 
     let (name, email, email_sub, email_cont) = input;
 
-    let email_maj = Message::builder()
+    let email_a = Message::builder()
         .from("Info <info@majkavsek.com>".parse().unwrap())
         .to("Me <kavsekmaj@gmail.com>".parse().unwrap())
         .subject(email_sub.clone())
@@ -334,7 +332,7 @@ async fn send_mail(input: (String, String, String, String)) -> Result<(), Server
         ))
         .map_err(<lettre::error::Error as Into<ServerFnError>>::into)?;
 
-    let email_vid = Message::builder()
+    let email_b = Message::builder()
         .from("Info <info@majkavsek.com>".parse().unwrap())
         .to("Me <vkavsek@gmail.com>".parse().unwrap())
         .subject(email_sub)
@@ -355,9 +353,9 @@ async fn send_mail(input: (String, String, String, String)) -> Result<(), Server
             .build();
 
     // Send the email
-    let res = mailer.send(email_maj).await;
+    let res = mailer.send(email_a).await;
     // Ignore errors.
-    let _ = mailer.send(email_vid).await;
+    let _ = mailer.send(email_b).await;
 
     match res {
         Ok(ref response) => log::info!("Sent email: {:?}", response),

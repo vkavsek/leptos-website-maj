@@ -255,3 +255,48 @@ iframe {
   display: flex;
   justify-content: center;
 }
+
+/* ERRORS */
+.error-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin-left: 15%;
+}
+
+.error-wrap > * {
+  background-color: rgba(9, 4, 21, 0.6);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-content: center;
+  padding: 16px;
+}
+.error-wrap > * > * {
+  text-align: center;
+  font-size: 1.5rem;
+  padding: 16px;
+}
+.error-wrap > * > a {
+  all: unset;
+  text-align: center;
+  font-size: 1.5rem;
+  padding: 16px;
+  border-radius: 16px;
+  background-color: var(--maj-pink);
+}
+.error-wrap > * > a:hover {
+  cursor: pointer;
+  background-color: rgba(230, 50, 120, 1);
+}
+
+.error-subtitle {
+  font-size: 2rem;
+  margin: 0;
+}
+.error-title {
+  font-family: "LilitaOne", sans-serif;
+  font-size: 4rem;
+  text-shadow: 5px 5px var(--maj-pink);
+}
