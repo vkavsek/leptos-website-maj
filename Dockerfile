@@ -1,5 +1,5 @@
 # If you’re using stable, use this instead
-FROM rust:1.73-bullseye as builder
+FROM rust:1.75-bullseye as builder
 
 RUN apt-get update && \
   apt-get install -y binaryen npm protobuf-compiler libssl-dev pkg-config musl-tools \
@@ -17,7 +17,7 @@ COPY . .
 # Build the app
 RUN cargo leptos build --release -vv
 
-FROM rust:1.73-bullseye as runner
+FROM rust:1.75-bullseye as runner
 # Copy the server binary to the /app directory
 COPY --from=builder /app/target/release/maj-fullstack /app/
 # /target/site contains our JS/WASM/CSS, etc.
