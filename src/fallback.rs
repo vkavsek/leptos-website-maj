@@ -1,6 +1,6 @@
 use crate::{
     app::App,
-    error_template::{ErrorTemplate, MajServerError},
+    error_template::{/*ErrorTemplate,*/ MajServerError},
 };
 
 use axum::{
