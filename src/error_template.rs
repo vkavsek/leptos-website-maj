@@ -45,7 +45,8 @@ pub fn ErrorTemplate(
         .into_iter()
         .filter_map(|(_k, e)| e.downcast_ref::<MajServerError>().cloned())
         .collect();
-    // TODO: Delete this and handle split the server / client errors.
+
+    // FIXME: Delete this and handle split the server / client errors.
     // Do the same in the view!
     eprintln!("Errors: {errors:#?}");
 

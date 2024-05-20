@@ -2,8 +2,8 @@ use leptos::html::Div;
 use leptos::*;
 use leptos_router::*;
 
-#[component]
 /// Navigation + handles dynamic BG style dispatching based on navigation.
+#[component]
 pub fn Head(
     /// NodeRef of the div where you'll set the background image.
     bg_div_ref: NodeRef<Div>,

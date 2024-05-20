@@ -1,43 +1,36 @@
-use crate::{
-    app::App,
-    error_template::{/*ErrorTemplate,*/ MajServerError},
-};
+use crate::app::App;
 
 use axum::{
     body::Body,
     extract::State,
-    http::{Request, Response, StatusCode, Uri},
-    response::{IntoResponse, Response as AxumResponse},
+    http::{Request, StatusCode, Uri},
+    response::{IntoResponse, Response},
 };
-use leptos::{view, Errors, LeptosOptions};
+use leptos::{view, LeptosOptions};
 use tower::ServiceExt;
 use tower_http::services::ServeDir;
 
-// TODO: use this shit.
-pub async fn file_and_error_handler(
+pub async fn static_file_handler(
     uri: Uri,
     State(options): State<LeptosOptions>,
     req: Request<Body>,
-) -> AxumResponse {
+    // FIXME: Result<Response>
+) -> Response {
     let root = options.site_root.clone();
-    // TODO: unwrap, handle error, maybe even return Result<Response>?
+    // FIXME: unwrap, handle error, maybe even return Result<Response>?
     let res = get_static_file(uri.clone(), &root).await.unwrap();
 
+    // Return the file if found or render App to stream,
+    // in which case the App renders the 404 page.
     if res.status() == StatusCode::OK {
         res.into_response()
     } else {
-        let mut errors = Errors::default();
-        errors.insert_with_default_key(MajServerError::NotFound);
-        let handler = leptos_axum::render_app_to_stream(
-            options.to_owned(),
-            // move || view! {<ErrorTemplate outside_errors=errors.clone()/>},
-            move || view! {<App/>},
-        );
+        let handler = leptos_axum::render_app_to_stream(options.to_owned(), move || view! {<App/>});
         handler(req).await.into_response()
     }
 }
 
-async fn get_static_file(uri: Uri, root: &str) -> Result<Response<Body>, (StatusCode, String)> {
+async fn get_static_file(uri: Uri, root: &str) -> Result<Response, (StatusCode, String)> {
     let req = Request::builder()
         .uri(uri.clone())
         .body(Body::empty())
