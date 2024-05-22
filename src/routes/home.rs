@@ -197,7 +197,7 @@ fn Mail() -> impl IntoView {
             .unwrap_or_else(|_| false);
 
         if version > control_input.get() && mail_is_some_and_ok {
-            log::info!("Closing email popup, email sent sucessfully!");
+            tracing::info!("Closing email popup, email sent sucessfully!");
             set_show_mail.set(false);
             set_control_input.set(version);
         }
@@ -357,9 +357,10 @@ async fn send_mail(input: (String, String, String, String)) -> Result<(), Server
     // Ignore errors.
     let _ = mailer.send(email_b).await;
 
+    // FIXME: What error are we printing, should it be printed etc.
     match res {
-        Ok(ref response) => log::info!("Sent email: {:?}", response),
-        Err(ref e) => log::error!("Error: {}", e),
+        Ok(ref response) => tracing::info!("Sent email: {:?}", response),
+        Err(ref e) => tracing::error!("Error: {}", e),
     }
     res.map(|_res| {}).map_err(|e| e.into())
 }

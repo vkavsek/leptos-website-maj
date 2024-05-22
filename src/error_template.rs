@@ -48,7 +48,7 @@ pub fn ErrorTemplate(
 
     // FIXME: Delete this and handle split the server / client errors.
     // Do the same in the view!
-    eprintln!("Errors: {errors:#?}");
+    tracing::error!("Errors: {errors:#?}");
 
     // Only the response code for the first error is actually sent from the server
     // this may be customized by the specific application

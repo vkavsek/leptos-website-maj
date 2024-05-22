@@ -1,5 +1,3 @@
-#[allow(unused)]
-use anyhow::Result;
 use leptos::{
     html::{Button, Div},
     *,
@@ -282,7 +280,7 @@ async fn read_files(path: String) -> Result<Vec<String>, ServerFnError> {
     let mut files = tokio::fs::read_dir(&path).await?;
     let mut res = Vec::new();
     while let Some(file) = files.next_entry().await? {
-        log::info!(
+        tracing::info!(
             "path to file: {}",
             file.path().to_str().expect("filename empty")
         );
