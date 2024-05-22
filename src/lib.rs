@@ -48,13 +48,10 @@ pub fn init_dbg_tracing() {
 // Initialize tracing for PRODUCTION
 pub fn init_production_tracing() {
     tracing_subscriber::fmt()
-        .with_ansi(false)
         .without_time()
         .with_target(false)
         // Panic if the env filter RUST_LOG isn't provided!
         .with_env_filter(EnvFilter::try_from_default_env().expect("RUST_LOG is missing!"))
-        // ENABLE IF YOU WANT JSON FORMATED LOGS
-        // .json()
         .init();
     println!("Initialized PRODUCTION tracing");
 }

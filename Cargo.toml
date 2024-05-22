@@ -23,7 +23,7 @@ tower-http = { version = "0.5", features = [
 
 # Tracing & Logging
 tracing = { version = "0.1", features = ["log"] }
-tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 console_error_panic_hook = "0.1"
 
 #Leptos
