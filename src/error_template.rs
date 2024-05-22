@@ -2,17 +2,26 @@ use http::status::StatusCode;
 use leptos::*;
 use leptos_router::A;
 use serde::Serialize;
-use thiserror::Error;
 use tracing::error;
 
 #[cfg(feature = "ssr")]
 use leptos_axum::ResponseOptions;
 
-#[derive(Serialize, Clone, Debug, Error)]
+pub type Result<T> = core::result::Result<T, MajServerError>;
+
+#[derive(Serialize, Clone, Debug)]
 pub enum MajServerError {
-    #[error("Not Found")]
     NotFound,
 }
+
+// Error Boilerplate
+impl core::fmt::Display for MajServerError {
+    fn fmt(&self, fmt: &mut core::fmt::Formatter) -> core::result::Result<(), core::fmt::Error> {
+        write!(fmt, "{self:?}")
+    }
+}
+
+impl std::error::Error for MajServerError {}
 
 impl MajServerError {
     pub fn status_code(&self) -> StatusCode {
@@ -45,11 +54,8 @@ pub fn ErrorTemplate(
     let errors: Vec<MajServerError> = errors
         .into_iter()
         .filter_map(|(_k, e)| e.downcast_ref::<MajServerError>().cloned())
+        .inspect(|e| error!("{:?}", e))
         .collect();
-
-    // FIXME: Delete this and handle split the server / client errors.
-    // Do the same in the view!
-    error!("Errors: {errors:#?}");
 
     // Only the response code for the first error is actually sent from the server
     // this may be customized by the specific application
