@@ -9,9 +9,6 @@ use player::AudioPlayer;
 
 #[component]
 pub fn AudioWrapper() -> impl IntoView {
-    // TODO: Remove all the unused shit, and move it into it's own component in a separate folder.
-    // Only keep the player, cause that's all that you need, simplify the player so it's easier to
-    // maintain.
     let names = vec![
         "Practical_Anxiety_MASTER.mp3",
         "Aya_Sean_edit-Mark_Babin.mp3",
@@ -21,6 +18,7 @@ pub fn AudioWrapper() -> impl IntoView {
         .into_iter()
         .map(|name| name.to_string())
         .collect::<Vec<String>>();
+
     // Create signals
     let names = create_rw_signal(names);
     let selector = create_rw_signal(0usize);
@@ -68,7 +66,7 @@ impl Song {
         let parts = spaces(filename);
 
         Self {
-            title: parts.get(0).map(|s| s.to_owned()),
+            title: parts.first().map(|s| s.to_owned()),
             artist: parts.get(1).map(|s| s.to_owned()),
             album: parts.get(2).map(|s| s.to_owned()),
         }

@@ -149,7 +149,7 @@ pub fn FutureEvents() -> impl IntoView {
     }
 }
 
-// TODO: Make this dynamic! SQL!
+// TODO: Make this dynamic! shows/shows.json!
 #[allow(unused)]
 const SHOWS_JSON: &str = r#"
 {"shows": [{

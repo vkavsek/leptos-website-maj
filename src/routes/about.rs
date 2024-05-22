@@ -3,10 +3,7 @@ use leptos::{
     *,
 };
 use leptos_meta::{Link, Title};
-#[allow(unused)]
-use std::path::{Path, PathBuf};
 use wasm_bindgen::JsValue;
-// use web_sys::{ScrollBehavior, ScrollToOptions};
 
 #[allow(unused)]
 enum Orient {
@@ -103,7 +100,6 @@ pub fn About() -> impl IntoView {
         <div class="components" id="about-components">
             <div class="title" id="about-title">
                 <h1>"About Me"</h1>
-            // <img class="title-img" id="about-img" src="/img/titles/about.svg"/>
             </div>
             <div class="contents" id="about-wrap">
                 <ImagesAbout/>
@@ -127,17 +123,27 @@ pub fn About() -> impl IntoView {
 
 #[component]
 pub fn ImagesAbout() -> impl IntoView {
-    let files = create_resource(
-        move || (),
-        |_| async move {
-            // TODO: Handle errors
-            // NOTE: this only works in Docker
-            read_files("/app/site/img/about_pics".to_string())
-                // read_files("./public/img/about_pics".to_string())
-                .await
-                .unwrap()
-        },
-    );
+    let files = if cfg!(not(debug_assertions)) {
+        create_resource(
+            move || (),
+            |_| async move {
+                // NOTE: PRODUCTION only works in Docker
+                read_files("/app/site/img/about_pics".to_string())
+                    .await
+                    .unwrap()
+            },
+        )
+    } else {
+        create_resource(
+            move || (),
+            |_| async move {
+                // NOTE: DEV
+                read_files("./public/img/about_pics".to_string())
+                    .await
+                    .unwrap()
+            },
+        )
+    };
 
     let _gallery_ref = create_node_ref::<Div>();
 
@@ -230,11 +236,7 @@ pub fn ImagesAbout() -> impl IntoView {
             <div class="fullscreen-container">{fullscreen_img}</div>
         </Show>
         <div class="about-gallery">
-            // <button on:click=move_back class="about-nav-button">
-            // <img class="nav-button-img" src="/img/icon/back.svg" alt="back"/>
-            // </button>
             <div node_ref=_gallery_ref class="about-images-scroller snaps-inline">
-                // TODO: Add proper loading screen with Transition/Suspense
                 <Suspense fallback=move || {
                     view! { <p>"Loading"</p> }
                 }>
@@ -263,34 +265,36 @@ pub fn ImagesAbout() -> impl IntoView {
 
                 </Suspense>
             </div>
-        // <button on:click=move_next class="about-nav-button">
-        // <img
-        // class="nav-button-img"
-        // src="/img/icon/back.svg"
-        // style:transform="rotate(180deg)"
-        // alt="back"
-        // />
-        // </button>
         </div>
     }
 }
 
 #[server(ReadFiles)]
 async fn read_files(path: String) -> Result<Vec<String>, ServerFnError> {
-    let mut files = tokio::fs::read_dir(&path).await?;
-    let mut res = Vec::new();
-    while let Some(file) = files.next_entry().await? {
-        tracing::info!(
-            "path to file: {}",
-            file.path().to_str().expect("filename empty")
-        );
-        res.push(extract_name(file.path().to_str()));
-    }
-    Ok(res)
+    use tokio::sync::OnceCell;
+
+    static INIT: OnceCell<Result<Vec<String>, ServerFnError>> = OnceCell::const_new();
+    INIT.get_or_init(|| async {
+        let mut files = tokio::fs::read_dir(&path).await?;
+        let mut res = Vec::new();
+        while let Some(file) = files.next_entry().await? {
+            tracing::debug!(
+                "path to file: {}",
+                file.path()
+                    .to_str()
+                    .expect("Got an empty Filename in about.rs -> read_files()")
+            );
+            res.push(extract_name(file.path().to_str()));
+        }
+        Ok(res)
+    })
+    .await
+    .clone()
 }
-/// Always returns a string, if it can't split by '/' or input is None it just returns an empty
-/// string: ""
+// NOTE: We get warnings for dead code, presumably because of the `server` macro.
 #[allow(dead_code)]
+/// Returns a string in the format: "/img/about_pics/{filename}",
+/// if it can't split by '/' or input is `None `it just returns an empty string: ""
 fn extract_name(path: Option<&str>) -> String {
     if let Some(path) = path {
         match path.split('/').last().map(|res| res.to_owned()) {

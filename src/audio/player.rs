@@ -11,7 +11,6 @@ use leptos_use::{use_raf_fn, use_raf_fn_with_options, utils::Pausable};
 use std::rc::Rc;
 
 // ------> AUDIO PLAYER
-// TODO: If end of song next song or make button PAUSE
 #[component]
 pub fn AudioPlayer() -> impl IntoView {
     // Signals
@@ -77,9 +76,8 @@ pub fn AudioPlayer() -> impl IntoView {
     // NOTE: here the main audio loop gets initialized
     use_interval(10, audio_loop);
 
-    // TODO: this only runs on CSR what if SSR ?
     // Reset play button when you change the song
-    create_effect(move |_| {
+    create_isomorphic_effect(move |_| {
         // subscribe to selector
         let _ = selector.get();
         if let Some(play_btn) = play_btn_ref.get() {
@@ -173,7 +171,6 @@ pub fn AudioPlayer() -> impl IntoView {
         }
     };
 
-    // TODO: add NextSong, PrevSong buttons?
     view! {
         <div class="audio-player">
             <audio node_ref=audio_ref on:loadeddata=audio_load src=song_src>

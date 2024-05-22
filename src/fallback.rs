@@ -14,10 +14,8 @@ pub async fn static_file_handler(
     uri: Uri,
     State(options): State<LeptosOptions>,
     req: Request<Body>,
-    // FIXME: Result<Response>
 ) -> Response {
     let root = options.site_root.clone();
-    // FIXME: unwrap, handle error, maybe even return Result<Response>?
     let res = get_static_file(uri.clone(), &root).await.unwrap();
 
     // Return the file if found or render App to stream,

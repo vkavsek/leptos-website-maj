@@ -2,7 +2,7 @@ use super::Song;
 use leptos::*;
 
 // ------> AUDIO LIST
-// TODO: make it dynamic reimplement for SSR
+// NOTE: Currently not in use
 #[component]
 pub fn AudioList() -> impl IntoView {
     let names = use_context::<RwSignal<Vec<String>>>().expect("the names to be provided");

@@ -1,3 +1,6 @@
+// NOTE: 22.05.2024: we were getting warnings for empty docs in `component` macro
+#![allow(clippy::empty_docs)]
+
 // ###################################
 // ->   MODS
 // ###################################

@@ -167,8 +167,7 @@ fn Mail() -> impl IntoView {
         })
     });
 
-    let mail_action =
-        create_action(|input: &(String, String, String, String)| send_mail(input.clone()));
+    let mail_action = create_action(|input: &EmailBuilder| send_mail(input.clone()));
 
     let on_submit = move |ev: SubmitEvent| {
         ev.prevent_default();
@@ -180,10 +179,11 @@ fn Mail() -> impl IntoView {
         let email_sub = email_sub_ref.get().unwrap().value();
         let email_cont = email_cont_ref.get().unwrap().value();
 
-        // TODO: content validation?
+        // NOTE: No content validation
         // No need to check if the Strings are empty, <form> does that for us.
+        let email_builder = EmailBuilder::new(name, email, email_sub, email_cont);
 
-        mail_action.dispatch((name, email, email_sub, email_cont));
+        mail_action.dispatch(email_builder);
     };
 
     // TODO: Improve this, does it have to be this complicated?
@@ -193,7 +193,9 @@ fn Mail() -> impl IntoView {
         let mail_is_some_and_ok = mail_action
             .value()
             .get()
-            .unwrap_or(Err(ServerFnError::ServerError(String::new())))
+            .unwrap_or(Err(ServerFnError::ServerError(
+                "No previous return Values".to_string(),
+            )))
             .map(|_| true)
             .unwrap_or_else(|_| false);
 
@@ -311,25 +313,48 @@ fn Mail() -> impl IntoView {
     }
 }
 
+#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+struct EmailBuilder {
+    name: String,
+    email: String,
+    email_subject: String,
+    email_content: String,
+}
+impl EmailBuilder {
+    fn new(name: String, email: String, email_subject: String, email_content: String) -> Self {
+        Self {
+            name,
+            email,
+            email_subject,
+            email_content,
+        }
+    }
+}
+
 /// Takes (Name, Email, Email Subject, Email Content) as input and sends an email, returning errors
 /// if any.
 #[server(SendMail)]
-async fn send_mail(input: (String, String, String, String)) -> Result<(), ServerFnError> {
+async fn send_mail(input: EmailBuilder) -> Result<(), ServerFnError> {
     use lettre::{
         message::header::ContentType, transport::smtp::authentication::Credentials,
         AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
     };
     use tracing::error;
 
-    let (name, email, email_sub, email_cont) = input;
+    let EmailBuilder {
+        name,
+        email,
+        email_subject,
+        email_content,
+    } = input;
 
     let email_a = Message::builder()
         .from("Info <info@majkavsek.com>".parse().unwrap())
         .to("Me <kavsekmaj@gmail.com>".parse().unwrap())
-        .subject(email_sub.clone())
+        .subject(email_subject.clone())
         .header(ContentType::TEXT_PLAIN)
         .body(format!(
-            "Sender INFO:\n\n{:*>20}{name}\n{:*>20}{email}\n\n\nEmail CONTENT:\n\n{email_cont}",
+            "Sender INFO:\n\n{:*>20}{name}\n{:*>20}{email}\n\n\nEmail CONTENT:\n\n{email_content}",
             "Name: ", "Email: "
         ))
         .map_err(<lettre::error::Error as Into<ServerFnError>>::into)?;
@@ -337,10 +362,10 @@ async fn send_mail(input: (String, String, String, String)) -> Result<(), Server
     let email_b = Message::builder()
         .from("Info <info@majkavsek.com>".parse().unwrap())
         .to("Me <vkavsek@gmail.com>".parse().unwrap())
-        .subject(email_sub)
+        .subject(email_subject)
         .header(ContentType::TEXT_PLAIN)
         .body(format!(
-            "Sender INFO:\n\n{:*>20}{name}\n{:*>20}{email}\n\n\nEmail CONTENT:\n\n{email_cont}",
+            "Sender INFO:\n\n{:*>20}{name}\n{:*>20}{email}\n\n\nEmail CONTENT:\n\n{email_content}",
             "Name: ", "Email: "
         ))
         .map_err(<lettre::error::Error as Into<ServerFnError>>::into)?;
@@ -359,7 +384,6 @@ async fn send_mail(input: (String, String, String, String)) -> Result<(), Server
     // Ignore errors.
     let _ = mailer.send(email_b).await;
 
-    // FIXME: What error are we printing, should it be printed etc.
     match res {
         Ok(ref response) => info!("Sent email: {:?}", response),
         Err(ref e) => error!("Error: {}", e),
