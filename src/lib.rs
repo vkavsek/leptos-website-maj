@@ -39,6 +39,7 @@ pub fn init_dbg_tracing() {
         .with_max_level(Level::DEBUG)
         .compact()
         .init();
+    println!("Initialized DEBUG tracing");
 }
 
 // Initialize tracing for PRODUCTION
@@ -47,6 +48,10 @@ pub fn init_production_tracing() {
         .with_ansi(false)
         .without_time()
         .with_target(false)
-        .with_env_filter(EnvFilter::from_default_env())
+        // Panic if the env filter RUST_LOG isn't provided!
+        .with_env_filter(EnvFilter::try_from_default_env().expect("RUST_LOG is missing!"))
+        // ENABLE IF YOU WANT JSON FORMATED LOGS
+        // .json()
         .init();
+    println!("Initialized PRODUCTION tracing");
 }

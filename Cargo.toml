@@ -1,12 +1,15 @@
 [package]
 name = "maj-leptos"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+#Tokio
+tokio = { version = "1", optional = true, features = ["full"] }
+
 # Axum
 axum = { version = "0.7", optional = true }
 tower = { version = "0.4", optional = true }
@@ -18,8 +21,10 @@ tower-http = { version = "0.5", features = [
   "compression-gzip",
 ], optional = true }
 
-#Tokio
-tokio = { version = "1", optional = true, features = ["full"] }
+# Tracing & Logging
+tracing = { version = "0.1", features = ["log"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+console_error_panic_hook = "0.1"
 
 #Leptos
 leptos = { version = "0.6", features = ["tracing"] }
@@ -28,14 +33,10 @@ leptos_meta = { version = "0.6" }
 leptos_router = { version = "0.6" }
 leptos-use = "0.10"
 wasm-bindgen = "=0.2"
+
+# Http & Web-SYS
 http = "1"
 web-sys = { version = "0.3", features = ["ScrollBehavior", "ScrollToOptions"] }
-
-# Tracing & Logging
-tracing = { version = "0.1", features = ["log"] }
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-console_log = "1"
-console_error_panic_hook = "0.1"
 
 # Serialization
 serde = { version = "1", features = ["derive"] }
@@ -76,7 +77,8 @@ panic = "abort"
 # The name used by wasm-bindgen/cargo-leptos for the JS/WASM bundle. Defaults to the crate name
 output-name = "maj-leptos"
 
-# The site root folder is where cargo-leptos generate all output. WARNING: all content of this folder will be erased on a rebuild. Use it in your server setup.
+# The site root folder is where cargo-leptos generate all output.
+# WARNING: all content of this folder will be erased on a rebuild. Use it in your server setup.
 site-root = "target/site"
 
 # The site-root relative folder where all compiled output (JS, WASM and CSS) is written

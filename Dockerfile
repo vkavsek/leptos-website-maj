@@ -26,6 +26,7 @@ RUN cargo chef cook --release --recipe-path recipe.json
 # If our dependency tree hasn't changed, everything should be cached up to now!
 COPY . .
 
+# TODO: Verify that cargo leptos uses cargo chef
 RUN cargo leptos build --release -vv
 
 
@@ -44,7 +45,7 @@ RUN apt-get update -y \
 
 
 # Copy the compiled server binary from builder to runtime.
-COPY --from=builder /app/target/release/maj-fullstack maj-fullstack
+COPY --from=builder /app/target/release/maj-leptos /app/maj-leptos
 # /target/site contains our JS/WASM/CSS, etc.
 COPY --from=builder /app/target/site /app/site
 COPY --from=builder /app/Cargo.toml /app/Cargo.toml
@@ -57,4 +58,4 @@ ENV LEPTOS_SITE_ROOT site
 EXPOSE 8080
 # Run the server
 
-ENTRYPOINT [ "./maj-fullstack" ]
+ENTRYPOINT [ "/app/maj-leptos" ]
