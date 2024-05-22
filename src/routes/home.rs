@@ -4,6 +4,7 @@ use leptos::{
     *,
 };
 use leptos_meta::{Link, Title};
+use tracing::info;
 
 #[allow(unused)]
 const EMAIL_ADDR: &str = "kavsekmaj@gmail.com";
@@ -197,7 +198,7 @@ fn Mail() -> impl IntoView {
             .unwrap_or_else(|_| false);
 
         if version > control_input.get() && mail_is_some_and_ok {
-            tracing::info!("Closing email popup, email sent sucessfully!");
+            info!("Closing email popup, email sent sucessfully!");
             set_show_mail.set(false);
             set_control_input.set(version);
         }
@@ -318,6 +319,7 @@ async fn send_mail(input: (String, String, String, String)) -> Result<(), Server
         message::header::ContentType, transport::smtp::authentication::Credentials,
         AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
     };
+    use tracing::error;
 
     let (name, email, email_sub, email_cont) = input;
 
@@ -359,8 +361,8 @@ async fn send_mail(input: (String, String, String, String)) -> Result<(), Server
 
     // FIXME: What error are we printing, should it be printed etc.
     match res {
-        Ok(ref response) => tracing::info!("Sent email: {:?}", response),
-        Err(ref e) => tracing::error!("Error: {}", e),
+        Ok(ref response) => info!("Sent email: {:?}", response),
+        Err(ref e) => error!("Error: {}", e),
     }
     res.map(|_res| {}).map_err(|e| e.into())
 }

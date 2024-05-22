@@ -3,6 +3,7 @@ use leptos::*;
 use leptos_router::A;
 use serde::Serialize;
 use thiserror::Error;
+use tracing::error;
 
 #[cfg(feature = "ssr")]
 use leptos_axum::ResponseOptions;
@@ -48,7 +49,7 @@ pub fn ErrorTemplate(
 
     // FIXME: Delete this and handle split the server / client errors.
     // Do the same in the view!
-    tracing::error!("Errors: {errors:#?}");
+    error!("Errors: {errors:#?}");
 
     // Only the response code for the first error is actually sent from the server
     // this may be customized by the specific application

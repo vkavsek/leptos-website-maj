@@ -22,7 +22,7 @@ tower-http = { version = "0.5", features = [
 tokio = { version = "1", optional = true, features = ["full"] }
 
 #Leptos
-leptos = { version = "0.6" }
+leptos = { version = "0.6", features = ["tracing"] }
 leptos_axum = { version = "0.6", optional = true }
 leptos_meta = { version = "0.6" }
 leptos_router = { version = "0.6" }
@@ -32,10 +32,8 @@ http = "1"
 web-sys = { version = "0.3", features = ["ScrollBehavior", "ScrollToOptions"] }
 
 # Tracing & Logging
-tracing = { version = "0.1", features = ["log"], optional = true }
-tracing-subscriber = { version = "0.3", features = [
-  "env-filter",
-], optional = true }
+tracing = { version = "0.1", features = ["log"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 console_log = "1"
 console_error_panic_hook = "0.1"
 
@@ -64,8 +62,6 @@ ssr = [
   "dep:tower-http",
   "dep:leptos_axum",
   "dep:lettre",
-  "dep:tracing",
-  "dep:tracing-subscriber",
 ]
 
 # Defines a size-optimized profile for the WASM bundle in release mode
