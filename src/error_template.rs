@@ -12,6 +12,32 @@ pub type Result<T> = core::result::Result<T, MajServerError>;
 #[derive(Serialize, Clone, Debug)]
 pub enum MajServerError {
     NotFound,
+    Io(String),
+    SerdeJson(String),
+}
+
+impl MajServerError {
+    pub fn status_code(&self) -> StatusCode {
+        #[allow(unreachable_patterns)]
+        match self {
+            MajServerError::NotFound => StatusCode::NOT_FOUND,
+            Self::Io(_) => StatusCode::NO_CONTENT,
+            Self::SerdeJson(_) => StatusCode::NOT_ACCEPTABLE,
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+}
+
+impl From<serde_json::Error> for MajServerError {
+    fn from(value: serde_json::Error) -> Self {
+        Self::SerdeJson(value.to_string())
+    }
+}
+
+impl From<std::io::Error> for MajServerError {
+    fn from(value: std::io::Error) -> Self {
+        Self::Io(value.to_string())
+    }
 }
 
 // Error Boilerplate
@@ -22,16 +48,6 @@ impl core::fmt::Display for MajServerError {
 }
 
 impl std::error::Error for MajServerError {}
-
-impl MajServerError {
-    pub fn status_code(&self) -> StatusCode {
-        #[allow(unreachable_patterns)]
-        match self {
-            MajServerError::NotFound => StatusCode::NOT_FOUND,
-            _ => StatusCode::INTERNAL_SERVER_ERROR,
-        }
-    }
-}
 
 // A basic function to display errors served by the error boundaries.
 // Feel free to do more complicated things here than just displaying the error.

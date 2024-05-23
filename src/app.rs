@@ -63,10 +63,10 @@ pub fn App() -> impl IntoView {
                     <Routes>
                         <Route path="/" view=Home/>
                         <Route path="/about_me" view=About/>
-                        <Route path="/shows" view=Concerts>
-                            <Route path="" view=ConcertsFallback/>
-                            <Route path="/past" view=Past/>
-                            <Route path="/future" view=FutureEvents/>
+                        <Route path="/shows" view=Shows>
+                            <Route path="" view=ShowsFallback/>
+                            <Route path="/past" view=PastShows/>
+                            <Route path="/future" view=FutureShows/>
                         </Route>
                         <Route path="/media" view=Media/>
                     </Routes>

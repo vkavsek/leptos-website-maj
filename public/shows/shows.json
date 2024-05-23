@@ -1,6 +1,42 @@
 {
 	"shows": [
 		{
+			"date": "27.05.2024",
+			"name": "Maj Kavšek Quintet: Galaterna",
+			"club": "ZigZag Jazz Club",
+			"location": "Berlin, Germany"
+		},
+		{
+			"date": "20.05.2024",
+			"name": "Maj Kavšek Quintet: Galaterna",
+			"club": "ZigZag Jazz Club",
+			"location": "Berlin, Germany"
+		},
+		{
+			"date": "26.04.2024",
+			"name": "Maj Kavšek Quintet: Galaterna (Album pre-release concert)",
+			"club": "Donau115",
+			"location": "Berlin, Germany"
+		},
+		{
+			"date": "29.12.2023",
+			"name": "Veliki praznični jam session",
+			"club": "Prulček",
+			"location": "Ljubljana, Slovenija"
+		},
+		{
+			"date": "23.12.2023",
+			"name": "Jazz & Jam",
+			"club": "KIŠD",
+			"location": "Izola, Slovenija"
+		},
+		{
+			"date": "20.10.2023",
+			"name": "Fame’s orchestra w/Arve Henriksen & Jan Bang",
+			"club": "Skopje Jazz festival",
+			"location": "Skopje, North Macedonia"
+		},
+		{
 			"date": "23.08.2023",
 			"name": "Good old friends",
 			"club": "Zorica",
