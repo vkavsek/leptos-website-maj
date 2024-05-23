@@ -14,7 +14,8 @@ pub mod routes;
 #[cfg(feature = "ssr")]
 pub mod serve;
 
-// Re-export the serve function
+// Re-exports
+pub use error_template::MajServerError;
 #[cfg(feature = "ssr")]
 pub use serve::serve;
 

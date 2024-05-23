@@ -4,8 +4,6 @@ use leptos_meta::{Link, Title};
 use leptos_router::*;
 use serde::{Deserialize, Serialize};
 
-use crate::error_template::MajServerError;
-
 // ###################################
 // ->   ROUTES
 // ###################################
@@ -168,17 +166,17 @@ async fn get_shows() -> Result<Events, ServerFnError> {
 }
 
 #[cfg(feature = "ssr")]
-async fn get_shows_util() -> &'static Result<Events, MajServerError> {
+async fn get_shows_util() -> &'static Result<Events, crate::MajServerError> {
     use std::cmp::Reverse;
     use tokio::sync::OnceCell;
 
     let path = if cfg!(not(debug_assertions)) {
-        "/app/shows/shows.json"
+        "/app/site/shows/shows.json"
     } else {
         "./public/shows/shows.json"
     };
 
-    static SHOWS_INIT: OnceCell<Result<Events, MajServerError>> = OnceCell::const_new();
+    static SHOWS_INIT: OnceCell<Result<Events, crate::MajServerError>> = OnceCell::const_new();
 
     SHOWS_INIT
         .get_or_init(|| async {

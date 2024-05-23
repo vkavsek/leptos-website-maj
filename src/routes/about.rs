@@ -123,28 +123,9 @@ pub fn About() -> impl IntoView {
 
 #[component]
 pub fn ImagesAbout() -> impl IntoView {
-    let files = if cfg!(not(debug_assertions)) {
-        create_resource(
-            move || (),
-            |_| async move {
-                // NOTE: PRODUCTION only works in Docker
-                read_files("/app/site/img/about_pics".to_string())
-                    .await
-                    .unwrap()
-            },
-        )
-    } else {
-        create_resource(
-            move || (),
-            |_| async move {
-                // NOTE: DEV
-                read_files("./public/img/about_pics".to_string())
-                    .await
-                    .unwrap()
-            },
-        )
-    };
+    let files = create_resource(move || (), |_| async move { read_files().await.unwrap() });
 
+    // This is named like this because we get warnings because of macros.
     let _gallery_ref = create_node_ref::<Div>();
 
     // Click on image to make it fullscreen.
@@ -270,12 +251,16 @@ pub fn ImagesAbout() -> impl IntoView {
 }
 
 #[server(ReadFiles)]
-async fn read_files(path: String) -> Result<Vec<String>, ServerFnError> {
+async fn read_files() -> Result<Vec<String>, ServerFnError> {
     use tokio::sync::OnceCell;
-
+    let path = if cfg!(not(debug_assertions)) {
+        "/app/site/img/about_pics"
+    } else {
+        "./public/img/about_pics"
+    };
     static INIT: OnceCell<Result<Vec<String>, ServerFnError>> = OnceCell::const_new();
     INIT.get_or_init(|| async {
-        let mut files = tokio::fs::read_dir(&path).await?;
+        let mut files = tokio::fs::read_dir(path).await?;
         let mut res = Vec::new();
         while let Some(file) = files.next_entry().await? {
             tracing::debug!(

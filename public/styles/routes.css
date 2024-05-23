@@ -22,43 +22,51 @@
   #home-components {
     height: 100%;
   }
+
   #home-wrap {
     height: 100%;
     justify-content: flex-end;
     margin-left: 0;
   }
+
   .all-contacts {
     position: relative;
     bottom: 4rem;
     width: 100%;
   }
-  .all-contacts > * {
+
+  .all-contacts>* {
     width: 3vh;
     padding: 1rem;
     border-radius: 10px;
   }
 }
+
 @media screen and (orientation: landscape) {
   #home-wrap {
     justify-content: flex-end;
     align-items: center;
   }
+
   .all-contacts {
     border-radius: 1rem;
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
     width: 60%;
   }
-  .all-contacts > * {
+
+  .all-contacts>* {
     padding: 1rem;
     width: 3vw;
     height: auto;
   }
+
   .contacts-img:hover {
     transform: scale(1.05);
     transition: 0.2s ease-in-out;
   }
 }
+
 @media screen and (orientation: landscape) and (min-height: 700px) {
   #home-title {
     font-size: 10rem;
@@ -71,29 +79,34 @@
   height: fit-content;
   background-color: rgba(9, 4, 21, 0.7);
 }
-.all-contacts > * {
+
+.all-contacts>* {
   display: flex;
   justify-content: center;
   align-content: center;
 }
-.contacts-wrap > button {
+
+.contacts-wrap>button {
   all: unset;
   display: grid;
   justify-items: center;
   align-items: center;
   width: 100%;
 }
-.contacts-wrap > a {
+
+.contacts-wrap>a {
   display: grid;
   justify-items: center;
   align-items: center;
   width: 100%;
 }
-.contacts-wrap > button:hover .contacts-img {
+
+.contacts-wrap>button:hover .contacts-img {
   filter: hue-rotate(-295deg) saturate(100%) brightness(2) contrast(100%);
   transform: scale(1.2);
 }
-.contacts-wrap > a:hover .contacts-img {
+
+.contacts-wrap>a:hover .contacts-img {
   filter: hue-rotate(-295deg) saturate(100%) brightness(2) contrast(100%);
   transform: scale(1.2);
 }
@@ -112,6 +125,7 @@
     right: 10%;
   }
 }
+
 @media screen and (orientation: landscape) and (min-height: 700px) {
   .modal {
     top: 20%;
@@ -121,6 +135,7 @@
     font-size: 1.5rem;
   }
 }
+
 @media screen and (orientation: landscape) and (max-height: 700px) {
   .modal {
     top: 10%;
@@ -130,6 +145,7 @@
     font-size: 1.2rem;
   }
 }
+
 .modal {
   top: 5%;
   bottom: 5%;
@@ -154,7 +170,7 @@
   overflow: auto;
 }
 
-.modal > * {
+.modal>* {
   padding: 1rem;
 }
 
@@ -164,6 +180,7 @@
   border-radius: 20px;
   margin: 1rem;
 }
+
 .close-button {
   all: unset;
   cursor: pointer;
@@ -173,10 +190,12 @@
   top: 1.5rem;
   right: 1.5rem;
 }
+
 .copy-and-confirm {
   display: grid;
   justify-items: center;
 }
+
 .copy-button {
   all: unset;
   display: grid;
@@ -188,13 +207,16 @@
   border: 1px solid var(--maj-pink);
   width: fit-content;
 }
+
 .copy-button:hover {
   background-color: rgba(15, 8, 80, 0.9);
 }
+
 .copy-img {
   width: 25px;
   padding: 8px;
 }
+
 .span-copied {
   font-size: 1rem;
 }
@@ -206,9 +228,12 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.7); /* Semi-transparent black overlay */
-  z-index: 1; /* Place it above other content */
+  background: rgba(0, 0, 0, 0.7);
+  /* Semi-transparent black overlay */
+  z-index: 1;
+  /* Place it above other content */
 }
+
 @media screen and (orientation: portrait) {
   .link-modal {
     left: 2%;
@@ -216,11 +241,13 @@
     top: 34%;
     bottom: 34%;
   }
+
   .link-modal p {
     padding: 5px;
     font-size: 1.2rem;
   }
 }
+
 @media screen and (orientation: landscape) and (min-height: 700px) {
   .link-modal {
     left: 25%;
@@ -228,14 +255,17 @@
     top: 26%;
     bottom: 26%;
   }
+
   .link-modal p {
     padding: 10px;
     font-size: 1.4rem;
   }
+
   .link-buttons button {
     font-size: 1rem;
   }
 }
+
 @media screen and (orientation: landscape) and (max-height: 700px) {
   .link-modal {
     left: 15%;
@@ -243,10 +273,12 @@
     top: 10%;
     bottom: 10%;
   }
+
   .link-modal p {
     padding: 10px;
     font-size: 1.2rem;
   }
+
   .link-buttons button {
     font-size: 0.8rem;
   }
@@ -264,6 +296,7 @@
 
   z-index: 2;
 }
+
 .link-modal p {
   text-align: center;
   border: 1px solid rgba(205, 46, 112, 0.7);
@@ -281,6 +314,7 @@
   border-radius: 8px;
   background-color: rgba(0, 0, 0, 0);
 }
+
 .link-buttons button:hover {
   background-color: rgba(15, 8, 80, 0.9);
 }
@@ -294,14 +328,17 @@
   justify-items: center;
   gap: 12px;
 }
-.email-form > * {
+
+.email-form>* {
   width: 100%;
 }
+
 .form-div {
   display: grid;
   justify-items: center;
 }
-.form-div > * {
+
+.form-div>* {
   height: fit-content;
   width: 100%;
 }
@@ -311,13 +348,14 @@ input[type="text"] {
   font-family: "IBM Plex Mono", sans-serif;
   padding: 5px;
 }
+
 input[type="email"] {
   width: 100%;
   font-family: "IBM Plex Mono", sans-serif;
   padding: 5px;
 }
 
-.form-div > input {
+.form-div>input {
   border: none;
   font-size: 0.9rem;
   background-color: rgba(10, 30, 51, 1);
@@ -325,7 +363,8 @@ input[type="email"] {
   border-radius: 10px;
   width: 100%;
 }
-.email-form > textarea {
+
+.email-form>textarea {
   resize: none;
   font-size: 0.9rem;
   background-color: rgba(10, 30, 51, 1);
@@ -348,9 +387,11 @@ input[type="email"] {
   cursor: pointer;
   transition: 0.2s ease-in-out;
 }
+
 .submit-button:hover {
   background-color: rgba(15, 20, 80, 1);
 }
+
 submit-button:active {
   background-color: rgba(45, 8, 80, 1);
 }
@@ -367,6 +408,7 @@ submit-button:active {
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }
@@ -376,11 +418,13 @@ submit-button:active {
 #about-components {
   gap: 5px;
 }
+
 @media screen and (orientation: portrait) and (max-height: 700px) {
   #about-components {
     height: 85%;
   }
 }
+
 @media screen and (orientation: portrait) and (min-height: 700px) {
   #about-components {
     height: 90%;
@@ -394,6 +438,7 @@ submit-button:active {
 }
 
 @media screen and (orientation: portrait) {
+
   /* #about-title { */
   /*   margin-top: 20%; */
   /* } */
@@ -403,6 +448,7 @@ submit-button:active {
     justify-items: center;
   }
 }
+
 @media screen and (orientation: landscape) {
   #about-wrap {
     max-height: 100%;
@@ -411,6 +457,7 @@ submit-button:active {
     justify-content: space-evenly;
   }
 }
+
 .fullscreen-container {
   position: absolute;
   top: 0;
@@ -424,10 +471,12 @@ submit-button:active {
   background-color: rgba(9, 4, 21, 0.7);
   z-index: 10;
 }
+
 .fullscreen-img-buttons {
   justify-content: center;
   max-width: 80%;
 }
+
 .fullscreen-close {
   font-family: "IBM Plex Mono", sans-serif;
   border: 1px solid var(--maj-pink);
@@ -442,17 +491,21 @@ submit-button:active {
   right: 5%;
   top: 4vw;
 }
+
 .fullscreen-close:hover {
   background-color: rgba(31, 12, 98, 1);
 }
+
 .fullscreen-img {
   all: unset;
 }
+
 @media screen and (min-height: 500px) {
   .fullscreen-img {
     max-width: 80%;
   }
 }
+
 @media screen and (max-height: 500px) {
   .fullscreen-img {
     max-width: 65%;
@@ -467,6 +520,7 @@ submit-button:active {
   height: 20%;
   cursor: pointer;
 }
+
 .fullscreen-nav-button:hover {
   background-color: rgba(31, 12, 98, 1);
 }
@@ -475,10 +529,12 @@ submit-button:active {
   position: absolute;
   top: 40%;
 }
+
 .fullscreen-nav-button.back-button {
   position: absolute;
   top: 40%;
 }
+
 .next-img {
   transform: rotate(180deg);
 }
@@ -490,14 +546,17 @@ submit-button:active {
     align-items: center;
     width: 100%;
   }
+
   .about-text {
     padding: 1rem;
     width: 85vw;
     max-height: 100%;
   }
-  .about-text > * {
+
+  .about-text>* {
     padding: 0.5rem;
   }
+
   .about-images-scroller {
     display: grid;
     grid-auto-flow: column;
@@ -512,28 +571,35 @@ submit-button:active {
     overflow-x: auto;
     overscroll-behavior-inline: contain;
   }
+
   .snaps-inline {
     scroll-snap-type: inline mandatory;
     scroll-padding-inline: 1rem;
   }
-  .snaps-inline > * {
+
+  .snaps-inline>* {
     scroll-snap-align: start;
   }
+
   .fullscreen-nav-button.next-button {
     right: 0;
   }
+
   .fullscreen-nav-button.back-button {
     left: 0;
   }
-  .fullscreen-nav-button > * {
+
+  .fullscreen-nav-button>* {
     padding: 0.5rem;
   }
 }
+
 @media screen and (orientation: landscape) {
   .about-gallery {
     height: 90%;
     width: 40%;
   }
+
   .about-images-scroller {
     display: grid;
     grid-auto-rows: 30%;
@@ -545,56 +611,70 @@ submit-button:active {
     overflow-y: auto;
     overscroll-behavior-block: contain;
   }
+
   .snaps-inline {
     scroll-snap-type: block mandatory;
     scroll-padding-block: 8px;
   }
-  .snaps-inline > * {
+
+  .snaps-inline>* {
     width: 70%;
     scroll-snap-align: start;
   }
+
   .fullscreen-nav-button.next-button {
     right: 5vw;
   }
+
   .fullscreen-nav-button.back-button {
     left: 5vw;
   }
-  .fullscreen-nav-button > * {
+
+  .fullscreen-nav-button>* {
     padding: 1rem;
   }
+
   .back-img {
     transform: scale(1.2);
   }
+
   .next-img {
     transform: scale(1.2) rotate(180deg);
   }
 }
+
 @media screen and (orientation: landscape) and (min-height: 700px) {
   .about-images-scroller {
     height: 80%;
   }
+
   .about-text {
     padding: 2rem;
     width: 80%;
     max-height: 75%;
   }
-  .about-text > * {
+
+  .about-text>* {
     padding: 1rem;
   }
+
   .about-images-scroller {
     padding: 2rem;
   }
 }
+
 @media screen and (orientation: landscape) and (max-height: 700px) {
   .about-images-scroller {
     height: 100%;
   }
+
   .about-text {
     padding: 2rem;
     width: 90%;
     max-height: 75%;
   }
-  .about-text > * {
+
+  .about-text>* {
     padding: 1rem;
   }
 }
@@ -620,6 +700,7 @@ submit-button:active {
   /* color: var(--maj-yel); */
   overflow: auto;
 }
+
 .about-text:hover {
   background: rgba(9, 4, 25, 0.9);
 }
@@ -635,6 +716,7 @@ submit-button:active {
     right: 0;
   }
 }
+
 @media screen and (orientation: landscape) and (min-width: 800px) {
   .change-color-button {
     width: 15%;
@@ -642,6 +724,7 @@ submit-button:active {
     right: 2%;
   }
 }
+
 @media screen and (orientation: landscape) and (max-width: 800px) {
   .change-color-button {
     width: 27%;
@@ -649,6 +732,7 @@ submit-button:active {
     right: 0%;
   }
 }
+
 .change-color-button {
   padding: 0.2rem;
   border: 1px solid rgba(255, 57, 136, 0.5);
@@ -666,17 +750,21 @@ submit-button:active {
   transition: 0.1s ease-in-out;
   opacity: 0.5;
 }
+
 .change-color-button:hover {
   opacity: 1;
 }
+
 .color-box {
   width: 0.7rem;
   height: 0.7rem;
 }
+
 .button-next-arrow {
   width: 2rem;
   transform: rotate(180deg) scaleX(0.8);
 }
+
 .change-color-button:hover {
   background-color: rgba(15, 8, 80, 0.9);
 }
@@ -695,16 +783,19 @@ submit-button:active {
   max-height: 90%;
   overflow: hidden;
 }
+
 @media screen and (orientation: portrait) {
   #shows-contents {
     height: 85%;
   }
 }
+
 @media screen and (orientation: landscape) {
   #shows-contents {
     height: 62%;
   }
 }
+
 .shows-nav {
   margin: 0;
   width: 100%;
@@ -721,7 +812,8 @@ submit-button:active {
   position: sticky;
   top: 0;
 }
-.shows-nav > * {
+
+.shows-nav>* {
   all: unset;
 
   /*
@@ -736,17 +828,21 @@ submit-button:active {
   cursor: pointer;
   width: 100%;
 }
-.shows-nav > *:hover {
+
+.shows-nav>*:hover {
   text-decoration: underline;
 }
-.shows-nav > *[aria-current="page"] {
+
+.shows-nav>*[aria-current="page"] {
   color: rgba(8, 200, 252, 1);
   /* color: #00ff75; */
 }
-.shows-nav > *:active {
+
+.shows-nav>*:active {
   color: rgba(35.3, 187.4, 228, 1);
   /* color: #00ff75; */
 }
+
 #shows-wrap {
   width: 100%;
   height: 100%;
@@ -768,11 +864,13 @@ submit-button:active {
   height: fit-content;
   width: 100%;
 }
+
 .show-container {
   background: rgba(9, 4, 21, 0.9);
   display: grid;
   grid-template-columns: repeat(4, 1fr);
 }
+
 .show-container:hover {
   background: rgba(31, 12, 98, 1);
 }
@@ -781,17 +879,20 @@ submit-button:active {
   position: sticky;
   top: 0;
 }
-#show-container-id > * {
+
+#show-container-id>* {
   color: var(--maj-yel);
   font-size: 1.1rem;
   background: rgba(9, 4, 21, 1);
 }
-.show-container > * {
+
+.show-container>* {
   color: var(--maj-pink);
   padding: 15px 10px;
   text-align: center;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
 }
+
 .shows-no-shows {
   width: 100%;
   padding: 3rem;
@@ -827,12 +928,14 @@ submit-button:active {
     height: 40%;
   }
 }
+
 @media screen and (orientation: landscape) {
   .yt-vid-container {
     width: 70%;
     height: 70%;
   }
 }
+
 .yt-vid-container {
   padding: 1rem;
   margin-left: auto;
