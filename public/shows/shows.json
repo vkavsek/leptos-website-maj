@@ -1,190 +1,188 @@
-{
-	"shows": [
-		{
-			"date": "20.05.2024",
-			"name": "Maj Kavšek Quintet: Galaterna",
-			"club": "ZigZag Jazz Club",
-			"location": "Berlin, Germany"
-		},
-		{
-			"date": "26.04.2024",
-			"name": "Maj Kavšek Quintet: Galaterna (Album pre-release concert)",
-			"club": "Donau115",
-			"location": "Berlin, Germany"
-		},
-		{
-			"date": "29.12.2023",
-			"name": "Veliki praznični jam session",
-			"club": "Prulček",
-			"location": "Ljubljana, Slovenija"
-		},
-		{
-			"date": "23.12.2023",
-			"name": "Jazz & Jam",
-			"club": "KIŠD",
-			"location": "Izola, Slovenija"
-		},
-		{
-			"date": "20.10.2023",
-			"name": "Fame’s orchestra w/Arve Henriksen & Jan Bang",
-			"club": "Skopje Jazz festival",
-			"location": "Skopje, North Macedonia"
-		},
-		{
-			"date": "23.08.2023",
-			"name": "Good old friends",
-			"club": "Zorica",
-			"location": "Ljubljana, Slovenia"
-		},
-		{
-			"date": "10.08.2023",
-			"name": "Local Warming",
-			"club": "Boca Wine Bar",
-			"location": "Pula, Croatia"
-		},
-		{
-			"date": "08.08.2023",
-			"name": "Local Warming",
-			"club": "Prulček",
-			"location": "Ljubljana, Slovenia"
-		},
-		{
-			"date": "23.06.2023",
-			"name": "Collector - Ramiro Zayas",
-			"club": " Donau115",
-			"location": "Berlin, Germany"
-		},
-		{
-			"date": "17.06.2023",
-			"name": "Prismala album release show",
-			"club": "Renaissance Theatre Berlin",
-			"location": "Berlin, Germany"
-		},
-		{
-			"date": "09.06.2023",
-			"name": "Amoeba",
-			"club": "Make-up Berlin",
-			"location": "Berlin, Germany"
-		},
-		{
-			"date": "27.05.2023",
-			"name": "Euroradio Jazz Orchestra",
-			"club": "Mama Jazz Festival",
-			"location": "Vilnius, Lithuania"
-		},
-		{
-			"date": "26.05.2023",
-			"name": "Euroradio Jazz Orchestra",
-			"club": "Kaunas Philharmonic",
-			"location": "Kaunas, Lithuania"
-		},
-		{
-			"date": "08.05.2023",
-			"name": "Oto's Treatment",
-			"club": "Jazz Club ZigZag Berlin",
-			"location": "Berlin, Germany"
-		},
-		{
-			"date": "28.03.2023",
-			"name": "Gal Golob Trio",
-			"club": "Zorica",
-			"location": "Ljubljana, Slovenia"
-		},
-		{
-			"date": "22.03.2023",
-			"name": "Pilgrimage of the lost troubadours",
-			"club": "Hupa Brajdič",
-			"location": "Ljubljana, Slovenia"
-		},
-		{
-			"date": "17.03.2023",
-			"name": "Maj Kavšek Quartet",
-			"club": "Jazz Club Ljubljana Castle",
-			"location": "Ljubljana, Slovenia"
-		},
-		{
-			"date": "13.02.2023",
-			"name": "Luka Kastelic Quintet",
-			"club": "ZigZag Jazz Club",
-			"location": "Berlin, Germany"
-		},
-		{
-			"date": "01.02.2023",
-			"name": "Luka Kastelic Quintet",
-			"club": "Orangerie Neukölln",
-			"location": "Berlin, Germany"
-		},
-		{
-			"date": "28.12.2022",
-			"name": "Christmas and Friends",
-			"club": "Prulček Bar",
-			"location": "Ljubljana, Slovenia"
-		},
-		{
-			"date": "23.12.2022",
-			"name": "Big Band RTV Slovenia",
-			"club": "SiTi Teater",
-			"location": "Ljubljana, Slovenia"
-		},
-		{
-			"date": "06.12.2022",
-			"name": "Jam Opener",
-			"club": "Bierhaus Urban",
-			"location": "Berlin, Germany"
-		},
-		{
-			"date": "11.11.2022",
-			"name": "Chet Baker Tribute",
-			"club": "Orville's",
-			"location": "Berlin, Germany"
-		},
-		{
-			"date": "13.10.2022",
-			"name": "Jam Opener",
-			"club": "La Minga",
-			"location": "Berlin, Germany"
-		},
-		{
-			"date": "24.09.2022",
-			"name": "Ramiro Olaciregui Group",
-			"club": "Jazz Club B-flat",
-			"location": "Berlin, Germany"
-		},
-		{
-			"date": "22.09.2022",
-			"name": "Jam Opener",
-			"club": "La Minga",
-			"location": "Berlin, Germany"
-		},
-		{
-			"date": "06.09.2022",
-			"name": "Local Warming",
-			"club": "Prulček Bar",
-			"location": "Ljubljana, Slovenia"
-		},
-		{
-			"date": "30.08.2022",
-			"name": "Local Warming",
-			"club": "Zorica Bar",
-			"location": "Ljubljana, Slovenia"
-		},
-		{
-			"date": "28.08.2022",
-			"name": "Local Warming",
-			"club": "MC Kavarna",
-			"location": "Žalec, Slovenia"
-		},
-		{
-			"date": "09.08.2022",
-			"name": "Local Warming",
-			"club": "Festival “Poletje na Travniku”",
-			"location": "Lucija, Slovenia"
-		},
-		{
-			"date": "11.01.2022",
-			"name": "Re.Chat Quintet",
-			"club": "Jazz Club Schlot",
-			"location": "Berlin, Germany"
-		}
-	]
-}
+ [
+	{
+		"date": "20.05.2024",
+		"name": "Maj Kavšek Quintet: Galaterna",
+		"club": "ZigZag Jazz Club",
+		"location": "Berlin, Germany"
+	},
+	{
+		"date": "26.04.2024",
+		"name": "Maj Kavšek Quintet: Galaterna (Album pre-release concert)",
+		"club": "Donau115",
+		"location": "Berlin, Germany"
+	},
+	{
+		"date": "29.12.2023",
+		"name": "Veliki praznični jam session",
+		"club": "Prulček",
+		"location": "Ljubljana, Slovenija"
+	},
+	{
+		"date": "23.12.2023",
+		"name": "Jazz & Jam",
+		"club": "KIŠD",
+		"location": "Izola, Slovenija"
+	},
+	{
+		"date": "20.10.2023",
+		"name": "Fame’s orchestra w/Arve Henriksen & Jan Bang",
+		"club": "Skopje Jazz festival",
+		"location": "Skopje, North Macedonia"
+	},
+	{
+		"date": "23.08.2023",
+		"name": "Good old friends",
+		"club": "Zorica",
+		"location": "Ljubljana, Slovenia"
+	},
+	{
+		"date": "10.08.2023",
+		"name": "Local Warming",
+		"club": "Boca Wine Bar",
+		"location": "Pula, Croatia"
+	},
+	{
+		"date": "08.08.2023",
+		"name": "Local Warming",
+		"club": "Prulček",
+		"location": "Ljubljana, Slovenia"
+	},
+	{
+		"date": "23.06.2023",
+		"name": "Collector - Ramiro Zayas",
+		"club": " Donau115",
+		"location": "Berlin, Germany"
+	},
+	{
+		"date": "17.06.2023",
+		"name": "Prismala album release show",
+		"club": "Renaissance Theatre Berlin",
+		"location": "Berlin, Germany"
+	},
+	{
+		"date": "09.06.2023",
+		"name": "Amoeba",
+		"club": "Make-up Berlin",
+		"location": "Berlin, Germany"
+	},
+	{
+		"date": "27.05.2023",
+		"name": "Euroradio Jazz Orchestra",
+		"club": "Mama Jazz Festival",
+		"location": "Vilnius, Lithuania"
+	},
+	{
+		"date": "26.05.2023",
+		"name": "Euroradio Jazz Orchestra",
+		"club": "Kaunas Philharmonic",
+		"location": "Kaunas, Lithuania"
+	},
+	{
+		"date": "08.05.2023",
+		"name": "Oto's Treatment",
+		"club": "Jazz Club ZigZag Berlin",
+		"location": "Berlin, Germany"
+	},
+	{
+		"date": "28.03.2023",
+		"name": "Gal Golob Trio",
+		"club": "Zorica",
+		"location": "Ljubljana, Slovenia"
+	},
+	{
+		"date": "22.03.2023",
+		"name": "Pilgrimage of the lost troubadours",
+		"club": "Hupa Brajdič",
+		"location": "Ljubljana, Slovenia"
+	},
+	{
+		"date": "17.03.2023",
+		"name": "Maj Kavšek Quartet",
+		"club": "Jazz Club Ljubljana Castle",
+		"location": "Ljubljana, Slovenia"
+	},
+	{
+		"date": "13.02.2023",
+		"name": "Luka Kastelic Quintet",
+		"club": "ZigZag Jazz Club",
+		"location": "Berlin, Germany"
+	},
+	{
+		"date": "01.02.2023",
+		"name": "Luka Kastelic Quintet",
+		"club": "Orangerie Neukölln",
+		"location": "Berlin, Germany"
+	},
+	{
+		"date": "28.12.2022",
+		"name": "Christmas and Friends",
+		"club": "Prulček Bar",
+		"location": "Ljubljana, Slovenia"
+	},
+	{
+		"date": "23.12.2022",
+		"name": "Big Band RTV Slovenia",
+		"club": "SiTi Teater",
+		"location": "Ljubljana, Slovenia"
+	},
+	{
+		"date": "06.12.2022",
+		"name": "Jam Opener",
+		"club": "Bierhaus Urban",
+		"location": "Berlin, Germany"
+	},
+	{
+		"date": "11.11.2022",
+		"name": "Chet Baker Tribute",
+		"club": "Orville's",
+		"location": "Berlin, Germany"
+	},
+	{
+		"date": "13.10.2022",
+		"name": "Jam Opener",
+		"club": "La Minga",
+		"location": "Berlin, Germany"
+	},
+	{
+		"date": "24.09.2022",
+		"name": "Ramiro Olaciregui Group",
+		"club": "Jazz Club B-flat",
+		"location": "Berlin, Germany"
+	},
+	{
+		"date": "22.09.2022",
+		"name": "Jam Opener",
+		"club": "La Minga",
+		"location": "Berlin, Germany"
+	},
+	{
+		"date": "06.09.2022",
+		"name": "Local Warming",
+		"club": "Prulček Bar",
+		"location": "Ljubljana, Slovenia"
+	},
+	{
+		"date": "30.08.2022",
+		"name": "Local Warming",
+		"club": "Zorica Bar",
+		"location": "Ljubljana, Slovenia"
+	},
+	{
+		"date": "28.08.2022",
+		"name": "Local Warming",
+		"club": "MC Kavarna",
+		"location": "Žalec, Slovenia"
+	},
+	{
+		"date": "09.08.2022",
+		"name": "Local Warming",
+		"club": "Festival “Poletje na Travniku”",
+		"location": "Lucija, Slovenia"
+	},
+	{
+		"date": "11.01.2022",
+		"name": "Re.Chat Quintet",
+		"club": "Jazz Club Schlot",
+		"location": "Berlin, Germany"
+	}
+]
