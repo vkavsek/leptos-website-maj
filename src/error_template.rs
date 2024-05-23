@@ -21,8 +21,6 @@ impl MajServerError {
         #[allow(unreachable_patterns)]
         match self {
             MajServerError::NotFound => StatusCode::NOT_FOUND,
-            Self::Io(_) => StatusCode::NO_CONTENT,
-            Self::SerdeJson(_) => StatusCode::NOT_ACCEPTABLE,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -67,10 +65,10 @@ pub fn ErrorTemplate(
     let errors = errors.get_untracked();
 
     // Downcast lets us take a type that implements `std::error::Error`
-    let errors: Vec<MajServerError> = errors
+    let errors: Vec<_> = errors
         .into_iter()
+        .inspect(|(_k, e)| error!("{:?}", e))
         .filter_map(|(_k, e)| e.downcast_ref::<MajServerError>().cloned())
-        .inspect(|e| error!("{:?}", e))
         .collect();
 
     // Only the response code for the first error is actually sent from the server
@@ -79,7 +77,12 @@ pub fn ErrorTemplate(
     {
         let response = use_context::<ResponseOptions>();
         if let Some(response) = response {
-            response.set_status(errors[0].status_code());
+            response.set_status(
+                errors
+                    .first()
+                    .map(|err| err.status_code())
+                    .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR),
+            );
         }
     }
 

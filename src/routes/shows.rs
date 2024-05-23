@@ -6,6 +6,8 @@ use leptos_meta::{Link, Title};
 use leptos_router::*;
 use serde::{Deserialize, Serialize};
 
+use crate::error_template::ErrorTemplate;
+
 // ###################################
 // ->   ROUTES
 // ###################################
@@ -81,7 +83,7 @@ pub struct Event {
     location: Option<String>,
 }
 impl Event {
-    fn get_date(&self) -> Option<DateTime<Utc>> {
+    pub fn get_date(&self) -> Option<DateTime<Utc>> {
         // TODO: Do I like this implementation ?
         self.date.as_ref().map(|date| {
             NaiveDate::parse_from_str(date, "%d.%m.%Y")
@@ -103,6 +105,8 @@ enum EventSelector {
     Future,
 }
 
+// Allow unused otherwise we get warnings because of the macros.
+#[allow(unused)]
 /// Fetches all events from the server, sorts them, and returns the desired list of events,
 /// Past or Future
 #[component]
@@ -112,62 +116,71 @@ fn RenderShows(selector: EventSelector) -> impl IntoView {
 
     view! {
         <Link rel="icon" href="/img/nota.svg" type_="image/svg"/>
-        <Transition fallback=move || {
-            view! { <p class="shows-no-shows">"Loading future shows!"</p> }
+        <Suspense fallback=move || {
+            view! { <p class="shows-no-shows">"  "</p> }
         }>
             {move || {
                 shows_resource
                     .get()
                     .map(|shows| {
-                        let shows = shows.expect("GetShows shouldn't fail");
-                        let shows_col = shows
-                            .iter()
-                            .filter(|show| {
-                                let date = show.get_date().expect("All events need dates!");
-                                match selector {
-                                    EventSelector::Past => date.lt(&pivot_date),
-                                    EventSelector::Future => date.ge(&pivot_date),
-                                }
-                            })
-                            .collect::<Vec<_>>();
-                        if shows_col.is_empty() {
-                            view! {
-                                <p class="shows-no-shows">
-                                    "There are currently no events to display here. Come back later."
-                                </p>
-                            }
-                                .into_view()
-                        } else {
-                            let view = shows_col
-                                .iter()
-                                .map(|show| {
-                                    view! {
-                                        <li class="show-container">
-                                            <p>{show.date.as_ref()}</p>
-                                            <p>{show.name.as_ref()}</p>
-                                            <p>{show.club.as_ref()}</p>
-                                            <p>{show.location.as_ref()}</p>
-                                        </li>
-                                    }
-                                })
-                                .collect_view();
-                            view! {
-                                <ul class="shows-list">
-                                    <li class="show-container" id="show-container-id">
-                                        <p>"Date:"</p>
-                                        <p>"Event:"</p>
-                                        <p>"Venue:"</p>
-                                        <p>"Location:"</p>
-                                    </li>
-                                    {view}
-                                </ul>
-                            }
-                                .into_view()
+                        view! {
+                            <ErrorBoundary fallback=move |errors| {
+                                view! { <ErrorTemplate errors/> }
+                            }>
+                                {shows
+                                    .map(|shows| {
+                                        let shows_col = shows
+                                            .iter()
+                                            .filter(|show| {
+                                                let date = show.get_date().expect("All events need dates!");
+                                                match selector {
+                                                    EventSelector::Past => date.lt(&pivot_date),
+                                                    EventSelector::Future => date.ge(&pivot_date),
+                                                }
+                                            })
+                                            .collect::<Vec<_>>();
+                                        if shows_col.is_empty() {
+                                            view! {
+                                                <p class="shows-no-shows">
+                                                    "There are currently no events to display here. Come back later."
+                                                </p>
+                                            }
+                                                .into_view()
+                                        } else {
+                                            let view = shows_col
+                                                .iter()
+                                                .map(|show| {
+                                                    view! {
+                                                        <li class="show-container">
+                                                            <p>{show.date.as_ref()}</p>
+                                                            <p>{show.name.as_ref()}</p>
+                                                            <p>{show.club.as_ref()}</p>
+                                                            <p>{show.location.as_ref()}</p>
+                                                        </li>
+                                                    }
+                                                })
+                                                .collect_view();
+                                            view! {
+                                                <ul class="shows-list">
+                                                    <li class="show-container" id="show-container-id">
+                                                        <p>"Date:"</p>
+                                                        <p>"Event:"</p>
+                                                        <p>"Venue:"</p>
+                                                        <p>"Location:"</p>
+                                                    </li>
+                                                    {view}
+                                                </ul>
+                                            }
+                                                .into_view()
+                                        }
+                                    })}
+
+                            </ErrorBoundary>
                         }
                     })
             }}
 
-        </Transition>
+        </Suspense>
     }
 }
 
@@ -193,6 +206,7 @@ async fn get_shows() -> Result<Events, ServerFnError> {
 async fn get_shows_util() -> &'static Result<Events, crate::MajServerError> {
     use std::cmp::Reverse;
     use tokio::sync::OnceCell;
+    use tracing::info;
 
     let path = if cfg!(not(debug_assertions)) {
         "/app/site/shows/shows.json"
@@ -202,8 +216,10 @@ async fn get_shows_util() -> &'static Result<Events, crate::MajServerError> {
 
     static SHOWS_INIT: OnceCell<Result<Events, crate::MajServerError>> = OnceCell::const_new();
 
+    tracing::debug!("Retrieving SHOWS");
     SHOWS_INIT
         .get_or_init(|| async {
+            info!("Initializing SHOWS");
             let show_json = tokio::fs::read_to_string(path).await?;
             let mut shows: Events = serde_json::from_str(&show_json)?;
             shows.sort_by_key(|show_a| Reverse(show_a.get_date()));

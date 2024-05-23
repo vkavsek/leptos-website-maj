@@ -32,7 +32,6 @@ pub fn Head(
                 class="nav-link"
                 id="home-nav-link"
                 href="/"
-                // aria-current=set_home
                 on:click=click_home
             >
                 <img class="nav-icon nav-icon-1" src="/img/trobenta.svg" alt="Home" width="512" height="217"/>
