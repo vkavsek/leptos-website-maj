@@ -47,7 +47,6 @@ impl LinkLocation {
                 177,
                 128,
             ),
-            // FIXME:
             LinkLocation::BandcampAut => (
                 "https://autrecords.bandcamp.com/album/galaterna",
                 "/img/foreign-logos/bandcamp-fin.svg",
@@ -89,16 +88,16 @@ pub fn Home() -> impl IntoView {
                         <Mail/>
                     </div>
                     <div class="contacts-wrap">
-                        <LinkWithModal loc=FB/>
+                        <LinkWithModal loc=FB if_add_image=true/>
                     </div>
                     <div class="contacts-wrap">
-                        <LinkWithModal loc=IG/>
+                        <LinkWithModal loc=IG if_add_image=true/>
                     </div>
                     <div class="contacts-wrap">
-                        <LinkWithModal loc=TIKTOK/>
+                        <LinkWithModal loc=TIKTOK if_add_image=true/>
                     </div>
                     <div class="contacts-wrap">
-                        <LinkWithModal loc=YT/>
+                        <LinkWithModal loc=YT if_add_image=true/>
                     </div>
                 </div>
             </div>
@@ -116,24 +115,36 @@ fn AlbumPromo() -> impl IntoView {
                 <h3>"New Album Release!"</h3>
                 <p id="home-album-text">
                     "A number of songs are available on YouTube, but you can check them out on the "
-                    <a href="your-media-page-url">"media page of this site."</a>
+                    <a href="/media">"media page of this site."</a>
                 </p>
                 <p id="home-album-text">
-                    "Buy a digital copy on " <a href="your-bandcamp-url">"Bandcamp"</a>
-                    " or a hard copy on the "
-                    <a href="your-record-company-url">"label's website!"</a>
+                    "Buy a digital copy on "
+                    <LinkWithModal
+                        loc=LinkLocation::BandcampAut
+                        if_add_image=false
+                        opt_text="Bandcamp".to_string()
+                    /> " or a hard copy on the "
+                    <LinkWithModal
+                        loc=LinkLocation::AutRecords
+                        if_add_image=false
+                        opt_text="label's website!".to_string()
+                    />
                 </p>
             </div>
             <div id="home-album-links">
-                <LinkWithModal loc=LinkLocation::BandcampAut/>
-                <LinkWithModal loc=LinkLocation::AutRecords/>
+                <LinkWithModal loc=LinkLocation::BandcampAut if_add_image=true/>
+                <LinkWithModal loc=LinkLocation::AutRecords if_add_image=true/>
             </div>
         </div>
     }
 }
 
 #[component]
-fn LinkWithModal(loc: LinkLocation) -> impl IntoView {
+fn LinkWithModal(
+    loc: LinkLocation,
+    if_add_image: bool,
+    #[prop(optional)] opt_text: Option<String>,
+) -> impl IntoView {
     let (href_target, src_target, width, height) = loc.process();
     let (visible, set_visible) = create_signal(false);
     let modal_ref = create_node_ref();
@@ -168,7 +179,15 @@ fn LinkWithModal(loc: LinkLocation) -> impl IntoView {
 
     view! {
         <a href=href_target on:click=click_on_link>
-            <img class="contacts-img" src=src_target alt=alt width=width height=height/>
+            {opt_text}
+            // On each dispatch evaluates if it needs to display an icon, doesn't dynamically change!
+            {if_add_image
+                .then_some(
+                    view! {
+                        <img class="contacts-img" src=src_target alt=alt width=width height=height/>
+                    },
+                )}
+
         </a>
         <Show when=move || visible.get() fallback=|| {}>
             <div class="modal-overlay"></div>

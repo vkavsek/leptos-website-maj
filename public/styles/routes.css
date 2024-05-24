@@ -23,7 +23,7 @@
   border-radius: 16px;
   background-color: rgba(9, 4, 25, 0.7);
   transition: width 0.4s ease-in-out;
-  overflow: hidden;
+  overflow: auto;
 }
 
 #home-album-img {
@@ -32,9 +32,6 @@
   transition: max-width 0.7s ease-out;
 }
 
-#home-center:hover #home-album-img {
-  max-width: 25%;
-}
 
 #home-hide {
   padding: 16px 64px;
@@ -63,13 +60,13 @@
 }
 
 #home-album-text {
-  font-size: 0.8rem;
+  font-size: 0.9rem;
 }
 
 #home-album-links {
   flex-direction: column;
   display: none;
-  width: 10%;
+  width: 30%;
   justify-content: space-evenly;
   transition: display 0s 0.8s;
 }
@@ -106,18 +103,19 @@
   }
 
   #home-center {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: space-around;
+    display: grid;
+    justify-items: center;
 
     width: 50%;
     max-height: 70%;
-    overflow: auto;
   }
 
   #home-center:hover {
     width: 80%;
+  }
+
+  #home-center:hover #home-album-img {
+    max-width: 70%;
   }
 
   #home-album-links {
@@ -149,7 +147,9 @@
   }
 
   #home-center {
-    display: flex;
+    display: grid;
+    grid-auto-flow: column;
+    justify-items: center;
     align-items: center;
     justify-content: space-around;
 
@@ -177,12 +177,6 @@
   .contacts-img:hover {
     transform: scale(1.05);
     transition: 0.2s ease-in-out;
-  }
-}
-
-@media screen and (orientation: landscape) and (min-height: 700px) {
-  #home-title {
-    font-size: 10rem;
   }
 }
 
