@@ -15,10 +15,12 @@ enum LinkLocation {
     TikTok,
     Ig,
     Yt,
+    BandcampAut,
+    AutRecords,
 }
 
 impl LinkLocation {
-    /// Returns a tuple in the form of: (HREF_TARGET, IMAGE_LOCATION)
+    /// Returns a tuple in the form of: (HREF_TARGET, IMAGE_LOCATION, size-x, size-y)
     fn process(&self) -> (&'static str, &'static str, i32, i32) {
         match self {
             LinkLocation::Fb => (
@@ -45,10 +47,26 @@ impl LinkLocation {
                 177,
                 128,
             ),
+            // FIXME:
+            LinkLocation::BandcampAut => (
+                "https://autrecords.bandcamp.com/album/galaterna",
+                "/img/foreign-logos/bandcamp-fin.svg",
+                256,
+                256,
+            ),
+            LinkLocation::AutRecords => (
+                "https://www.autrecords.com/",
+                "/img/foreign-logos/aut-fin.svg",
+                256,
+                256,
+            ),
         }
     }
 }
 
+// ###################################
+// ->   COMPONENTS
+// ###################################
 #[component]
 pub fn Home() -> impl IntoView {
     const FB: LinkLocation = LinkLocation::Fb;
@@ -58,14 +76,14 @@ pub fn Home() -> impl IntoView {
     view! {
         <Link rel="icon" href="/img/trobenta.svg" type_="image/svg"/>
         <Title text="Home"/>
-        <footer class="components" id="home-components">
+        <div class="components" id="home-components">
             <div>
                 <div class="title">
                     <h1 id="home-title">"Maj Kavšek"</h1>
                 </div>
-                // <p  style="font-size: 1.25rem; font-weight: 700">"Trumpeter & composer"</p>
             </div>
-            <div class="contents" id="home-wrap">
+            <AlbumPromo/>
+            <div class="contents" id="home-bottom">
                 <div class="all-contacts">
                     <div class="contacts-wrap">
                         <Mail/>
@@ -84,9 +102,36 @@ pub fn Home() -> impl IntoView {
                     </div>
                 </div>
             </div>
-        </footer>
+        </div>
     }
 }
+
+#[component]
+fn AlbumPromo() -> impl IntoView {
+    view! {
+        <div id="home-center">
+            <img src="/img/album_artwork.jpg" id="home-album-img" alt="Album Artwork"/>
+            <div id="home-hide">
+                <h2>"GALATERNA"</h2>
+                <h3>"New Album Release!"</h3>
+                <p id="home-album-text">
+                    "A number of songs are available on YouTube, but you can check them out on the "
+                    <a href="your-media-page-url">"media page of this site."</a>
+                </p>
+                <p id="home-album-text">
+                    "Buy a digital copy on " <a href="your-bandcamp-url">"Bandcamp"</a>
+                    " or a hard copy on the "
+                    <a href="your-record-company-url">"label's website!"</a>
+                </p>
+            </div>
+            <div id="home-album-links">
+                <LinkWithModal loc=LinkLocation::BandcampAut/>
+                <LinkWithModal loc=LinkLocation::AutRecords/>
+            </div>
+        </div>
+    }
+}
+
 #[component]
 fn LinkWithModal(loc: LinkLocation) -> impl IntoView {
     let (href_target, src_target, width, height) = loc.process();
@@ -98,6 +143,8 @@ fn LinkWithModal(loc: LinkLocation) -> impl IntoView {
         LinkLocation::Ig => "A link to Instagram",
         LinkLocation::TikTok => "A link to TikTok",
         LinkLocation::Yt => "A link to YouTube",
+        LinkLocation::AutRecords => "A link to the label company",
+        LinkLocation::BandcampAut => "A link to label company's Bandcamp page",
     };
 
     let click_on_link = move |ev: MouseEvent| {
@@ -127,12 +174,16 @@ fn LinkWithModal(loc: LinkLocation) -> impl IntoView {
             <div class="modal-overlay"></div>
             <div class="link-modal" node_ref=modal_ref>
                 <p>"You are now leaving the site!"</p>
+                <div>
+                    <p style:font-size="0.7rem">" Going to: "</p>
+                    <p style:font-size="0.7rem">{href_target}</p>
+                </div>
                 <div class="link-buttons">
                     <button class="yes-link-button" on:click=take_me_to_link>
                         "Ok"
                     </button>
                     <button class="no-link-button" on:click=take_me_back>
-                        "I don't want to go yet."
+                        "Back"
                     </button>
                 </div>
             </div>
@@ -313,6 +364,9 @@ fn Mail() -> impl IntoView {
     }
 }
 
+// ###################################
+// ->   SERVER
+// ###################################
 #[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
 struct EmailBuilder {
     name: String,

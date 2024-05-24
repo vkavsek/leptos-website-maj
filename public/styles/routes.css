@@ -6,27 +6,127 @@
   padding-top: 10px;
 }
 
-#home-wrap {
+#home-components {
+  align-items: center;
+}
+
+#home-bottom {
   display: flex;
   flex-direction: column;
   margin: 0;
   max-height: 100%;
 }
 
-/* #home-title { */
-/*   margin-top: 0; */
-/*   margin-bottom: 0; */
-/* } */
+#home-center {
+  padding: 20px;
+
+  border-radius: 16px;
+  background-color: rgba(9, 4, 25, 0.7);
+  transition: width 0.4s ease-in-out;
+  overflow: hidden;
+}
+
+#home-album-img {
+  max-width: 100%;
+  height: auto;
+  transition: max-width 0.7s ease-out;
+}
+
+#home-center:hover #home-album-img {
+  max-width: 25%;
+}
+
+#home-hide {
+  padding: 16px 64px;
+  text-align: center;
+
+  max-width: 600px;
+
+  display: none;
+
+  transition: display 0s 0.8s;
+}
+
+#home-center:hover #home-hide {
+  display: block;
+}
+
+#home-hide>* {
+  padding: 4px;
+
+  transition: display 0s 0.8s;
+  transition: opacity 0.8s ease-in-out;
+}
+
+#home-hide>* a {
+  color: var(--maj-pink);
+}
+
+#home-album-text {
+  font-size: 0.8rem;
+}
+
+#home-album-links {
+  flex-direction: column;
+  display: none;
+  width: 10%;
+  justify-content: space-evenly;
+  transition: display 0s 0.8s;
+}
+
+#home-center:hover #home-album-links {
+  display: flex;
+}
+
+#home-album-links>a {
+  width: 100%;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  margin: 24px 0px;
+}
+
+
+#home-album-links>a>* {
+  width: 80%;
+  height: auto;
+}
+
 
 @media screen and (orientation: portrait) {
   #home-components {
     height: 100%;
   }
 
-  #home-wrap {
+  #home-bottom {
     height: 100%;
     justify-content: flex-end;
+    align-items: center;
     margin-left: 0;
+  }
+
+  #home-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-around;
+
+    width: 50%;
+    max-height: 70%;
+    overflow: auto;
+  }
+
+  #home-center:hover {
+    width: 80%;
+  }
+
+  #home-album-links {
+    flex-direction: row;
+    width: 100%;
+  }
+
+  #home-album-links>a {
+    width: 10%;
   }
 
   .all-contacts {
@@ -43,9 +143,22 @@
 }
 
 @media screen and (orientation: landscape) {
-  #home-wrap {
+  #home-bottom {
     justify-content: flex-end;
     align-items: center;
+  }
+
+  #home-center {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+
+    width: 20%;
+    max-height: 80%;
+  }
+
+  #home-center:hover {
+    width: 80%;
   }
 
   .all-contacts {

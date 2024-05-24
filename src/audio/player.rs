@@ -1,4 +1,3 @@
-#![allow(unused)]
 use super::Song;
 use crate::app::use_interval;
 use leptos::ev::MouseEvent;
@@ -6,9 +5,6 @@ use leptos::{
     html::{Audio, Button, Div},
     *,
 };
-use leptos_use::UseRafFnOptions;
-use leptos_use::{use_raf_fn, use_raf_fn_with_options, utils::Pausable};
-use std::rc::Rc;
 
 // ------> AUDIO PLAYER
 #[component]
@@ -18,10 +14,10 @@ pub fn AudioPlayer() -> impl IntoView {
     let (duration, set_duration) = create_signal(0u64);
     let (name, set_name) = create_signal::<Option<String>>(None);
     // Derived signals
-    let song_title = move || Song::from_filenamename(&name.get().unwrap_or(String::new())).title();
-    let song_artist =
+    let _song_title = move || Song::from_filenamename(&name.get().unwrap_or(String::new())).title();
+    let _song_artist =
         move || Song::from_filenamename(&name.get().unwrap_or(String::new())).artist();
-    let song_album = move || Song::from_filenamename(&name.get().unwrap_or(String::new())).album();
+    let _song_album = move || Song::from_filenamename(&name.get().unwrap_or(String::new())).album();
     let time_fmt = move || fmt_sec_to_mmss(time.get());
     let duration_fmt = move || fmt_sec_to_mmss(duration.get());
     // NodeRefs
@@ -34,7 +30,7 @@ pub fn AudioPlayer() -> impl IntoView {
     let progress_ref = create_node_ref::<Div>();
 
     // Import the selector and the List of songs
-    let names = use_context::<RwSignal<Vec<String>>>().expect("the names to be provided");
+    let _names = use_context::<RwSignal<Vec<String>>>().expect("the names to be provided");
     let selector = use_context::<RwSignal<usize>>().expect("the selector to be provided");
 
     let f64_to_u64 = |f: f64| (f * 100.0) as u64;
@@ -55,20 +51,20 @@ pub fn AudioPlayer() -> impl IntoView {
     let audio_loop = move || {
         if let Some(audio) = audio_ref.get_untracked() {
             let progress_bar = progress_ref.get_untracked().unwrap();
-            progress_bar.style(
+            let _ = progress_bar.style(
                 "width",
                 format!("{}%", audio.current_time() / audio.duration() * 100.0),
             );
             set_time.set(audio.current_time() as u64);
             if audio.ended() {
                 let play_btn = play_btn_ref.get_untracked().unwrap();
-                play_btn.clone().class("pause", false);
-                play_btn.class("play", true);
+                let _ = play_btn.clone().class("pause", false);
+                let _ = play_btn.class("play", true);
             }
-            if let Some(slider) = volume_slider_ref.get_untracked() {
+            if let Some(_slider) = volume_slider_ref.get_untracked() {
                 if let Some(vol_percent) = vol_percent_ref.get_untracked() {
                     let new_volume = audio.volume();
-                    vol_percent.style("width", format!("{}%", (new_volume * 100.0) as u32));
+                    let _ = vol_percent.style("width", format!("{}%", (new_volume * 100.0) as u32));
                 }
             }
         }
@@ -81,8 +77,8 @@ pub fn AudioPlayer() -> impl IntoView {
         // subscribe to selector
         let _ = selector.get();
         if let Some(play_btn) = play_btn_ref.get() {
-            play_btn.clone().class("pause", false);
-            play_btn.class("play", true);
+            let _ = play_btn.clone().class("pause", false);
+            let _ = play_btn.class("play", true);
         }
         if let Some(audio) = audio_ref.get() {
             let _ = audio.pause();
@@ -98,7 +94,7 @@ pub fn AudioPlayer() -> impl IntoView {
         audio.set_volume(init_volume);
         set_duration.set(audio.duration() as u64);
         set_name.set(extract_name(audio.src()));
-        vol_percent.style("width", format!("{}%", (init_volume * 100.0) as u32));
+        let _ = vol_percent.style("width", format!("{}%", (init_volume * 100.0) as u32));
     };
 
     // Play
@@ -107,12 +103,12 @@ pub fn AudioPlayer() -> impl IntoView {
 
         let play_btn = play_btn_ref.get().unwrap();
         if audio.paused() {
-            play_btn.clone().class("play", false);
-            play_btn.clone().class("pause", true);
+            let _ = play_btn.clone().class("play", false);
+            let _ = play_btn.clone().class("pause", true);
             let _ = audio.play();
         } else {
-            play_btn.clone().class("pause", false);
-            play_btn.class("play", true);
+            let _ = play_btn.clone().class("pause", false);
+            let _ = play_btn.class("play", true);
             let _ = audio.pause();
         }
     };
@@ -147,7 +143,7 @@ pub fn AudioPlayer() -> impl IntoView {
                 audio.set_muted(false)
             }
             audio.set_volume(new_volume);
-            vol_percent.style("width", format!("{}%", (new_volume * 100.0) as u32));
+            let _ = vol_percent.style("width", format!("{}%", (new_volume * 100.0) as u32));
         }
     };
 
@@ -160,14 +156,14 @@ pub fn AudioPlayer() -> impl IntoView {
         audio.set_muted(!audio.muted());
 
         if audio.muted() {
-            vol_percent.style("width", "0%");
-            vol_el.clone().class("ico-vol-med", false);
-            vol_el.clone().class("ico-vol-mute", true);
+            let _ = vol_percent.style("width", "0%");
+            let _ = vol_el.clone().class("ico-vol-med", false);
+            let _ = vol_el.clone().class("ico-vol-mute", true);
         } else {
             let volume = f64_to_u64(audio.volume());
-            vol_percent.style("width", format!("{}%", volume));
-            vol_el.clone().class("ico-vol-mute", false);
-            vol_el.class("ico-vol-med", true);
+            let _ = vol_percent.style("width", format!("{}%", volume));
+            let _ = vol_el.clone().class("ico-vol-mute", false);
+            let _ = vol_el.class("ico-vol-med", true);
         }
     };
 
@@ -215,6 +211,9 @@ pub fn AudioPlayer() -> impl IntoView {
     }
 }
 
+// ###################################
+// ->   UTILS
+// ###################################
 fn extract_name(path: String) -> Option<String> {
     let res = path.split('/').last().map(|name| name.split('.').next());
     match res {
