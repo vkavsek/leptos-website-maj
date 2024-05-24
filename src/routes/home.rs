@@ -111,7 +111,7 @@ fn AlbumPromo() -> impl IntoView {
         <div id="home-center">
             <img src="/img/album_artwork.jpg" id="home-album-img" alt="Album Artwork"/>
             <div id="home-hide">
-                <h2>"GALATERNA"</h2>
+                <h1 id="album-promo-title">"GALATERNA"</h1>
                 <h3>"New Album Release!"</h3>
                 <p id="home-album-text">
                     "A number of songs are available on YouTube, but you can check them out on the "
@@ -163,8 +163,16 @@ fn LinkWithModal(
         set_visible.set(true);
     };
 
-    let take_me_to_link = move |_| {
+    let open_link = move |_| {
+        // Open in new tab
         let _ = window().open_with_url(href_target);
+        set_visible.set(false);
+    };
+
+    let take_me_to_link = move |_| {
+        // Navigate in the same tab
+        let _ = window().location().set_href(href_target);
+        set_visible.set(false);
     };
 
     let take_me_back = move |_| {
@@ -200,6 +208,9 @@ fn LinkWithModal(
                 <div class="link-buttons">
                     <button class="yes-link-button" on:click=take_me_to_link>
                         "Ok"
+                    </button>
+                    <button class="yes-link-button" on:click=open_link>
+                        "Open in new tab"
                     </button>
                     <button class="no-link-button" on:click=take_me_back>
                         "Back"

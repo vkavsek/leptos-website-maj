@@ -21,9 +21,13 @@
   padding: 20px;
 
   border-radius: 16px;
-  background-color: rgba(9, 4, 25, 0.7);
+  background-color: rgba(9, 4, 32, 0.7);
   transition: width 0.4s ease-in-out;
   overflow: auto;
+}
+
+#home-center:hover {
+  background-color: rgba(9, 4, 32, 0.9);
 }
 
 #home-album-img {
@@ -57,6 +61,11 @@
 
 #home-hide>* a {
   color: var(--maj-pink);
+}
+
+#album-promo-title {
+  font-family: "LilitaOne", sans-serif;
+  text-shadow: 2px 2px var(--maj-pink);
 }
 
 #home-album-text {
