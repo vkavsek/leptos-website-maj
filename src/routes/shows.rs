@@ -208,17 +208,17 @@ async fn get_shows_util() -> &'static Result<Events, crate::MajServerError> {
     use tokio::sync::OnceCell;
     use tracing::info;
 
-    let path = if cfg!(not(debug_assertions)) {
-        "/app/site/shows/shows.json"
-    } else {
-        "./public/shows/shows.json"
-    };
-
     static SHOWS_INIT: OnceCell<Result<Events, crate::MajServerError>> = OnceCell::const_new();
 
     tracing::debug!("Retrieving SHOWS");
     SHOWS_INIT
         .get_or_init(|| async {
+            let path = if cfg!(not(debug_assertions)) {
+                "/app/site/shows/shows.json"
+            } else {
+                "./public/shows/shows.json"
+            };
+
             info!("Initializing SHOWS");
             let show_json = tokio::fs::read_to_string(path).await?;
             let mut shows: Events = serde_json::from_str(&show_json)?;

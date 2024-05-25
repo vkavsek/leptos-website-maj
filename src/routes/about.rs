@@ -279,6 +279,7 @@ async fn read_image_files() -> Result<Vec<String>, ServerFnError> {
     .await
     .clone()
 }
+
 // NOTE: We get warnings for dead code, presumably because of the `server` macro.
 #[allow(dead_code)]
 /// Returns a string in the format: "/img/about_pics/{filename}",
