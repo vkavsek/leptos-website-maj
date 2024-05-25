@@ -214,9 +214,9 @@ async fn get_shows_util() -> &'static Result<Events, crate::MajServerError> {
     SHOWS_INIT
         .get_or_init(|| async {
             let path = if cfg!(not(debug_assertions)) {
-                "/app/site/shows/shows.json"
+                "/app/site/data_json/shows.json"
             } else {
-                "./public/shows/shows.json"
+                "./public/data_json/shows.json"
             };
 
             info!("Initializing SHOWS");
