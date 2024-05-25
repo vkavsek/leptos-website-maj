@@ -123,7 +123,10 @@ pub fn About() -> impl IntoView {
 
 #[component]
 pub fn ImagesAbout() -> impl IntoView {
-    let files = create_resource(move || (), |_| async move { read_files().await.unwrap() });
+    let files = create_resource(
+        move || (),
+        |_| async move { read_image_files().await.unwrap() },
+    );
 
     // This is named like this because we get warnings because of macros.
     let _gallery_ref = create_node_ref::<Div>();
@@ -250,8 +253,8 @@ pub fn ImagesAbout() -> impl IntoView {
     }
 }
 
-#[server(ReadFiles)]
-async fn read_files() -> Result<Vec<String>, ServerFnError> {
+#[server(ReadImageFiles, "/api", "GetJson", "get_image_files")]
+async fn read_image_files() -> Result<Vec<String>, ServerFnError> {
     use tokio::sync::OnceCell;
     let path = if cfg!(not(debug_assertions)) {
         "/app/site/img/about_pics"
