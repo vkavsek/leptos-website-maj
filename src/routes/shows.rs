@@ -192,7 +192,7 @@ fn RenderShows(selector: EventSelector) -> impl IntoView {
 /// Can return an Error if there was a problem reading the file or parsing the JSON.
 /// Only reads the files, deserializes and sorts them on the initial call.
 /// Further calls just return a clone of `Shows`.
-#[server(GetShows)]
+#[server(GetShows, "/api", "GetJson", "get_shows")]
 async fn get_shows() -> Result<Events, ServerFnError> {
     let shows = get_shows_util()
         .await
