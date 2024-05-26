@@ -6,7 +6,8 @@
 // ###################################
 pub mod app;
 pub mod audio;
-pub mod error_template;
+pub mod error;
+pub mod error_components;
 #[cfg(feature = "ssr")]
 pub mod fallback;
 pub mod head;
@@ -15,7 +16,7 @@ pub mod routes;
 pub mod serve;
 
 // Re-exports
-pub use error_template::MajServerError;
+pub use error::MajServerError;
 #[cfg(feature = "ssr")]
 pub use serve::serve;
 

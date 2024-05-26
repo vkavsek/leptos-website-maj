@@ -2,7 +2,7 @@
 // ->   SERVE
 // ###################################
 use crate::app::App;
-use crate::fallback::static_file_handler;
+use crate::fallback::static_file_and_err_handler;
 
 use axum::{body::Body, Router};
 use http::{HeaderName, Request, Response};
@@ -76,7 +76,7 @@ pub async fn serve(
                 // Propagate UUID to response, keep it last so it processes the response first!
                 .layer(PropagateRequestIdLayer::new(x_request_id)),
         )
-        .fallback(static_file_handler)
+        .fallback(static_file_and_err_handler)
         .with_state(state);
 
     axum::serve(listener, app).await?;

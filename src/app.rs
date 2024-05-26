@@ -1,8 +1,9 @@
 use crate::{
     audio::AudioWrapper,
-    error_template::{ErrorTemplate, MajServerError},
+    error_components::ErrorTemplate,
     head::*,
     routes::{about::*, home::*, media::*, shows::*},
+    MajServerError,
 };
 use core::time::Duration;
 use leptos::html::Div;
@@ -51,11 +52,13 @@ pub fn App() -> impl IntoView {
         <Title formatter/>
         <Meta name="viewport" content="width=device-width, initial-scale=1"/>
 
-        <Router fallback=|| {
+        <Router
+            fallback=|| {
             let mut outside_errors = Errors::default();
             outside_errors.insert_with_default_key(MajServerError::NotFound);
             view! { <ErrorTemplate outside_errors/> }.into_view()
-        }>
+            }
+            >
             <div class="bg-wrapper" node_ref=bg_div_ref>
                 <Head bg_div_ref/>
                 <AudioWrapper/>

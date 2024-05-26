@@ -1,51 +1,11 @@
 use http::status::StatusCode;
 use leptos::*;
 use leptos_router::A;
-use serde::Serialize;
-use tracing::error;
 
 #[cfg(feature = "ssr")]
 use leptos_axum::ResponseOptions;
 
-pub type Result<T> = core::result::Result<T, MajServerError>;
-
-#[derive(Serialize, Clone, Debug)]
-pub enum MajServerError {
-    NotFound,
-    Io(String),
-    SerdeJson(String),
-}
-
-impl MajServerError {
-    pub fn status_code(&self) -> StatusCode {
-        #[allow(unreachable_patterns)]
-        match self {
-            MajServerError::NotFound => StatusCode::NOT_FOUND,
-            _ => StatusCode::INTERNAL_SERVER_ERROR,
-        }
-    }
-}
-
-impl From<serde_json::Error> for MajServerError {
-    fn from(value: serde_json::Error) -> Self {
-        Self::SerdeJson(value.to_string())
-    }
-}
-
-impl From<std::io::Error> for MajServerError {
-    fn from(value: std::io::Error) -> Self {
-        Self::Io(value.to_string())
-    }
-}
-
-// Error Boilerplate
-impl core::fmt::Display for MajServerError {
-    fn fmt(&self, fmt: &mut core::fmt::Formatter) -> core::result::Result<(), core::fmt::Error> {
-        write!(fmt, "{self:?}")
-    }
-}
-
-impl std::error::Error for MajServerError {}
+use crate::MajServerError;
 
 // A basic function to display errors served by the error boundaries.
 // Feel free to do more complicated things here than just displaying the error.
@@ -67,7 +27,6 @@ pub fn ErrorTemplate(
     // Downcast lets us take a type that implements `std::error::Error`
     let errors: Vec<_> = errors
         .into_iter()
-        .inspect(|(_k, e)| error!("{:?}", e))
         .filter_map(|(_k, e)| e.downcast_ref::<MajServerError>().cloned())
         .collect();
 

@@ -6,7 +6,7 @@ use leptos_meta::{Link, Title};
 use leptos_router::*;
 use serde::{Deserialize, Serialize};
 
-use crate::error_template::ErrorTemplate;
+use crate::error_components::ErrorTemplate;
 
 // ###################################
 // ->   ROUTES
