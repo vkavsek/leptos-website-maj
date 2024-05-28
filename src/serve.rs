@@ -62,7 +62,6 @@ pub async fn serve(
     // build our application with a route
     let app = Router::new()
         .leptos_routes(&state, routes, App)
-        .layer(middleware::map_response(midware::add_cache_control_header))
         .route("/health-check", axum::routing::get(health))
         .layer(
             ServiceBuilder::new()
@@ -78,6 +77,7 @@ pub async fn serve(
                 .layer(PropagateRequestIdLayer::new(x_request_id)),
         )
         .fallback(static_file_and_err_handler)
+        .layer(middleware::map_response(midware::add_cache_control_header))
         .with_state(state);
 
     axum::serve(listener, app).await?;
