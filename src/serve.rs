@@ -4,7 +4,7 @@
 use crate::app::App;
 use crate::fallback::static_file_and_err_handler;
 
-use axum::{body::Body, Router};
+use axum::{body::Body, middleware, Router};
 use http::{HeaderName, Request, Response};
 use leptos::LeptosOptions;
 use leptos_axum::LeptosRoutes;
@@ -62,6 +62,7 @@ pub async fn serve(
     // build our application with a route
     let app = Router::new()
         .leptos_routes(&state, routes, App)
+        .layer(middleware::map_response(midware::add_cache_control_header))
         .route("/health-check", axum::routing::get(health))
         .layer(
             ServiceBuilder::new()
@@ -86,4 +87,17 @@ pub async fn serve(
 
 async fn health() -> axum::http::StatusCode {
     http::StatusCode::OK
+}
+
+mod midware {
+    use axum::response::Response;
+
+    pub async fn add_cache_control_header(mut res: Response) -> Response {
+        tracing::debug!("Adding cache control header");
+        res.headers_mut().insert(
+            "Cache-Control",
+            "max-age=3600, must-revalidate".parse().unwrap(),
+        );
+        res
+    }
 }
