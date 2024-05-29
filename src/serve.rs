@@ -94,10 +94,19 @@ mod midware {
 
     pub async fn add_cache_control_header(mut res: Response) -> Response {
         tracing::debug!("Adding cache control header");
-        res.headers_mut().insert(
-            "Cache-Control",
-            "max-age=3600, must-revalidate".parse().unwrap(),
-        );
+        if cfg!(debug_assertions) {
+            res.headers_mut().insert(
+                "Cache-Control",
+                "no-store, no-cache, must-revalidate, proxy-revalidate"
+                    .parse()
+                    .unwrap(),
+            );
+        } else {
+            res.headers_mut().insert(
+                "Cache-Control",
+                "max-age=3600, must-revalidate".parse().unwrap(),
+            );
+        }
         res
     }
 }
