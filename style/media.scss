@@ -1,0 +1,45 @@
+/* routes.scss ------ MEDIA LAYOUT */
+#media-img {
+	width: 33%;
+}
+
+#media-title {
+	height: fit-content;
+}
+
+#media-contents {
+	max-height: unset;
+	display: block;
+
+	margin-left: 5%;
+	margin-right: 5%;
+	padding: 1rem;
+	overflow: auto;
+
+	width: 75%;
+}
+
+@media screen and (orientation: portrait) {
+	.yt-vid-container {
+		width: 80%;
+		height: 40%;
+	}
+}
+
+@media screen and (orientation: landscape) {
+	.yt-vid-container {
+		width: 70%;
+		height: 70%;
+	}
+}
+
+.yt-vid-container {
+	padding: 1rem;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.yt-vid {
+	width: 100%;
+	height: 100%;
+}
