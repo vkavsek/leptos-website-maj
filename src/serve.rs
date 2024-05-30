@@ -77,11 +77,13 @@ pub async fn serve(
                 .layer(PropagateRequestIdLayer::new(x_request_id)),
         )
         .fallback(static_file_and_err_handler)
-        // Set the compression layer for ALL routes
+        //  Set the compression layer for all routes.
         .layer(tower_http::compression::CompressionLayer::new())
+        // Detect and insert `If-modified-since` header into Response extensions for all routes.
         .layer(middleware::from_fn(
             midware::if_modified_to_extensions_midware,
         ))
+        // Insert appropriate headers and handle `If-modified-since` for all routes.
         .layer(middleware::map_response(midware::response_mapper_midware))
         .with_state(state);
 
@@ -136,6 +138,8 @@ mod midware {
         response
     }
 
+    /// Adds appropriate `Cache-control` headers & tries to handle `If-modified-since` header if
+    /// it's present in the response extensions *AND* `Last-modified` header is available.
     pub async fn response_mapper_midware(res: Response) -> Response {
         let mut resp = res;
 
@@ -181,7 +185,7 @@ mod midware {
         resp
     }
 
-    /// Creates a `DateTime<Utc>` from `If-modified-since` or `Last-modified` header values.
+    /// Tries to create a `DateTime<Utc>` from `If-modified-since` or `Last-modified` header values (as &str).
     fn get_datetime_utc(input: &str) -> Option<DateTime<Utc>> {
         static MONTHS: [&str; 12] = [
             "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
