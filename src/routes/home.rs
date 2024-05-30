@@ -4,6 +4,7 @@ use leptos::{
     *,
 };
 use leptos_meta::{Link, Title};
+use leptos_use::use_element_hover;
 use tracing::info;
 
 #[allow(unused)]
@@ -107,9 +108,21 @@ pub fn Home() -> impl IntoView {
 
 #[component]
 fn AlbumPromo() -> impl IntoView {
+    let center_ref: NodeRef<Div> = create_node_ref();
+    let is_hovered = use_element_hover(center_ref);
+    let (get_id, set_id) = create_signal("home-animated");
+
+    let dyn_id = move || {
+        if is_hovered.get() {
+            set_id.set("");
+        }
+        get_id.get()
+    };
+
     view! {
-        <div id="home-center">
-            <img src="/img/album_artwork.jpg" id="home-album-img" alt="Album Artwork"/>
+        <div class="home-center" id=dyn_id node_ref=center_ref>
+            // TODO: SVG
+            <img src="/img/album_artwork.jpg" width="640" height="360" id="home-album-img" alt="Album Artwork"/>
             <div id="home-hide">
                 <h1 id="album-promo-title">"GALATERNA"</h1>
                 <h3>"New Album Release!"</h3>

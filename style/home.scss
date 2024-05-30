@@ -38,7 +38,7 @@ $maj-pink: #ff3988;
 			margin-left: 0;
 		}
 
-		#home-center {
+		.home-center {
 			display: grid;
 			justify-items: center;
 			width: 50%;
@@ -61,7 +61,7 @@ $maj-pink: #ff3988;
 			align-items: center;
 		}
 
-		#home-center {
+		.home-center {
 			display: grid;
 			grid-auto-flow: column;
 			justify-items: center;
@@ -84,9 +84,35 @@ $maj-pink: #ff3988;
 		max-height: 100%;
 	}
 
-	#home-center {
-		grid-column-start: 1;
+	.home-center#home-animated {
+		animation: inflateDeflate 1.8s 2;
+
+		@keyframes inflateDeflate {
+
+			30%,
+			60% {
+				transform: scale(1.0);
+			}
+
+			38% {
+				transform: scale(1.1);
+			}
+
+			45% {
+				transform: scale(0.99);
+			}
+
+			52% {
+				transform: scale(1.05);
+			}
+
+		}
+
+	}
+
+	.home-center {
 		grid-column-end: 9;
+		grid-column-start: 1;
 		padding: 20px;
 		border-radius: 16px;
 		background-color: rgba(9, 4, 32, 0.7);
@@ -154,6 +180,11 @@ $maj-pink: #ff3988;
 				align-content: center;
 				justify-items: center;
 				margin: 24px 0px;
+
+				&:hover .contacts-img {
+					filter: hue-rotate(-295deg) saturate(100%) brightness(2) contrast(100%);
+					transform: scale(1.2);
+				}
 
 				>* {
 					width: 80%;

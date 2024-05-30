@@ -27,7 +27,7 @@ pub fn App() -> impl IntoView {
                     local("IBMPlexMono"),
                     url("/fonts/IBM-Plex-Mono/fonts/complete/woff2/IBMPlexMono-Regular.woff2")
                     format("woff2"),
-                    url("../IBM-Plex-Mono/fonts/complete/woff/IBMPlexMono-Regular.woff")
+                    url("/fonts/IBM-Plex-Mono/fonts/complete/woff/IBMPlexMono-Regular.woff")
                     format("woff");
                 font-display: swap;
             }
@@ -44,10 +44,9 @@ pub fn App() -> impl IntoView {
         <Link rel="preload" href="/img/bg/bg_smallest.webp" as_="image"/>
         <Link rel="shortcut icon" type_="image/svg" href="/img/trobenta.svg"/>
         <Html lang="en"/>
-        <Meta name="description" content="Personal portfolio page of Maj Kavšek."/>
-
-        <Title formatter/>
+        <Meta name="description" content="Maj Kavšek is a Berlin-based trumpeter and composer from Ljubljana, Slovenia. Beginning his musical journey at age 8, he refined his talents at the Conservatorium for Music in Ljubljana and the Jazz Institute Berlin, studying under renowned musicians such as James Robert Rotondi and Ralph Alessi. His versatile experience spans symphonic orchestras, jazz ensembles, and solo performances, highlighted by prestigious accolades like the TEMSIG competition's 1st prize with The Mood Lab Quintet. Maj has graced stages at major festivals and collaborated with esteemed artists, showcasing his profound musicality and professional excellence."/>
         <Meta name="viewport" content="width=device-width, initial-scale=1"/>
+        <Title formatter/>
 
         <Router
             fallback=|| {
