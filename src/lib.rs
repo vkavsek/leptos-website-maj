@@ -7,7 +7,6 @@
 pub mod app;
 pub mod audio;
 pub mod error;
-pub mod error_components;
 #[cfg(feature = "ssr")]
 pub mod fallback;
 pub mod head;

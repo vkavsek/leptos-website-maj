@@ -1,8 +1,7 @@
 use crate::{
     audio::AudioWrapper,
-    error_components::ErrorTemplate,
     head::*,
-    routes::{about::*, home::*, media::*, shows::*},
+    routes::{about::*, error::ErrorTemplate, home::*, media::*, shows::*},
     MajServerError,
 };
 use core::time::Duration;
