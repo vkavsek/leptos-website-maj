@@ -121,8 +121,7 @@ fn AlbumPromo() -> impl IntoView {
 
     view! {
         <div class="home-center" id=dyn_id node_ref=center_ref>
-            // TODO: SVG
-            <img src="/img/album_artwork.jpg" width="640" height="360" id="home-album-img" alt="Album Artwork"/>
+            <img src="/img/album_artwork_360p.webp" width="360" height="360" id="home-album-img" alt="Album Artwork"/>
             <div id="home-hide">
                 <h1 id="album-promo-title">"GALATERNA"</h1>
                 <h3>"New Album Release!"</h3>

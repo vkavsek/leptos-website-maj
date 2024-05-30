@@ -64,19 +64,21 @@ pub async fn serve(
         .leptos_routes(&state, routes, App)
         .route("/health-check", axum::routing::get(health))
         .layer(
+            // Adding tower_http services (except CompressionLayer)
             ServiceBuilder::new()
-                // Set the compression layer
-                .layer(tower_http::compression::CompressionLayer::new())
                 // Set UUID per request
                 .layer(SetRequestIdLayer::new(
                     x_request_id.clone(),
                     MakeRequestUuid,
                 ))
+                // Tracing Layer
                 .layer(trace_layer)
                 // Propagate UUID to response, keep it last so it processes the response first!
                 .layer(PropagateRequestIdLayer::new(x_request_id)),
         )
         .fallback(static_file_and_err_handler)
+        // Set the compression layer for ALL routes
+        .layer(tower_http::compression::CompressionLayer::new())
         .layer(middleware::map_response(midware::add_cache_control_header))
         .with_state(state);
 
