@@ -79,7 +79,10 @@ pub async fn serve(
         .fallback(static_file_and_err_handler)
         // Set the compression layer for ALL routes
         .layer(tower_http::compression::CompressionLayer::new())
-        .layer(middleware::map_response(midware::add_cache_control_header))
+        .layer(middleware::from_fn(
+            midware::if_modified_to_extensions_midware,
+        ))
+        .layer(middleware::map_response(midware::response_mapper_midware))
         .with_state(state);
 
     axum::serve(listener, app).await?;
@@ -92,23 +95,121 @@ async fn health() -> axum::http::StatusCode {
 }
 
 mod midware {
-    use axum::response::Response;
+    use std::ops::{Deref, DerefMut};
 
-    pub async fn add_cache_control_header(mut res: Response) -> Response {
-        tracing::debug!("Adding cache control header");
+    use axum::{extract::Request, middleware::Next, response::Response};
+    use chrono::{DateTime, TimeZone, Utc};
+    use http::{
+        header::{CACHE_CONTROL, IF_MODIFIED_SINCE, LAST_MODIFIED, VARY},
+        StatusCode,
+    };
+    use tracing::debug;
+
+    #[derive(Clone)]
+    struct IfModifiedSince(DateTime<Utc>);
+    impl Deref for IfModifiedSince {
+        type Target = DateTime<Utc>;
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
+    impl DerefMut for IfModifiedSince {
+        fn deref_mut(&mut self) -> &mut Self::Target {
+            &mut self.0
+        }
+    }
+
+    /// Tries to find `If-modified-since` header, if it finds the header it stores it in the Response
+    /// extensions so that it can be handled by the response mapper.
+    pub async fn if_modified_to_extensions_midware(req: Request, next: Next) -> Response {
+        let modified = req.headers().get(IF_MODIFIED_SINCE).cloned();
+
+        let mut response = next.run(req).await;
+
+        if let Some(modified) = modified {
+            if let Ok(modified) = modified.to_str() {
+                if let Some(dt) = get_datetime_utc(modified) {
+                    response.extensions_mut().insert(IfModifiedSince(dt));
+                }
+            }
+        }
+        response
+    }
+
+    pub async fn response_mapper_midware(res: Response) -> Response {
+        let mut resp = res;
+
+        // Detect and Handle `If-modified-since` header if possible
+        let if_modified_since = resp.extensions().get::<IfModifiedSince>();
+        if let Some(if_modified_since) = if_modified_since {
+            if let Some(last_modified_header) = resp.headers().get(LAST_MODIFIED).cloned() {
+                if let Some(last_modified) =
+                    get_datetime_utc(last_modified_header.to_str().unwrap_or_default())
+                {
+                    debug!("If-modified-since: {}", **if_modified_since);
+                    debug!("Last-modified: {}", last_modified);
+
+                    if **if_modified_since > last_modified {
+                        resp = Response::default();
+                        *resp.status_mut() = StatusCode::NOT_MODIFIED;
+                        // Add headers into the response
+                        resp.headers_mut()
+                            .insert(VARY, "accept-encoding".parse().unwrap());
+                        resp.headers_mut()
+                            .insert(LAST_MODIFIED, last_modified_header);
+                    }
+                }
+            }
+        }
+
+        // Add `Cache-control` header
+        debug!("Adding cache control header");
         if cfg!(debug_assertions) {
-            res.headers_mut().insert(
-                "Cache-Control",
+            resp.headers_mut().insert(
+                CACHE_CONTROL,
                 "no-store, no-cache, must-revalidate, proxy-revalidate"
                     .parse()
                     .unwrap(),
             );
         } else {
-            res.headers_mut().insert(
-                "Cache-Control",
+            resp.headers_mut().insert(
+                CACHE_CONTROL,
                 "max-age=3600, must-revalidate".parse().unwrap(),
             );
         }
-        res
+
+        resp
+    }
+
+    /// Creates a `DateTime<Utc>` from `If-modified-since` or `Last-modified` header values.
+    fn get_datetime_utc(input: &str) -> Option<DateTime<Utc>> {
+        static MONTHS: [&str; 12] = [
+            "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+        ];
+
+        let regex = lazy_regex::regex_captures!(
+            r#"\s*(\w{3}),\s*(\d{2})\s*(\w{3})\s*(\d{4})\s*(\d{2}):(\d{2}):(\d{2})\s*GMT"#,
+            input
+        );
+
+        let (_full_input, _day_str, day, month, year, hour, min, sec) = regex?;
+        let day: u32 = day.parse().ok()?;
+        let month = MONTHS
+            .iter()
+            .enumerate()
+            .find(|(_i, &m)| m == month)
+            .map(|(i, _)| i + 1)? as u32;
+        let year: i32 = year.parse().ok()?;
+        let hour: u32 = hour.parse().ok()?;
+        let min: u32 = min.parse().ok()?;
+        let sec: u32 = sec.parse().ok()?;
+
+        let date_time = match Utc.with_ymd_and_hms(year, month, day, hour, min, sec) {
+            chrono::offset::LocalResult::Single(res) => res,
+            chrono::offset::LocalResult::Ambiguous(_early, latest) => latest,
+            chrono::offset::LocalResult::None => return None,
+        };
+
+        Some(date_time)
     }
 }
