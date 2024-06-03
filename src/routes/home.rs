@@ -1,11 +1,7 @@
-use leptos::{
-    ev::{MouseEvent, SubmitEvent},
-    html::{Div, Input, Textarea},
-    *,
-};
+use leptos::{ev::MouseEvent, html::Div, *};
 use leptos_meta::{Link, Title};
+use leptos_router::ActionForm;
 use leptos_use::use_element_hover;
-use tracing::info;
 
 #[allow(unused)]
 const EMAIL_ADDR: &str = "kavsekmaj@gmail.com";
@@ -235,15 +231,10 @@ fn LinkWithModal(
 
 #[component]
 fn Mail() -> impl IntoView {
-    let (show_mail, set_show_mail) = create_signal(false);
-
-    let mail_ref = create_node_ref::<Div>();
-    let name_ref = create_node_ref::<Input>();
-    let email_ref = create_node_ref::<Input>();
-    let email_sub_ref = create_node_ref::<Input>();
-    let email_cont_ref = create_node_ref::<Textarea>();
-
     const EMAIL_PATTERN: &str = r".+@.+\..+";
+
+    let (show_mail, set_show_mail) = create_signal(false);
+    let mail_ref = create_node_ref::<Div>();
 
     let mail_click = move |ev: MouseEvent| {
         ev.prevent_default();
@@ -260,24 +251,7 @@ fn Mail() -> impl IntoView {
         })
     });
 
-    let mail_action = create_action(|input: &EmailBuilder| send_mail(input.clone()));
-
-    let on_submit = move |ev: SubmitEvent| {
-        ev.prevent_default();
-        let name = name_ref
-            .get()
-            .expect("the DOM should be built by now!")
-            .value();
-        let email = email_ref.get().unwrap().value();
-        let email_sub = email_sub_ref.get().unwrap().value();
-        let email_cont = email_cont_ref.get().unwrap().value();
-
-        // NOTE: No content validation
-        // No need to check if the Strings are empty, <form> does that for us.
-        let email_builder = EmailBuilder::new(name, email, email_sub, email_cont);
-
-        mail_action.dispatch(email_builder);
-    };
+    let mail_action = create_server_action::<SendMail>();
 
     // TODO: Improve this, does it have to be this complicated?
     let (control_input, set_control_input) = create_signal(0);
@@ -293,7 +267,6 @@ fn Mail() -> impl IntoView {
             .unwrap_or_else(|_| false);
 
         if version > control_input.get() && mail_is_some_and_ok {
-            info!("Closing email popup, email sent sucessfully!");
             set_show_mail.set(false);
             set_control_input.set(version);
         }
@@ -348,7 +321,7 @@ fn Mail() -> impl IntoView {
                 <span style:color="var(--maj-yel)">
                     "Contact for booking, teaching and collaborations."
                 </span>
-                <form class="email-form" on:submit=on_submit>
+                <ActionForm class="email-form" action=mail_action>
                     <div class="form-div">
                         <label for="name" class="name-label">
                             "Enter your name: "
@@ -358,7 +331,6 @@ fn Mail() -> impl IntoView {
                             id="name"
                             type="text"
                             class="name-input"
-                            node_ref=name_ref
                             placeholder="Your Name"
                         />
                     </div>
@@ -372,7 +344,6 @@ fn Mail() -> impl IntoView {
                             class="email-input"
                             type="email"
                             pattern=EMAIL_PATTERN
-                            node_ref=email_ref
                             placeholder="email@example.com"
                             required
                         />
@@ -383,24 +354,22 @@ fn Mail() -> impl IntoView {
                         </label>
                         <input
                             class="email-sub-input"
-                            name="email-subject"
+                            name="email_subject"
                             id="email-subject"
                             type="text"
-                            node_ref=email_sub_ref
                             placeholder="Message subject"
                             required
                         />
                     </div>
                     <textarea
                         class="email-content"
-                        name="email-content"
-                        node_ref=email_cont_ref
+                        name="email_content"
                         placeholder="Your message"
                         required
                     ></textarea>
                     <input class="submit-button" type="submit" value="Send"/>
                     {display_mail_status}
-                </form>
+                </ActionForm>
             </div>
         </Show>
     }
@@ -409,41 +378,23 @@ fn Mail() -> impl IntoView {
 // ###################################
 // ->   SERVER
 // ###################################
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
-struct EmailBuilder {
+/// Takes (Name, Email, Email Subject, Email Content) as input and sends an email, returning errors
+/// if any.
+#[server(name = SendMail)]
+async fn send_mail(
     name: String,
     email: String,
     email_subject: String,
     email_content: String,
-}
-impl EmailBuilder {
-    fn new(name: String, email: String, email_subject: String, email_content: String) -> Self {
-        Self {
-            name,
-            email,
-            email_subject,
-            email_content,
-        }
-    }
-}
-
-/// Takes (Name, Email, Email Subject, Email Content) as input and sends an email, returning errors
-/// if any.
-#[server(SendMail)]
-async fn send_mail(input: EmailBuilder) -> Result<(), ServerFnError> {
+) -> Result<(), ServerFnError> {
     use lettre::{
         message::header::ContentType, transport::smtp::authentication::Credentials,
         AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
     };
     use tracing::error;
+    use tracing::info;
 
-    let EmailBuilder {
-        name,
-        email,
-        email_subject,
-        email_content,
-    } = input;
-
+    info!("Sending an email.");
     let email_a = Message::builder()
         .from("Info <info@majkavsek.com>".parse().unwrap())
         .to("Me <kavsekmaj@gmail.com>".parse().unwrap())
@@ -466,8 +417,8 @@ async fn send_mail(input: EmailBuilder) -> Result<(), ServerFnError> {
         ))
         .map_err(<lettre::error::Error as Into<ServerFnError>>::into)?;
 
-    let porkmail_pwd = std::env::var("PORKMAIL_PWD").unwrap_or_default();
-    let creds = Credentials::new("info@majkavsek.com".to_owned(), porkmail_pwd);
+    let porkmail_pwd = std::env!("PORKMAIL_PWD");
+    let creds = Credentials::new("info@majkavsek.com".to_owned(), porkmail_pwd.to_string());
 
     // Open a remote connection to porkbun
     let mailer: AsyncSmtpTransport<Tokio1Executor> =
@@ -477,12 +428,15 @@ async fn send_mail(input: EmailBuilder) -> Result<(), ServerFnError> {
 
     // Send the email
     let res = mailer.send(email_a).await;
-    // Ignore errors.
-    let _ = mailer.send(email_b).await;
+    let res_2 = mailer.send(email_b).await;
 
+    if let Err(res_2) = res_2 {
+        error!("{res_2}");
+    }
     match res {
         Ok(ref response) => info!("Sent email: {:?}", response),
-        Err(ref e) => error!("Error: {}", e),
+        Err(ref e) => error!("{e}"),
     }
+    // Map the `Response` to `()` and convert Error.
     res.map(|_res| {}).map_err(|e| e.into())
 }

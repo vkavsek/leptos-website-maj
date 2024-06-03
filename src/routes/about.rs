@@ -253,6 +253,10 @@ pub fn ImagesAbout() -> impl IntoView {
     }
 }
 
+// ###################################
+// ->   SERVER
+// ###################################
+
 #[server(ReadImageFiles, "/api", "GetJson", "get_image_files")]
 async fn read_image_files() -> Result<Vec<String>, ServerFnError> {
     use tokio::sync::OnceCell;

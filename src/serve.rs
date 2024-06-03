@@ -4,7 +4,7 @@
 use crate::app::App;
 use crate::fallback::static_file_and_err_handler;
 
-use axum::{body::Body, middleware, Router};
+use axum::{body::Body, middleware, routing::get, Router};
 use http::{HeaderName, Request, Response};
 use leptos::LeptosOptions;
 use leptos_axum::LeptosRoutes;
@@ -62,7 +62,7 @@ pub async fn serve(
     // build our application with a route
     let app = Router::new()
         .leptos_routes(&state, routes, App)
-        .route("/health-check", axum::routing::get(health))
+        .route("/health-check", get(health))
         .layer(
             // Adding tower_http services (except CompressionLayer)
             ServiceBuilder::new()
