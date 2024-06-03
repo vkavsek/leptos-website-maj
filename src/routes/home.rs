@@ -417,7 +417,7 @@ async fn send_mail(
         ))
         .map_err(<lettre::error::Error as Into<ServerFnError>>::into)?;
 
-    let porkmail_pwd = std::env!("PORKMAIL_PWD");
+    let porkmail_pwd = std::env::var("PORKMAIL_PWD").unwrap_or_default();
     let creds = Credentials::new("info@majkavsek.com".to_owned(), porkmail_pwd.to_string());
 
     // Open a remote connection to porkbun
