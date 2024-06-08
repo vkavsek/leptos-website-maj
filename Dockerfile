@@ -1,3 +1,4 @@
+## NOTE: cargo-chef doesn't currently work with cargo-leptos, but I'm optimistically leaving it in. 
 FROM lukemathwalker/cargo-chef:latest-rust-1 AS chef
 WORKDIR /app
 

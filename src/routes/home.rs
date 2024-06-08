@@ -391,10 +391,9 @@ async fn send_mail(
         message::header::ContentType, transport::smtp::authentication::Credentials,
         AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
     };
-    use tracing::error;
-    use tracing::info;
+    use tracing::{error, info};
 
-    info!("Sending an email.");
+    info!(name = %name, address = %email, subject = %email_subject, email_content = %email_content, "SENDING EMAIL");
     let email_a = Message::builder()
         .from("Info <info@majkavsek.com>".parse().unwrap())
         .to("Me <kavsekmaj@gmail.com>".parse().unwrap())
