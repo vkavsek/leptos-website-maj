@@ -46,7 +46,7 @@ RUN apt-get update -y \
 
 
 # Copy the compiled server binary from builder to runtime.
-COPY --from=builder /app/target/release/maj-leptos /app/maj-leptos
+COPY --from=builder /app/target/release/leptos-website-maj /app/leptos-website-maj
 # /target/site contains our JS/WASM/CSS, etc.
 COPY --from=builder /app/target/site /app/site
 COPY --from=builder /app/Cargo.toml /app/Cargo.toml
@@ -59,4 +59,4 @@ ENV LEPTOS_SITE_ROOT site
 EXPOSE 8080
 # Run the server
 
-ENTRYPOINT [ "/app/maj-leptos" ]
+ENTRYPOINT [ "/app/leptos-website-maj" ]

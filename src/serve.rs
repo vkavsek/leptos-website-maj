@@ -28,7 +28,7 @@ const REQUEST_ID_HEADER: &str = "x-request-id";
 /// It sets up a TraceLayer that provides console logging.
 /// It returns a `Result` containing a `Serve` future. Needs to be awaited like so:
 /// ```ignore
-/// maj_leptos::serve(listener, routes, leptos_options).await?;
+/// leptos_website_maj::serve(listener, routes, leptos_options).await?;
 /// ```
 pub async fn serve(
     listener: TcpListener,

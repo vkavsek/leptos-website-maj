@@ -40,7 +40,7 @@ pub fn App() -> impl IntoView {
             }"#;
     view! {
         <Style>{critical_styles_fonts}</Style>
-        <Stylesheet id="leptos" href="/pkg/maj-leptos.css"/>
+        <Stylesheet id="leptos" href="/pkg/leptos-website-maj.css"/>
         <Link rel="preload" href="/img/bg/bg_smallest.webp" as_="image"/>
         <Link rel="shortcut icon" type_="image/svg" href="/img/trobenta.svg"/>
         <Html lang="en"/>
