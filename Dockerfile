@@ -51,10 +51,10 @@ COPY --from=builder /app/target/release/leptos-website-maj /app/leptos-website-m
 COPY --from=builder /app/target/site /app/site
 COPY --from=builder /app/Cargo.toml /app/Cargo.toml
 # # Set any required env variables and
-ENV RUST_LOG info
-ENV APP_ENVIRONMENT production
-ENV LEPTOS_SITE_ADDR 0.0.0.0:8080
-ENV LEPTOS_SITE_ROOT site
+ENV RUST_LOG=info
+ENV APP_ENVIRONMENT=production
+ENV LEPTOS_SITE_ADDR=0.0.0.0:8080
+ENV LEPTOS_SITE_ROOT=site
 
 EXPOSE 8080
 # Run the server
