@@ -1,5 +1,3 @@
-use std::ops::{Deref, DerefMut};
-
 use chrono::prelude::*;
 use leptos::*;
 use leptos_meta::{Link, Title};
@@ -15,8 +13,8 @@ use crate::routes::error::ErrorTemplate;
 #[component]
 pub fn Shows() -> impl IntoView {
     view! {
-        <Link rel="icon" href="/img/nota.svg" type_="image/svg"/>
-        <Title text="Shows"/>
+        <Link rel="icon" href="/img/nota.svg" type_="image/svg" />
+        <Title text="Shows" />
         <div class="components" id="shows-components">
             <div class="title" id="shows-title">
                 <h1>"Shows"</h1>
@@ -28,7 +26,7 @@ pub fn Shows() -> impl IntoView {
                     <A href="future">"future"</A>
                 </nav>
                 <div id="shows-wrap">
-                    <Outlet/>
+                    <Outlet />
                 </div>
             </div>
         </div>
@@ -38,7 +36,7 @@ pub fn Shows() -> impl IntoView {
 #[component]
 pub fn ShowsFallback() -> impl IntoView {
     view! {
-        <Link rel="icon" href="/img/nota.svg" type_="image/svg"/>
+        <Link rel="icon" href="/img/nota.svg" type_="image/svg" />
         <p class="shows-no-shows">"Select past or future events by clicking on the link above!"</p>
     }
 }
@@ -46,34 +44,40 @@ pub fn ShowsFallback() -> impl IntoView {
 #[component]
 pub fn PastShows() -> impl IntoView {
     let selector = EventSelector::Past;
-    view! { <RenderShows selector/> }
+    view! { <RenderShows selector /> }
 }
 
 #[component]
 pub fn FutureShows() -> impl IntoView {
     let selector = EventSelector::Future;
-    view! { <RenderShows selector/> }
+    view! { <RenderShows selector /> }
 }
 
 // ###################################
 // ->   UTILS
 // ###################################
-
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub struct Events(Vec<Event>);
-
-impl DerefMut for Events {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct EventsSorted {
+    date_desc: Vec<Event>,
+    date_asc: Vec<Event>,
+}
+impl EventsSorted {
+    pub fn get_desc(&self) -> &[Event] {
+        &self.date_desc
+    }
+    pub fn get_desc_mut(&mut self) -> &mut [Event] {
+        &mut self.date_asc
+    }
+    pub fn get_asc(&self) -> &[Event] {
+        &self.date_asc
+    }
+    pub fn get_asc_mut(&mut self) -> &mut [Event] {
+        &mut self.date_asc
     }
 }
-impl Deref for Events {
-    type Target = Vec<Event>;
 
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
+#[derive(Clone, Debug, Deserialize)]
+pub struct EventsDeser(Vec<Event>);
 
 #[derive(Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Default, Serialize, Deserialize)]
 pub struct Event {
@@ -115,7 +119,7 @@ fn RenderShows(selector: EventSelector) -> impl IntoView {
     let pivot_date = Utc::now();
 
     view! {
-        <Link rel="icon" href="/img/nota.svg" type_="image/svg"/>
+        <Link rel="icon" href="/img/nota.svg" type_="image/svg" />
         <Suspense fallback=move || {
             view! { <p class="shows-no-shows">"  "</p> }
         }>
@@ -125,21 +129,35 @@ fn RenderShows(selector: EventSelector) -> impl IntoView {
                     .map(|shows| {
                         view! {
                             <ErrorBoundary fallback=move |errors| {
-                                view! { <ErrorTemplate errors/> }
+                                view! { <ErrorTemplate errors /> }
                             }>
                                 {shows
                                     .map(|shows| {
-                                        let shows_col = shows
-                                            .iter()
-                                            .filter(|show| {
-                                                let date = show.get_date().expect("All events need dates!");
-                                                match selector {
-                                                    EventSelector::Past => date.lt(&pivot_date),
-                                                    EventSelector::Future => date.ge(&pivot_date),
-                                                }
-                                            })
-                                            .collect::<Vec<_>>();
+                                        let shows_col = match selector {
+                                            EventSelector::Past => {
+                                                shows
+                                                    .get_desc()
+                                                    .iter()
+                                                    .filter(|show| {
+                                                        let date = show.get_date().expect("All events need dates!");
+                                                        date.lt(&pivot_date)
+                                                    })
+                                                    .collect::<Vec<_>>()
+                                            }
+                                            EventSelector::Future => {
+                                                shows
+                                                    .get_asc()
+                                                    .iter()
+                                                    .filter(|show| {
+                                                        let date = show.get_date().expect("All events need dates!");
+                                                        date.ge(&pivot_date)
+                                                    })
+                                                    .collect::<Vec<_>>()
+                                            }
+                                        };
+
                                         if shows_col.is_empty() {
+
                                             view! {
                                                 <p class="shows-no-shows">
                                                     "There are currently no events to display here. Come back later."
@@ -193,7 +211,7 @@ fn RenderShows(selector: EventSelector) -> impl IntoView {
 /// Only reads the files, deserializes and sorts them on the initial call.
 /// Further calls just return a clone of `Shows`.
 #[server(GetShows, "/api", "GetJson", "get_shows")]
-async fn get_shows() -> Result<Events, ServerFnError> {
+async fn get_shows() -> Result<EventsSorted, ServerFnError> {
     let shows = get_shows_util()
         .await
         .as_ref()
@@ -203,12 +221,13 @@ async fn get_shows() -> Result<Events, ServerFnError> {
 }
 
 #[cfg(feature = "ssr")]
-async fn get_shows_util() -> &'static Result<Events, crate::MajServerError> {
+async fn get_shows_util() -> &'static Result<EventsSorted, crate::MajServerError> {
     use std::cmp::Reverse;
     use tokio::sync::OnceCell;
     use tracing::info;
 
-    static SHOWS_INIT: OnceCell<Result<Events, crate::MajServerError>> = OnceCell::const_new();
+    static SHOWS_INIT: OnceCell<Result<EventsSorted, crate::MajServerError>> =
+        OnceCell::const_new();
 
     tracing::debug!("Retrieving SHOWS");
     SHOWS_INIT
@@ -221,9 +240,19 @@ async fn get_shows_util() -> &'static Result<Events, crate::MajServerError> {
 
             info!("Initializing SHOWS");
             let show_json = tokio::fs::read_to_string(path).await?;
-            let mut shows: Events = serde_json::from_str(&show_json)?;
-            shows.sort_by_key(|show_a| Reverse(show_a.get_date()));
-            Ok(shows)
+            let mut shows: EventsDeser = serde_json::from_str(&show_json)?;
+            shows.0.sort_by_key(|show_a| Reverse(show_a.get_date()));
+
+            let date_desc = shows.0.clone();
+            let mut date_asc = shows.0;
+            date_asc.reverse();
+
+            let events_sorted = EventsSorted {
+                date_desc,
+                date_asc,
+            };
+
+            Ok(events_sorted)
         })
         .await
 }
