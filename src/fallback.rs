@@ -3,7 +3,7 @@ use crate::{app::App, MajServerError};
 use axum::{
     body::Body,
     extract::State,
-    http::{Request, StatusCode, Uri},
+    http::{Request, StatusCode},
     response::{IntoResponse, Response},
 };
 use leptos::{view, LeptosOptions};
@@ -11,12 +11,21 @@ use tower::ServiceExt;
 use tower_http::services::ServeDir;
 
 pub async fn static_file_and_err_handler(
-    uri: Uri,
     State(options): State<LeptosOptions>,
     req: Request<Body>,
 ) -> Response {
     let root = options.site_root.clone();
-    let res = match get_static_file(uri.clone(), &root).await {
+    let (parts, body) = req.into_parts();
+
+    let mut static_parts = parts.clone();
+    static_parts.headers.clear();
+    if let Some(encodings) = parts.headers.get("accept-encoding") {
+        static_parts
+            .headers
+            .insert("accept-encoding", encodings.clone());
+    }
+
+    let res = match get_static_file(Request::from_parts(static_parts, Body::empty()), &root).await {
         Ok(res) => res,
         Err(err) => err.into_response(),
     };
@@ -26,23 +35,26 @@ pub async fn static_file_and_err_handler(
     if res.status() == StatusCode::OK {
         res.into_response()
     } else {
-        let request = format!("{} @ {}", req.method(), req.uri());
+        let request = format!("{} @ {}", parts.method, parts.uri);
 
         // TODO: This is stupid improve error handling
         tracing::error!("{}", request);
         let handler = leptos_axum::render_app_to_stream(options.to_owned(), move || view! {<App/>});
-        handler(req).await.into_response()
+        handler(Request::from_parts(parts, body))
+            .await
+            .into_response()
     }
 }
 
-async fn get_static_file(uri: Uri, root: &str) -> Result<Response, MajServerError> {
-    let req = Request::builder()
-        .uri(uri.clone())
-        .body(Body::empty())
-        .unwrap();
+async fn get_static_file(req: Request<Body>, root: &str) -> Result<Response, MajServerError> {
     // `ServeDir` implements `tower::Service` so we can call it with `tower::ServiceExt::oneshot`
     // This path is relative to the cargo root
-    match ServeDir::new(root).oneshot(req).await {
+    match ServeDir::new(root)
+        .precompressed_gzip()
+        .precompressed_br()
+        .oneshot(req)
+        .await
+    {
         Ok(res) => Ok(res.into_response()),
         Err(_err) => Err(MajServerError::Internal),
     }
