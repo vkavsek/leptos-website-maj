@@ -117,9 +117,11 @@ fn AlbumPromo() -> impl IntoView {
 
     view! {
         <div class="home-center" id=dyn_id node_ref=center_ref>
-            <img src="/img/album_artwork_360p.webp" width="360" height="360" id="home-album-img" alt="Album Artwork"/>
-            <div id="home-hide">
+            <div id="album-img-title-wrap">
+                <img src="/img/album_artwork_360p.webp" width="360" height="360" id="home-album-img" alt="Album Artwork"/>
                 <h1 id="album-promo-title">"GALATERNA"</h1>
+            </div>
+            <div id="home-hide">
                 <h3>"New Album Release!"</h3>
                 <p id="home-album-text">
                     "A number of songs are available on YouTube, but you can check them out on the "

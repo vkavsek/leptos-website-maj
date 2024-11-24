@@ -115,7 +115,7 @@ $maj-pink: #ff3988;
 		grid-column-end: 9;
 		grid-column-start: 1;
 		padding: 20px;
-		border-radius: 16px;
+		border-radius: 6px;
 		background-color: rgba(9, 4, 32, 0.7);
 		transition: width 0.4s ease-in-out;
 		overflow: auto;
@@ -124,8 +124,27 @@ $maj-pink: #ff3988;
 			background-color: rgba(9, 4, 32, 0.9);
 		}
 
+		#album-img-title-wrap {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+		}
+
+		#album-promo-title {
+			font-family: "LilitaOne", sans-serif;
+			text-shadow: 2px 2px $maj-pink;
+			font-size: 1rem;
+			margin: 0;
+			margin-top: 5px;
+			transition: font-size 0.8s;
+		}
+
+		&:hover #album-promo-title {
+			font-size: 2rem;
+		}
+
 		#home-hide {
-			padding: 16px 64px;
+			padding: 16px 32px;
 			text-align: center;
 			max-width: 600px;
 			display: none;
@@ -159,10 +178,6 @@ $maj-pink: #ff3988;
 			color: $maj-pink;
 		}
 
-		#album-promo-title {
-			font-family: "LilitaOne", sans-serif;
-			text-shadow: 2px 2px $maj-pink;
-		}
 
 		#home-album-text {
 			font-size: 0.9rem;
@@ -171,7 +186,7 @@ $maj-pink: #ff3988;
 		#home-album-links {
 			flex-direction: column;
 			display: none;
-			width: 30%;
+			width: 50%;
 			justify-content: space-evenly;
 			transition: display 0s 0.8s;
 

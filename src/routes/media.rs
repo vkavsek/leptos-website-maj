@@ -57,7 +57,7 @@ pub fn CreateVideo(video: YoutubeUrl) -> impl IntoView {
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct YoutubeUrl {
     pub url: String,
 }
@@ -65,7 +65,6 @@ pub struct YoutubeUrl {
 // ###################################
 // ->   Server
 // ###################################
-
 #[server(GetMediaVideos, "/api", "GetJson", "get_media_videos")]
 async fn get_youtube_videos() -> Result<Vec<YoutubeUrl>, ServerFnError> {
     let res = get_shows_util()
@@ -79,7 +78,7 @@ async fn get_youtube_videos() -> Result<Vec<YoutubeUrl>, ServerFnError> {
 #[cfg(feature = "ssr")]
 async fn get_shows_util() -> &'static Result<Vec<YoutubeUrl>, crate::MajServerError> {
     use tokio::sync::OnceCell;
-    use tracing::info;
+    use tracing::{debug, info};
 
     static SHOWS_INIT: OnceCell<Result<Vec<YoutubeUrl>, crate::MajServerError>> =
         OnceCell::const_new();
@@ -95,19 +94,8 @@ async fn get_shows_util() -> &'static Result<Vec<YoutubeUrl>, crate::MajServerEr
 
             info!("Initializing YT videos");
             let videos_json = tokio::fs::read_to_string(path).await?;
-            let mut videos: Vec<YoutubeUrl> = serde_json::from_str(&videos_json)?;
-
-            // Try to convert url to youtube-nocookie
-            for video in videos.iter_mut() {
-                use lazy_regex::regex_find;
-                let regex = regex_find!(r#"(?:v=|\/)([0-9A-Za-z_-]{11}).*"#, &video.url);
-
-                let Some(url) = regex.map(|s| s.strip_prefix("v=").unwrap_or_default()) else {
-                    continue;
-                };
-
-                video.url = format!("https://www.youtube-nocookie.com/embed/{}", url);
-            }
+            debug!("videos_json: {videos_json}");
+            let videos: Vec<YoutubeUrl> = serde_json::from_str(&videos_json)?;
 
             Ok(videos)
         })
