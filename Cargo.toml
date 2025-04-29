@@ -1,6 +1,6 @@
 [package]
 name = "leptos-website-maj"
-version = "1.1.0"
+version = "1.2.0"
 edition = "2021"
 
 [lib]
@@ -24,15 +24,15 @@ tower-http = { version = "0.6", features = [
 # Tracing & Logging
 tracing = { version = "0.1", features = ["log"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-console_error_panic_hook = "0.1"
+console_error_panic_hook = { version = "0.1", optional = true }
 
 #Leptos
-leptos = { version = "0.6", features = ["tracing"] }
-leptos_axum = { version = "0.6", optional = true }
-leptos_meta = { version = "0.6" }
-leptos_router = { version = "0.6" }
-leptos-use = "0.13"
-wasm-bindgen = "=0.2"
+leptos = { version = "0.7", features = ["tracing"] }
+leptos_meta = { version = "0.7" }
+leptos_router = { version = "0.7" }
+leptos-use = "0.15"
+leptos_axum = { version = "0.7", optional = true }
+wasm-bindgen = { version = "=0.2", optional = true }
 
 # Http & Web-SYS
 http = "1"
@@ -51,7 +51,7 @@ lettre = { version = "0.11", features = [
 lazy-regex = { version = "3", optional = true }
 
 [features]
-hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate"]
+hydrate = ["leptos/hydrate", "dep:console_error_panic_hook", "dep:wasm-bindgen"]
 ssr = [
   "leptos/ssr",
   "leptos_meta/ssr",
