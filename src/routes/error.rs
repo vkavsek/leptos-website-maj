@@ -1,6 +1,6 @@
 use http::status::StatusCode;
-use leptos::*;
-use leptos_router::A;
+use leptos::prelude::*;
+use leptos_router::components::A;
 
 #[cfg(feature = "ssr")]
 use leptos_axum::ResponseOptions;
@@ -12,10 +12,10 @@ use crate::MajServerError;
 #[component]
 pub fn ErrorTemplate(
     #[prop(optional)] outside_errors: Option<Errors>,
-    #[prop(optional)] errors: Option<RwSignal<Errors>>,
+    #[prop(optional)] errors: Option<ArcRwSignal<Errors>>,
 ) -> impl IntoView {
     let errors = match outside_errors {
-        Some(e) => create_rw_signal(e),
+        Some(e) => ArcRwSignal::new(e),
         None => match errors {
             Some(e) => e,
             None => panic!("No Errors found and we expected errors!"),
@@ -63,12 +63,12 @@ pub fn ErrorTemplate(
                                 <h2 class="error-subtitle">{error_code.to_string()}</h2>
                                 <p>"The site you are looking for doesn't exist!"</p>
                                 <A href="/">"Go back to the home page."</A>
-                            }
+                            }.into_any()
                         } else {
                             view! {
                                 <h2 class="error-subtitle">{error_code.to_string()}</h2>
                                 <p>"Error: " {error_string}</p>
-                            }
+                            }.into_any()
                         }
                     }
                 />

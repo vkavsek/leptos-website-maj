@@ -6,9 +6,8 @@ use crate::fallback::static_file_and_err_handler;
 
 use axum::{body::Body, middleware, routing::get, Router};
 use http::{HeaderName, Request, Response};
-use leptos::LeptosOptions;
-use leptos_axum::LeptosRoutes;
-use leptos_router::RouteListing;
+use leptos::config::LeptosOptions;
+use leptos_axum::{AxumRouteListing, LeptosRoutes};
 use std::time::Duration;
 use tokio::net::TcpListener;
 use tower::ServiceBuilder;
@@ -32,7 +31,7 @@ const REQUEST_ID_HEADER: &str = "x-request-id";
 /// ```
 pub async fn serve(
     listener: TcpListener,
-    routes: Vec<RouteListing>,
+    routes: Vec<AxumRouteListing>,
     state: LeptosOptions,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let x_request_id = HeaderName::from_static(REQUEST_ID_HEADER);

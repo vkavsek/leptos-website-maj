@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 
 mod list;
 mod player;
@@ -20,8 +20,8 @@ pub fn AudioWrapper() -> impl IntoView {
         .collect::<Vec<String>>();
 
     // Create signals
-    let names = create_rw_signal(names);
-    let selector = create_rw_signal(0usize);
+    let names = RwSignal::new(names);
+    let selector = RwSignal::new(0usize);
     // Provide names and selector to all the children of AudioWrapper
     provide_context(names);
     provide_context(selector);

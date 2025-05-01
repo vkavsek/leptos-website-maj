@@ -1,4 +1,4 @@
-use leptos::{get_configuration, view};
+use leptos::{config::get_configuration, view};
 use leptos_axum::generate_route_list;
 use leptos_website_maj::app::App;
 use tracing::info;
@@ -15,7 +15,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // `None` imports the default Cargo.toml configuration. ("./Cargo.toml")
-    let conf = get_configuration(None).await?;
+    let conf = get_configuration(None)?;
     let leptos_options = conf.leptos_options;
     let addr = leptos_options.site_addr;
     let routes = generate_route_list(|| view! { <App/> });

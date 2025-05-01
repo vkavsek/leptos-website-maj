@@ -5,16 +5,14 @@ use crate::{
     MajServerError,
 };
 use core::time::Duration;
-use leptos::html::Div;
-use leptos::*;
-use leptos_dom::helpers::IntervalHandle;
+use leptos::prelude::*;
 use leptos_meta::*;
-use leptos_router::*;
+use leptos_router::{components::*, path};
 
 #[component]
 pub fn App() -> impl IntoView {
     provide_meta_context();
-    let bg_div_ref = create_node_ref::<Div>();
+    let bg_div_ref = NodeRef::new();
 
     let formatter = |text| format!("{text} - Maj Kavšek");
     let critical_styles_fonts = r#"
@@ -41,33 +39,30 @@ pub fn App() -> impl IntoView {
     view! {
         <Style>{critical_styles_fonts}</Style>
         <Stylesheet id="leptos" href="/pkg/leptos-website-maj.css"/>
+            <Link rel="shortcut icon" type_="image/svg" href="/img/trobenta.svg"/>
         <Link rel="preload" href="/img/bg/bg_smallest.webp" as_="image"/>
-        <Link rel="shortcut icon" type_="image/svg" href="/img/trobenta.svg"/>
-        <Html lang="en"/>
+        <Html {..} lang="en"/>
         <Meta name="description" content="Maj Kavšek is a Berlin-based trumpeter and composer from Ljubljana, Slovenia. Beginning his musical journey at age 8, he refined his talents at the Conservatorium for Music in Ljubljana and the Jazz Institute Berlin, studying under renowned musicians such as James Robert Rotondi and Ralph Alessi. His versatile experience spans symphonic orchestras, jazz ensembles, and solo performances, highlighted by prestigious accolades like the TEMSIG competition's 1st prize with The Mood Lab Quintet. Maj has graced stages at major festivals and collaborated with esteemed artists, showcasing his profound musicality and professional excellence."/>
         <Meta name="viewport" content="width=device-width, initial-scale=1"/>
         <Title formatter/>
-
-        <Router
-            fallback=|| {
-            let mut outside_errors = Errors::default();
-            outside_errors.insert_with_default_key(MajServerError::NotFound);
-            view! { <ErrorTemplate outside_errors/> }.into_view()
-            }
-            >
+        <Router>
             <div class="bg-wrapper" node_ref=bg_div_ref>
                 <Head bg_div_ref/>
                 <AudioWrapper/>
                 <main>
-                    <Routes>
-                        <Route path="/" view=Home/>
-                        <Route path="/about_me" view=About/>
-                        <Route path="/shows" view=Shows>
-                            <Route path="" view=ShowsFallback/>
-                            <Route path="/past" view=PastShows/>
-                            <Route path="/future" view=FutureShows/>
-                        </Route>
-                        <Route path="/media" view=Media/>
+                    <Routes fallback=|| {
+                        let mut outside_errors = Errors::default();
+                        outside_errors.insert_with_default_key(MajServerError::NotFound);
+                        view! { <ErrorTemplate outside_errors/> }.into_view()
+                        }>
+                        <Route path=path!("/") view=Home/>
+                        <Route path=path!("/about_me") view=About/>
+                        <ParentRoute path=path!("/shows") view=Shows>
+                            <Route path=path!("") view=ShowsFallback/>
+                            <Route path=path!("/past") view=PastShows/>
+                            <Route path=path!("/future") view=FutureShows/>
+                        </ParentRoute>
+                        <Route path=path!("/media") view=Media/>
                     </Routes>
                 </main>
             </div>
@@ -75,6 +70,7 @@ pub fn App() -> impl IntoView {
     }
 }
 
+// FIXME: find new use_interval function in the docs
 pub fn use_interval<T, F>(interval_millis: T, f: F)
 where
     F: Fn() + Clone + 'static,

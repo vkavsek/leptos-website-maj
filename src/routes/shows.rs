@@ -1,7 +1,7 @@
 use chrono::prelude::*;
-use leptos::*;
+use leptos::prelude::*;
 use leptos_meta::{Link, Title};
-use leptos_router::*;
+use leptos_router::components::{Outlet, A};
 use serde::{Deserialize, Serialize};
 
 use crate::routes::error::ErrorTemplate;
@@ -26,7 +26,7 @@ pub fn Shows() -> impl IntoView {
                     <A href="future">"future"</A>
                 </nav>
                 <div id="shows-wrap">
-                    <Outlet />
+                    <Outlet/>
                 </div>
             </div>
         </div>
@@ -115,7 +115,7 @@ enum EventSelector {
 /// Past or Future
 #[component]
 fn RenderShows(selector: EventSelector) -> impl IntoView {
-    let shows_resource = create_resource(|| (), |_| async move { get_shows().await });
+    let shows_resource = Resource::new(|| (), |_| async move { get_shows().await });
     let pivot_date = Utc::now();
 
     view! {
@@ -157,27 +157,26 @@ fn RenderShows(selector: EventSelector) -> impl IntoView {
                                         };
 
                                         if shows_col.is_empty() {
-
                                             view! {
                                                 <p class="shows-no-shows">
                                                     "There are currently no events to display here. Come back later."
                                                 </p>
-                                            }
-                                                .into_view()
+                                            }.into_any()
                                         } else {
                                             let view = shows_col
                                                 .iter()
                                                 .map(|show| {
                                                     view! {
                                                         <li class="show-container">
-                                                            <p>{show.date.as_ref()}</p>
-                                                            <p>{show.name.as_ref()}</p>
-                                                            <p>{show.club.as_ref()}</p>
-                                                            <p>{show.location.as_ref()}</p>
+                                                            <p>{show.date.clone()}</p>
+                                                            <p>{show.name.clone()}</p>
+                                                            <p>{show.club.clone()}</p>
+                                                            <p>{show.location.clone()}</p>
                                                         </li>
                                                     }
                                                 })
                                                 .collect_view();
+
                                             view! {
                                                 <ul class="shows-list">
                                                     <li class="show-container" id="show-container-id">
@@ -189,7 +188,7 @@ fn RenderShows(selector: EventSelector) -> impl IntoView {
                                                     {view}
                                                 </ul>
                                             }
-                                                .into_view()
+                                                .into_any()
                                         }
                                     })}
 

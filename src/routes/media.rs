@@ -1,9 +1,10 @@
-use leptos::*;
+use leptos::prelude::*;
 use leptos_meta::{Link, Title};
+use serde::{Deserialize, Serialize};
 
 #[component]
 pub fn Media() -> impl IntoView {
-    let videos_res = create_resource(|| (), |_| async move { get_youtube_videos().await });
+    let videos_res = Resource::new(|| (), |_| async move { get_youtube_videos().await });
 
     view! {
         <Link rel="icon" href="/img/media.svg" type_="image/svg"/>
@@ -46,16 +47,15 @@ pub fn CreateVideo(video: YoutubeUrl) -> impl IntoView {
                 class="yt-video"
                 src=video.url
                 title="YouTube video player"
-                frameborder="0"
-                loading="lazy"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowfullscreen
+            // FIXME: ??
+                // frameborder="0"
+                // loading="lazy"
+                // allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                // allowfullscreen
             ></iframe>
         </div>
     }
 }
-
-use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct YoutubeUrl {

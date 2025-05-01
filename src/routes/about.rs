@@ -1,9 +1,10 @@
 use leptos::{
     html::{Button, Div},
-    *,
+    prelude::*,
+    tachys::dom::window,
+    wasm_bindgen::JsValue,
 };
 use leptos_meta::{Link, Title};
-use wasm_bindgen::JsValue;
 
 #[allow(unused)]
 enum Orient {
@@ -75,23 +76,23 @@ pub fn About() -> impl IntoView {
     let init_bg_color = format!("background-color: {}", color.return_val());
     let init_next_bg_color = format!("background-color: {}", (color.other()).return_val());
 
-    let text_ref = create_node_ref::<Div>();
-    let button_ref = create_node_ref::<Button>();
-    let curr_col_ref = create_node_ref::<Div>();
-    let next_col_ref = create_node_ref::<Div>();
+    let text_ref: NodeRef<Div> = NodeRef::new();
+    let button_ref: NodeRef<Button> = NodeRef::new();
+    let curr_col_ref: NodeRef<Div> = NodeRef::new();
+    let next_col_ref: NodeRef<Div> = NodeRef::new();
 
     let change_color = move |_| {
         let text_div = text_ref.get().expect("the DOM should be built by now");
-        let button = button_ref.get().expect("the DOM should be built by now");
-        let current_color = curr_col_ref.get().expect("the DOM should be built by now");
-        let next_color = next_col_ref.get().expect("the DOM should be built by now");
+        let button = button_ref.get().unwrap();
+        let current_color = curr_col_ref.get().unwrap();
+        let next_color = next_col_ref.get().unwrap();
         color.switch();
         let cd = color.return_val();
         let next_cd = (color.other()).return_val();
-        let _ = text_div.style("color", cd);
-        let _ = button.style("color", cd);
-        let _ = current_color.style("background-color", cd);
-        let _ = next_color.style("background-color", next_cd);
+        let _ = text_div.style(("color", cd));
+        let _ = button.style(("color", cd));
+        let _ = current_color.style(("background-color", cd));
+        let _ = next_color.style(("background-color", next_cd));
     };
 
     view! {
@@ -108,7 +109,7 @@ pub fn About() -> impl IntoView {
                     <button
                         class="change-color-button"
                         on:click=change_color
-                        style=init_color
+                        style=init_color.clone()
                         node_ref=button_ref
                     >
                         <div class="color-box" style=init_bg_color node_ref=curr_col_ref></div>
@@ -123,18 +124,18 @@ pub fn About() -> impl IntoView {
 
 #[component]
 pub fn ImagesAbout() -> impl IntoView {
-    let files = create_resource(
+    let files = Resource::new(
         move || (),
         |_| async move { read_image_files().await.unwrap() },
     );
 
     // This is named like this because we get warnings because of macros.
-    let _gallery_ref = create_node_ref::<Div>();
+    let _gallery_ref = NodeRef::<Div>::new();
 
     // Click on image to make it fullscreen.
-    let (show_img, set_show_img) = create_signal(false);
-    let (current_img, set_current_img) = create_signal::<Option<String>>(None);
-    let fullscreen_ref = create_node_ref::<Div>();
+    let (show_img, set_show_img) = signal(false);
+    let (current_img, set_current_img) = signal(None);
+    let fullscreen_ref = NodeRef::<Div>::new();
 
     let close_fullscreen = move |_| {
         set_show_img.set(false);
@@ -202,14 +203,14 @@ pub fn ImagesAbout() -> impl IntoView {
                     </button>
                 </div>
             }
-            .into_view()
+            .into_any()
         } else {
-            view! { <p>"Sorry we couldn't load the image!"</p> }.into_view()
+            view! { <p>"Sorry we couldn't load the image!"</p> }.into_any()
         }
     };
 
     // Close img on click outside
-    create_effect(move |_| {
+    Effect::new(move |_| {
         leptos_use::on_click_outside(fullscreen_ref, move |_| {
             set_show_img.set(false);
         })
@@ -229,7 +230,7 @@ pub fn ImagesAbout() -> impl IntoView {
                             .get()
                             .map(|files| {
                                 files
-                                    .iter()
+                                    .into_iter()
                                     .map(|file| {
                                         let file_c = file.clone();
                                         let click_image = move |ev: leptos::ev::MouseEvent| {

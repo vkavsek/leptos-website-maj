@@ -3,16 +3,16 @@ use crate::app::use_interval;
 use leptos::ev::MouseEvent;
 use leptos::{
     html::{Audio, Button, Div},
-    *,
+    prelude::*,
 };
 
 // ------> AUDIO PLAYER
 #[component]
 pub fn AudioPlayer() -> impl IntoView {
     // Signals
-    let (time, set_time) = create_signal(0u64);
-    let (duration, set_duration) = create_signal(0u64);
-    let (name, set_name) = create_signal::<Option<String>>(None);
+    let (time, set_time) = signal(0u64);
+    let (duration, set_duration) = signal(0u64);
+    let (name, set_name) = signal::<Option<String>>(None);
     // Derived signals
     let _song_title = move || Song::from_filenamename(&name.get().unwrap_or(String::new())).title();
     let _song_artist =
@@ -21,13 +21,13 @@ pub fn AudioPlayer() -> impl IntoView {
     let time_fmt = move || fmt_sec_to_mmss(time.get());
     let duration_fmt = move || fmt_sec_to_mmss(duration.get());
     // NodeRefs
-    let audio_ref = create_node_ref::<Audio>();
-    let vol_percent_ref = create_node_ref::<Div>();
-    let play_btn_ref = create_node_ref::<Button>();
-    let timeline_ref = create_node_ref::<Div>();
-    let volume_slider_ref = create_node_ref::<Div>();
-    let vol_el_ref = create_node_ref::<Button>();
-    let progress_ref = create_node_ref::<Div>();
+    let audio_ref = NodeRef::<Audio>::new();
+    let vol_percent_ref = NodeRef::<Div>::new();
+    let play_btn_ref = NodeRef::<Button>::new();
+    let timeline_ref = NodeRef::<Div>::new();
+    let volume_slider_ref = NodeRef::<Div>::new();
+    let vol_el_ref = NodeRef::<Button>::new();
+    let progress_ref = NodeRef::<Div>::new();
 
     // Import the selector and the List of songs
     let _names = use_context::<RwSignal<Vec<String>>>().expect("the names to be provided");
@@ -51,20 +51,21 @@ pub fn AudioPlayer() -> impl IntoView {
     let audio_loop = move || {
         if let Some(audio) = audio_ref.get_untracked() {
             let progress_bar = progress_ref.get_untracked().unwrap();
-            let _ = progress_bar.style(
+            let _ = progress_bar.style((
                 "width",
                 format!("{}%", audio.current_time() / audio.duration() * 100.0),
-            );
+            ));
             set_time.set(audio.current_time() as u64);
             if audio.ended() {
                 let play_btn = play_btn_ref.get_untracked().unwrap();
-                let _ = play_btn.clone().class("pause", false);
-                let _ = play_btn.class("play", true);
+                let _ = play_btn.clone().class(("pause", false));
+                let _ = play_btn.class(("play", true));
             }
             if let Some(_slider) = volume_slider_ref.get_untracked() {
                 if let Some(vol_percent) = vol_percent_ref.get_untracked() {
                     let new_volume = audio.volume();
-                    let _ = vol_percent.style("width", format!("{}%", (new_volume * 100.0) as u32));
+                    let _ =
+                        vol_percent.style(("width", format!("{}%", (new_volume * 100.0) as u32)));
                 }
             }
         }
@@ -73,12 +74,12 @@ pub fn AudioPlayer() -> impl IntoView {
     use_interval(10, audio_loop);
 
     // Reset play button when you change the song
-    create_isomorphic_effect(move |_| {
+    Effect::new_isomorphic(move |_| {
         // subscribe to selector
         let _ = selector.get();
         if let Some(play_btn) = play_btn_ref.get() {
-            let _ = play_btn.clone().class("pause", false);
-            let _ = play_btn.class("play", true);
+            let _ = play_btn.clone().class(("pause", false));
+            let _ = play_btn.class(("play", true));
         }
         if let Some(audio) = audio_ref.get() {
             let _ = audio.pause();
@@ -94,7 +95,7 @@ pub fn AudioPlayer() -> impl IntoView {
         audio.set_volume(init_volume);
         set_duration.set(audio.duration() as u64);
         set_name.set(extract_name(audio.src()));
-        let _ = vol_percent.style("width", format!("{}%", (init_volume * 100.0) as u32));
+        let _ = vol_percent.style(("width", format!("{}%", (init_volume * 100.0) as u32)));
     };
 
     // Play
@@ -103,12 +104,12 @@ pub fn AudioPlayer() -> impl IntoView {
 
         let play_btn = play_btn_ref.get().unwrap();
         if audio.paused() {
-            let _ = play_btn.clone().class("play", false);
-            let _ = play_btn.clone().class("pause", true);
+            let _ = play_btn.clone().class(("play", false));
+            let _ = play_btn.clone().class(("pause", true));
             let _ = audio.play();
         } else {
-            let _ = play_btn.clone().class("pause", false);
-            let _ = play_btn.class("play", true);
+            let _ = play_btn.clone().class(("pause", false));
+            let _ = play_btn.class(("play", true));
             let _ = audio.pause();
         }
     };
@@ -143,7 +144,7 @@ pub fn AudioPlayer() -> impl IntoView {
                 audio.set_muted(false)
             }
             audio.set_volume(new_volume);
-            let _ = vol_percent.style("width", format!("{}%", (new_volume * 100.0) as u32));
+            let _ = vol_percent.style(("width", format!("{}%", (new_volume * 100.0) as u32)));
         }
     };
 
@@ -156,14 +157,14 @@ pub fn AudioPlayer() -> impl IntoView {
         audio.set_muted(!audio.muted());
 
         if audio.muted() {
-            let _ = vol_percent.style("width", "0%");
-            let _ = vol_el.clone().class("ico-vol-med", false);
-            let _ = vol_el.clone().class("ico-vol-mute", true);
+            let _ = vol_percent.style(("width", "0%"));
+            let _ = vol_el.clone().class(("ico-vol-med", false));
+            let _ = vol_el.clone().class(("ico-vol-mute", true));
         } else {
             let volume = f64_to_u64(audio.volume());
-            let _ = vol_percent.style("width", format!("{}%", volume));
-            let _ = vol_el.clone().class("ico-vol-mute", false);
-            let _ = vol_el.class("ico-vol-med", true);
+            let _ = vol_percent.style(("width", format!("{}%", volume)));
+            let _ = vol_el.clone().class(("ico-vol-mute", false));
+            let _ = vol_el.class(("ico-vol-med", true));
         }
     };
 

@@ -1,6 +1,5 @@
-use leptos::{ev::MouseEvent, html::Div, *};
+use leptos::{ev::MouseEvent, form::ActionForm, html::Div, prelude::*};
 use leptos_meta::{Link, Title};
-use leptos_router::ActionForm;
 use leptos_use::use_element_hover;
 
 #[allow(unused)]
@@ -104,9 +103,9 @@ pub fn Home() -> impl IntoView {
 
 #[component]
 fn AlbumPromo() -> impl IntoView {
-    let center_ref: NodeRef<Div> = create_node_ref();
+    let center_ref: NodeRef<Div> = NodeRef::new();
     let is_hovered = use_element_hover(center_ref);
-    let (get_id, set_id) = create_signal("home-animated");
+    let (get_id, set_id) = signal("home-animated");
 
     let dyn_id = move || {
         if is_hovered.get() {
@@ -156,8 +155,8 @@ fn LinkWithModal(
     #[prop(optional)] opt_text: Option<String>,
 ) -> impl IntoView {
     let (href_target, src_target, width, height) = loc.process();
-    let (visible, set_visible) = create_signal(false);
-    let modal_ref = create_node_ref();
+    let (visible, set_visible) = signal(false);
+    let modal_ref = NodeRef::new();
 
     let alt = match loc {
         LinkLocation::Fb => "A link to Facebook",
@@ -189,7 +188,7 @@ fn LinkWithModal(
         set_visible.set(false);
     };
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         leptos_use::on_click_outside(modal_ref, move |_| {
             set_visible.set(false);
         })
@@ -235,8 +234,8 @@ fn LinkWithModal(
 fn Mail() -> impl IntoView {
     const EMAIL_PATTERN: &str = r".+@.+\..+";
 
-    let (show_mail, set_show_mail) = create_signal(false);
-    let mail_ref = create_node_ref::<Div>();
+    let (show_mail, set_show_mail) = signal(false);
+    let mail_ref = NodeRef::new();
 
     let mail_click = move |ev: MouseEvent| {
         ev.prevent_default();
@@ -247,16 +246,16 @@ fn Mail() -> impl IntoView {
         set_show_mail.set(false);
     };
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         leptos_use::on_click_outside(mail_ref, move |_| {
             set_show_mail.set(false);
         })
     });
 
-    let mail_action = create_server_action::<SendMail>();
+    let mail_action = ServerAction::<SendMail>::new();
 
     // TODO: Improve this, does it have to be this complicated?
-    let (control_input, set_control_input) = create_signal(0);
+    let (control_input, set_control_input) = signal(0);
     let mail_visibility = move || {
         let version = mail_action.version().get();
         let mail_is_some_and_ok = mail_action
@@ -288,14 +287,15 @@ fn Mail() -> impl IntoView {
                         <span class="email-sending"></span>
                     </div>
                 }
-                .into_view(),
+                .into_any(),
             )
         } else {
-            let err = view! { <p>"Internal server error! Couldn't send the email, please try again later!"</p> }.into_view();
-            mail_action.value().get().map(|mail| match mail {
-                Ok(_) => view! { <p>"Email sent!"</p> }.into_view(),
+            let err = view! { <p>"Internal server error! Couldn't send the email, please try again later!"</p> }.into_any();
+            let v = mail_action.value().get().map(|mail| match mail {
+                Ok(_) => view! { <p>"Email sent!"</p> }.into_any(),
                 Err(_) => err,
-            })
+            });
+            v
         }
     };
 
@@ -323,7 +323,9 @@ fn Mail() -> impl IntoView {
                 <span style:color="var(--maj-yel)">
                     "Contact for booking, teaching and collaborations."
                 </span>
-                <ActionForm class="email-form" action=mail_action>
+                // FIXME: whats up with ActionForm class do i have to wrap in a div?
+                // class="email-form"
+                <ActionForm action=mail_action>
                     <div class="form-div">
                         <label for="name" class="name-label">
                             "Enter your name: "
