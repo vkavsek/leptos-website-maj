@@ -96,14 +96,14 @@ pub fn About() -> impl IntoView {
     };
 
     view! {
-        <Link rel="icon" href="/img/izkaznica.svg" type_="image/svg"/>
-        <Title text="About Me"/>
+        <Link rel="icon" href="/img/izkaznica.svg" type_="image/svg" />
+        <Title text="About Me" />
         <div class="components" id="about-components">
             <div class="title" id="about-title">
                 <h1>"About Me"</h1>
             </div>
             <div class="contents" id="about-wrap">
-                <ImagesAbout/>
+                <ImagesAbout />
                 <div class="about-text" style=init_color.clone() node_ref=text_ref>
                     {text_content}
                     <button
@@ -113,7 +113,7 @@ pub fn About() -> impl IntoView {
                         node_ref=button_ref
                     >
                         <div class="color-box" style=init_bg_color node_ref=curr_col_ref></div>
-                        <img src="/img/icon/back.svg" class="button-next-arrow"/>
+                        <img src="/img/icon/back.svg" class="button-next-arrow" />
                         <div class="color-box" style=init_next_bg_color node_ref=next_col_ref></div>
                     </button>
                 </div>
@@ -186,7 +186,7 @@ pub fn ImagesAbout() -> impl IntoView {
         if let Some(path) = current_img.get() {
             view! {
                 <div style:display="flex" node_ref=fullscreen_ref class="fullscreen-img-buttons">
-                    <img src=path class="fullscreen-img"/>
+                    <img src=path class="fullscreen-img" />
                     <button on:click=close_fullscreen class="fullscreen-close">
                         <img
                             src="/img/icon/cross.svg"
@@ -196,10 +196,10 @@ pub fn ImagesAbout() -> impl IntoView {
                         />
                     </button>
                     <button on:click=fullscreen_back class="fullscreen-nav-button back-button">
-                        <img class="nav-button-img back-img" src="/img/icon/back.svg" alt="back"/>
+                        <img class="nav-button-img back-img" src="/img/icon/back.svg" alt="back" />
                     </button>
                     <button on:click=fullscreen_next class="fullscreen-nav-button next-button">
-                        <img class="nav-button-img next-img" src="/img/icon/back.svg" alt="back"/>
+                        <img class="nav-button-img next-img" src="/img/icon/back.svg" alt="back" />
                     </button>
                 </div>
             }
@@ -240,7 +240,7 @@ pub fn ImagesAbout() -> impl IntoView {
                                         };
                                         view! {
                                             <a on:click=click_image>
-                                                <img src=file class="image-about"/>
+                                                <img src=file class="image-about" />
                                             </a>
                                         }
                                     })

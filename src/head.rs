@@ -4,7 +4,7 @@ use leptos_router::components::A;
 
 /// Navigation + handles dynamic BG style dispatching based on navigation.
 #[component]
-pub fn Head(
+pub fn NavBar(
     /// NodeRef of the div where you'll set the background image.
     bg_div_ref: NodeRef<Div>,
 ) -> impl IntoView {
@@ -28,22 +28,16 @@ pub fn Head(
 
     view! {
         <nav class="nav-links">
-            // FIXME: anchors apparently cant have class or id so wrap it in a div ??
-            // class="nav-link"
-            // id="home-nav-link"
-            <A
-                href="/"
-                on:click=click_home
-            >
+            <A href="/" on:click=click_home attr:class="nav-link" attr:id="home-nav-link">
                 <img class="nav-icon nav-icon-1" src="/img/trobenta.svg" alt="Home" width="512" height="217"/>
             </A>
-            <A href="/about_me" on:click=click_about>
+            <A href="/about_me" on:click=click_about attr:class="nav-link">
                 <img class="nav-icon nav-icon-2" src="/img/izkaznica.svg" alt="About Me" width="378" height="330"/>
             </A>
-            <A href="/shows" on:click=click_concerts>
+            <A href="/shows" on:click=click_concerts attr:class="nav-link">
                 <img class="nav-icon nav-icon-3" src="/img/nota.svg" alt="Shows" width="144" height="158"/>
             </A>
-            <A href="/media" on:click=click_media>
+            <A href="/media" on:click=click_media attr:class="nav-link">
                 <img class="nav-icon nav-icon-4" src="/img/media.svg" alt="Media" width="395" height="336"/>
             </A>
         </nav>

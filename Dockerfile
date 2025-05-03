@@ -2,10 +2,10 @@
 FROM lukemathwalker/cargo-chef:latest-rust-1 AS chef
 WORKDIR /app
 
-RUN apt update && apt install mold clang -y 
-RUN cargo install --locked cargo-leptos
-RUN rustup component add rust-src
-RUN rustup target add wasm32-unknown-unknown
+RUN apt-get update && apt install mold clang -y 
+RUN cargo install --locked cargo-leptos \
+  && rustup component add rust-src \
+  && rustup target add wasm32-unknown-unknown
 
 
 ########################################
@@ -39,10 +39,10 @@ WORKDIR /app
 # Install OpenSSL - it's dynamically linked by some of our dependencies.
 # Install ca-certificates - it's needed to verify TLS certificates when establishing HTTPS con.
 RUN apt-get update -y \
-	&& apt-get install -y --no-install-recommends openssl ca-certificates \
-	&& apt-get autoremove -y \
-	&& apt-get clean -y \
-	&& rm -rf /var/lib/apt/lists/*
+  && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && apt-get autoremove -y \
+  && apt-get clean -y \
+  && rm -rf /var/lib/apt/lists/*
 
 
 # Copy the compiled server binary from builder to runtime.

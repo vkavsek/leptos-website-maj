@@ -74,6 +74,7 @@ lto = true
 codegen-units = 1
 panic = "abort"
 
+# FIXME: check if metadata for leptos is still up to date.
 [package.metadata.leptos]
 # The name used by wasm-bindgen/cargo-leptos for the JS/WASM bundle. Defaults to the crate name
 output-name = "leptos-website-maj"

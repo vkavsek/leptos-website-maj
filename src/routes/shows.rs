@@ -26,7 +26,7 @@ pub fn Shows() -> impl IntoView {
                     <A href="future">"future"</A>
                 </nav>
                 <div id="shows-wrap">
-                    <Outlet/>
+                    <Outlet />
                 </div>
             </div>
         </div>
@@ -109,8 +109,6 @@ enum EventSelector {
     Future,
 }
 
-// Allow unused otherwise we get warnings because of the macros.
-#[allow(unused)]
 /// Fetches all events from the server, sorts them, and returns the desired list of events,
 /// Past or Future
 #[component]
@@ -123,80 +121,79 @@ fn RenderShows(selector: EventSelector) -> impl IntoView {
         <Suspense fallback=move || {
             view! { <p class="shows-no-shows">"  "</p> }
         }>
-            {move || {
-                shows_resource
-                    .get()
-                    .map(|shows| {
-                        view! {
-                            <ErrorBoundary fallback=move |errors| {
-                                view! { <ErrorTemplate errors /> }
-                            }>
-                                {shows
-                                    .map(|shows| {
-                                        let shows_col = match selector {
-                                            EventSelector::Past => {
-                                                shows
-                                                    .get_desc()
-                                                    .iter()
-                                                    .filter(|show| {
-                                                        let date = show.get_date().expect("All events need dates!");
-                                                        date.lt(&pivot_date)
-                                                    })
-                                                    .collect::<Vec<_>>()
-                                            }
-                                            EventSelector::Future => {
-                                                shows
-                                                    .get_asc()
-                                                    .iter()
-                                                    .filter(|show| {
-                                                        let date = show.get_date().expect("All events need dates!");
-                                                        date.ge(&pivot_date)
-                                                    })
-                                                    .collect::<Vec<_>>()
-                                            }
-                                        };
-
-                                        if shows_col.is_empty() {
-                                            view! {
-                                                <p class="shows-no-shows">
-                                                    "There are currently no events to display here. Come back later."
-                                                </p>
-                                            }.into_any()
-                                        } else {
-                                            let view = shows_col
+            <ErrorBoundary fallback=move |errors| {
+                view! { <ErrorTemplate errors /> }
+            }>
+                {move || {
+                    Suspend::new(async move {
+                        shows_resource
+                            .await
+                            .map(|shows| {
+                                {
+                                    let shows_col = match selector {
+                                        EventSelector::Past => {
+                                            shows
+                                                .get_desc()
                                                 .iter()
-                                                .map(|show| {
-                                                    view! {
-                                                        <li class="show-container">
-                                                            <p>{show.date.clone()}</p>
-                                                            <p>{show.name.clone()}</p>
-                                                            <p>{show.club.clone()}</p>
-                                                            <p>{show.location.clone()}</p>
-                                                        </li>
-                                                    }
+                                                .filter(|show| {
+                                                    let date = show.get_date().expect("All events need dates!");
+                                                    date.lt(&pivot_date)
                                                 })
-                                                .collect_view();
-
-                                            view! {
-                                                <ul class="shows-list">
-                                                    <li class="show-container" id="show-container-id">
-                                                        <p>"Date:"</p>
-                                                        <p>"Event:"</p>
-                                                        <p>"Venue:"</p>
-                                                        <p>"Location:"</p>
-                                                    </li>
-                                                    {view}
-                                                </ul>
-                                            }
-                                                .into_any()
+                                                .collect::<Vec<_>>()
                                         }
-                                    })}
+                                        EventSelector::Future => {
+                                            shows
+                                                .get_asc()
+                                                .iter()
+                                                .filter(|show| {
+                                                    let date = show.get_date().expect("All events need dates!");
+                                                    date.ge(&pivot_date)
+                                                })
+                                                .collect::<Vec<_>>()
+                                        }
+                                    };
 
-                            </ErrorBoundary>
-                        }
+                                    if shows_col.is_empty() {
+                                        view! {
+                                            <p class="shows-no-shows">
+                                                "There are currently no events to display here. Come back later."
+                                            </p>
+                                        }
+                                            .into_any()
+                                    } else {
+                                        let view = shows_col
+                                            .iter()
+                                            .map(|show| {
+                                                view! {
+                                                    <li class="show-container">
+                                                        <p>{show.date.clone()}</p>
+                                                        <p>{show.name.clone()}</p>
+                                                        <p>{show.club.clone()}</p>
+                                                        <p>{show.location.clone()}</p>
+                                                    </li>
+                                                }
+                                            })
+                                            .collect_view();
+
+                                        view! {
+                                            <ul class="shows-list">
+                                                <li class="show-container" id="show-container-id">
+                                                    <p>"Date:"</p>
+                                                    <p>"Event:"</p>
+                                                    <p>"Venue:"</p>
+                                                    <p>"Location:"</p>
+                                                </li>
+                                                {view}
+                                            </ul>
+                                        }
+                                            .into_any()
+                                    }
+                                }
+                            })
                     })
-            }}
+                }}
 
+            </ErrorBoundary>
         </Suspense>
     }
 }

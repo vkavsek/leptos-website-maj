@@ -7,8 +7,8 @@ pub fn Media() -> impl IntoView {
     let videos_res = Resource::new(|| (), |_| async move { get_youtube_videos().await });
 
     view! {
-        <Link rel="icon" href="/img/media.svg" type_="image/svg"/>
-        <Title text="Media"/>
+        <Link rel="icon" href="/img/media.svg" type_="image/svg" />
+        <Title text="Media" />
 
         <div class="components" id="media-components">
             <div class="title" id="media-title">
@@ -19,20 +19,16 @@ pub fn Media() -> impl IntoView {
                 <Suspense fallback=|| {
                     view! { <p>"Loading..."</p> }
                 }>
-
-                    {videos_res
-                        .get()
-                        .map(|videos| {
-                            videos
-                                .ok()
-                                .map(|videos| {
-                                    videos
-                                        .into_iter()
-                                        .map(|video| view! { <CreateVideo video/> })
-                                        .collect_view()
-                                })
-                        })}
-
+                    {move || Suspend::new(async move {
+                        videos_res
+                            .await
+                            .map(|videos| {
+                                videos
+                                    .into_iter()
+                                    .map(|video| view! { <CreateVideo video /> })
+                                    .collect_view()
+                            })
+                    })}
                 </Suspense>
             </div>
         </div>
@@ -43,16 +39,13 @@ pub fn Media() -> impl IntoView {
 pub fn CreateVideo(video: YoutubeUrl) -> impl IntoView {
     view! {
         <div class="yt-vid-container">
-            <iframe
-                class="yt-video"
-                src=video.url
-                title="YouTube video player"
+            <iframe class="yt-video" src=video.url title="YouTube video player">
             // FIXME: ??
-                // frameborder="0"
-                // loading="lazy"
-                // allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                // allowfullscreen
-            ></iframe>
+            // frameborder="0"
+            // loading="lazy"
+            // allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            // allowfullscreen
+            </iframe>
         </div>
     }
 }

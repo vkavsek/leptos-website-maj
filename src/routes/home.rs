@@ -290,12 +290,10 @@ fn Mail() -> impl IntoView {
                 .into_any(),
             )
         } else {
-            let err = view! { <p>"Internal server error! Couldn't send the email, please try again later!"</p> }.into_any();
-            let v = mail_action.value().get().map(|mail| match mail {
+            mail_action.value().get().map(|mail| match mail {
                 Ok(_) => view! { <p>"Email sent!"</p> }.into_any(),
-                Err(_) => err,
-            });
-            v
+                Err(_) => view! { <p>"Internal server error! Couldn't send the email, please try again later!"</p> }.into_any(),
+            })
         }
     };
 
@@ -323,9 +321,7 @@ fn Mail() -> impl IntoView {
                 <span style:color="var(--maj-yel)">
                     "Contact for booking, teaching and collaborations."
                 </span>
-                // FIXME: whats up with ActionForm class do i have to wrap in a div?
-                // class="email-form"
-                <ActionForm action=mail_action>
+                <ActionForm action=mail_action attr:class="email-form">
                     <div class="form-div">
                         <label for="name" class="name-label">
                             "Enter your name: "
