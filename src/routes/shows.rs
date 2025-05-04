@@ -76,6 +76,7 @@ impl EventsSorted {
     }
 }
 
+#[cfg(feature = "ssr")]
 #[derive(Clone, Debug, Deserialize)]
 pub struct EventsDeser(Vec<Event>);
 

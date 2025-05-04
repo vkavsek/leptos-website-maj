@@ -27,7 +27,7 @@ pub use serve::serve;
 pub fn hydrate() {
     use crate::app::*;
     console_error_panic_hook::set_once();
-    leptos::mount::mount_to_body(App);
+    leptos::mount::hydrate_body(App);
 }
 
 // ###################################
