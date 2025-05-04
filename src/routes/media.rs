@@ -40,11 +40,6 @@ pub fn CreateVideo(video: YoutubeUrl) -> impl IntoView {
     view! {
         <div class="yt-vid-container">
             <iframe class="yt-video" src=video.url title="YouTube video player">
-            // FIXME: ??
-            // frameborder="0"
-            // loading="lazy"
-            // allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            // allowfullscreen
             </iframe>
         </div>
     }
