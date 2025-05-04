@@ -1,4 +1,4 @@
-use leptos::{config::get_configuration, view};
+use leptos::config::get_configuration;
 use leptos_axum::generate_route_list;
 use leptos_website_maj::app::App;
 use tracing::info;
@@ -18,7 +18,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let conf = get_configuration(None)?;
     let leptos_options = conf.leptos_options;
     let addr = leptos_options.site_addr;
-    let routes = generate_route_list(|| view! { <App/> });
+    let routes = generate_route_list(App);
 
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     info!("Listening on http://{}", listener.local_addr()?);

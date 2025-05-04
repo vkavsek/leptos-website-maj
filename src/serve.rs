@@ -1,7 +1,7 @@
 // ###################################
 // ->   SERVE
 // ###################################
-use crate::app::App;
+use crate::app::app_shell;
 use crate::fallback::static_file_and_err_handler;
 
 use axum::{body::Body, middleware, routing::get, Router};
@@ -60,7 +60,10 @@ pub async fn serve(
 
     // build our application with a route
     let app = Router::new()
-        .leptos_routes(&state, routes, App)
+        .leptos_routes(&state, routes, {
+            let options = state.clone();
+            move || app_shell(options.clone())
+        })
         .route("/health-check", get(health))
         .layer(
             // Adding tower_http services (except CompressionLayer)

@@ -1,8 +1,8 @@
-@import 'home.scss';
-@import 'about.scss';
-@import 'shows.scss';
-@import 'media.scss';
-@import 'audio_player.scss';
+@import "home.scss";
+@import "about.scss";
+@import "shows.scss";
+@import "media.scss";
+@import "audio_player.scss";
 
 /* app.rs ------ MAIN LAYOUT */
 $maj-yel: #fad549;
@@ -83,6 +83,7 @@ iframe {
   width: 100%;
   height: 100%;
   border-radius: 20px;
+  border-color: rgba(0, 0, 0, 0);
 }
 
 @media screen and (orientation: portrait) {
@@ -291,7 +292,7 @@ iframe {
   margin-left: 15%;
 }
 
-.error-wrap>* {
+.error-wrap > * {
   background-color: rgba(9, 4, 21, 0.6);
   border-radius: 16px;
   display: flex;
@@ -300,13 +301,13 @@ iframe {
   padding: 16px;
 }
 
-.error-wrap>*>* {
+.error-wrap > * > * {
   text-align: center;
   font-size: 1.5rem;
   padding: 16px;
 }
 
-.error-wrap>*>a {
+.error-wrap > * > a {
   all: unset;
   text-align: center;
   font-size: 1.5rem;
@@ -315,7 +316,7 @@ iframe {
   background-color: $maj-pink;
 }
 
-.error-wrap>*>a:hover {
+.error-wrap > * > a:hover {
   cursor: pointer;
   background-color: rgba(230, 50, 120, 1);
 }

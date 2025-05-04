@@ -9,14 +9,9 @@ use leptos::prelude::*;
 use leptos_meta::*;
 use leptos_router::{components::*, path};
 
-#[component]
-pub fn App() -> impl IntoView {
-    // FIXME: figure out leptos_meta
-    provide_meta_context();
-
-    let bg_div_ref = NodeRef::new();
-
-    let formatter = |text| format!("{text} - Maj Kavšek");
+/// An HTML outline of our application.
+/// Contains the HTML boilerplate, critical styles, etc..
+pub fn app_shell(options: LeptosOptions) -> impl IntoView {
     let critical_styles_fonts = r#"
             @font-face {
                 font-family: "IBM Plex Mono";
@@ -38,17 +33,40 @@ pub fn App() -> impl IntoView {
                 src: url("/fonts/Lilita_One/LilitaOne-Regular.woff2") format("woff2");
                 font-display: swap;
             }"#;
+
     view! {
-        <Style>{critical_styles_fonts}</Style>
+        <!DOCTYPE html>
+        <html lang="en">
+            <head>
+                <meta charset="utf-8" />
+                <meta name="viewport" content="width=device-width, initial-scale=1" />
+                <meta
+                    name="description"
+                    content="Maj Kavšek is a Berlin-based trumpeter and composer from Ljubljana, Slovenia. Beginning his musical journey at age 8, he refined his talents at the Conservatorium for Music in Ljubljana and the Jazz Institute Berlin, studying under renowned musicians such as James Robert Rotondi and Ralph Alessi. His versatile experience spans symphonic orchestras, jazz ensembles, and solo performances, highlighted by prestigious accolades like the TEMSIG competition's 1st prize with The Mood Lab Quintet. Maj has graced stages at major festivals and collaborated with esteemed artists, showcasing his profound musicality and professional excellence."
+                />
+                <link rel="shortcut icon" type_="image/svg" href="/img/trobenta.svg" />
+                <link rel="preload" href="/img/bg/bg_smallest.webp" as_="image" />
+                <style>{critical_styles_fonts}</style>
+                <AutoReload options=options.clone() />
+                <HydrationScripts options />
+                <MetaTags />
+            </head>
+            <body>
+                <App />
+            </body>
+        </html>
+    }
+}
+
+#[component]
+pub fn App() -> impl IntoView {
+    provide_meta_context();
+
+    let bg_div_ref = NodeRef::new();
+
+    let formatter = |text| format!("{text} - Maj Kavšek");
+    view! {
         <Stylesheet id="leptos" href="/pkg/leptos-website-maj.css" />
-        <Link rel="shortcut icon" type_="image/svg" href="/img/trobenta.svg" />
-        <Link rel="preload" href="/img/bg/bg_smallest.webp" as_="image" />
-        <Html {..} lang="en" />
-        <Meta
-            name="description"
-            content="Maj Kavšek is a Berlin-based trumpeter and composer from Ljubljana, Slovenia. Beginning his musical journey at age 8, he refined his talents at the Conservatorium for Music in Ljubljana and the Jazz Institute Berlin, studying under renowned musicians such as James Robert Rotondi and Ralph Alessi. His versatile experience spans symphonic orchestras, jazz ensembles, and solo performances, highlighted by prestigious accolades like the TEMSIG competition's 1st prize with The Mood Lab Quintet. Maj has graced stages at major festivals and collaborated with esteemed artists, showcasing his profound musicality and professional excellence."
-        />
-        <Meta name="viewport" content="width=device-width, initial-scale=1" />
         <Title formatter />
         <Router>
             <div class="bg-wrapper" node_ref=bg_div_ref>
