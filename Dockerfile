@@ -1,41 +1,34 @@
-## NOTE: cargo-chef doesn't currently work with cargo-leptos, but I'm optimistically leaving it in. 
-FROM lukemathwalker/cargo-chef:latest-rust-1 AS chef
-WORKDIR /app
+FROM rust:1-bookworm AS builder
 
-RUN apt-get update && apt install mold clang -y 
-RUN cargo install --locked cargo-leptos \
-  && rustup component add rust-src \
+# Install cargo-binstall, which makes it easier to install other
+# cargo extensions like cargo-leptos
+RUN wget --progress=dot:giga https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-unknown-linux-musl.tgz \
+  && tar -xvf cargo-binstall-x86_64-unknown-linux-musl.tgz \
+  && cp cargo-binstall /usr/local/cargo/bin
+
+# Install required tools
+RUN apt-get update -y \
+  && apt-get install -y --no-install-recommends clang mold
+
+# Install cargo-leptos
+RUN cargo binstall cargo-leptos -y \
+  # Add the WASM target
   && rustup target add wasm32-unknown-unknown
 
 
-########################################
-
-FROM chef AS planner
-
-# Copy contents of current DIR to the image
-COPY . .
-# Compute a lock-like file for our project 
-RUN cargo chef prepare --recipe-path recipe.json
-
-########################################
-
-FROM chef AS builder 
-
-COPY --from=planner /app/recipe.json recipe.json
-# Build our project dependecies, not our app!
-RUN cargo chef cook --release --recipe-path recipe.json
-# If our dependency tree hasn't changed, everything should be cached up to now!
+# Make an /app dir, which everything will eventually live in
+RUN mkdir -p /app
+WORKDIR /app
 COPY . .
 
-# TODO: Verify that cargo leptos uses cargo chef
+# Build the app
 RUN cargo leptos build --release -vv
 
-
 ########################################
 
-FROM debian:bookworm-slim AS runtime 
-WORKDIR /app
+FROM debian:bookworm-slim AS runtime
 
+WORKDIR /app
 # Install OpenSSL - it's dynamically linked by some of our dependencies.
 # Install ca-certificates - it's needed to verify TLS certificates when establishing HTTPS con.
 RUN apt-get update -y \
@@ -44,19 +37,18 @@ RUN apt-get update -y \
   && apt-get clean -y \
   && rm -rf /var/lib/apt/lists/*
 
-
 # Copy the compiled server binary from builder to runtime.
 COPY --from=builder /app/target/release/leptos-website-maj /app/leptos-website-maj
 # /target/site contains our JS/WASM/CSS, etc.
 COPY --from=builder /app/target/site /app/site
 COPY --from=builder /app/Cargo.toml /app/Cargo.toml
-# # Set any required env variables and
-ENV RUST_LOG=info
-ENV APP_ENVIRONMENT=production
-ENV LEPTOS_SITE_ADDR=0.0.0.0:8080
-ENV LEPTOS_SITE_ROOT=site
 
+# Set any required env variables and
+ENV RUST_LOG="info"
+ENV APP_ENVIRONMENT="production"
+ENV LEPTOS_SITE_ADDR="0.0.0.0:8080"
+ENV LEPTOS_SITE_ROOT="site"
 EXPOSE 8080
-# Run the server
 
+# Run the server
 ENTRYPOINT [ "/app/leptos-website-maj" ]
