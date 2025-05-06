@@ -1,3 +1,4 @@
+## TODO: bump leptos and axum to 0.8 when leptos-use 0.16 is released
 [package]
 name = "leptos-website-maj"
 version = "1.2.0"
