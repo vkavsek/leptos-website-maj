@@ -394,9 +394,10 @@ async fn send_mail(
     use tracing::{error, info};
 
     info!(name = %name, address = %email, subject = %email_subject, email_content = %email_content, "SENDING EMAIL");
-    let email_a = Message::builder()
+    let email = Message::builder()
         .from("Info <info@majkavsek.com>".parse().unwrap())
-        .to("Me <kavsekmaj@gmail.com>".parse().unwrap())
+        .to("Maj <kavsekmaj@gmail.com>".parse().unwrap())
+        .cc("Vid <vkavsek@gmail.com>".parse().unwrap())
         .subject(email_subject.clone())
         .header(ContentType::TEXT_PLAIN)
         .body(format!(
@@ -405,17 +406,7 @@ async fn send_mail(
         ))
         .map_err(<lettre::error::Error as Into<ServerFnError>>::into)?;
 
-    let email_b = Message::builder()
-        .from("Info <info@majkavsek.com>".parse().unwrap())
-        .to("Me <vkavsek@gmail.com>".parse().unwrap())
-        .subject(email_subject)
-        .header(ContentType::TEXT_PLAIN)
-        .body(format!(
-            "Sender INFO:\n\n{:*>20}{name}\n{:*>20}{email}\n\n\nEmail CONTENT:\n\n{email_content}",
-            "Name: ", "Email: "
-        ))
-        .map_err(<lettre::error::Error as Into<ServerFnError>>::into)?;
-
+    // TODO: add secrecy
     let porkmail_pwd = std::env::var("PORKMAIL_PWD").unwrap_or_default();
     let creds = Credentials::new("info@majkavsek.com".to_owned(), porkmail_pwd.to_string());
 
@@ -426,12 +417,8 @@ async fn send_mail(
             .build();
 
     // Send the email
-    let res = mailer.send(email_a).await;
-    let res_2 = mailer.send(email_b).await;
+    let res = mailer.send(email).await;
 
-    if let Err(res_2) = res_2 {
-        error!("{res_2}");
-    }
     match res {
         Ok(ref response) => info!("Sent email: {:?}", response),
         Err(ref e) => error!("{e}"),
