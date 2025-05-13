@@ -1,4 +1,4 @@
-use crate::{app::App, MajServerError};
+use crate::{app::app_shell, MajServerError};
 
 use axum::{
     body::Body,
@@ -6,7 +6,7 @@ use axum::{
     http::{Request, StatusCode},
     response::{IntoResponse, Response},
 };
-use leptos::{config::LeptosOptions, view};
+use leptos::config::LeptosOptions;
 use tower::ServiceExt;
 use tower_http::services::ServeDir;
 
@@ -39,7 +39,7 @@ pub async fn static_file_and_err_handler(
 
         // TODO: This is stupid improve error handling
         tracing::error!("{}", request);
-        let handler = leptos_axum::render_app_to_stream(move || view! {<App/>});
+        let handler = leptos_axum::render_app_to_stream(move || app_shell(options.clone()));
         handler(Request::from_parts(parts, body))
             .await
             .into_response()
