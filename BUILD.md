@@ -14,8 +14,8 @@ Notes on building for development and publishing to production.
 
 ## Local Dev
 
-1. Build the docker image with: `sudo docker build -t maj-web .`
-2. Run the docker image with: `sudo docker run -p 8080:8080 maj-web`
+1. Build the docker image with: `docker build -t maj-web .`
+2. Run the docker image with: `docker run -p 8080:8080 maj-web`
 
 ## Publishing to Fly.io
 
