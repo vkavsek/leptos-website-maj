@@ -1,5 +1,8 @@
 #![recursion_limit = "256"]
 
+// TODO:
+// - fix player button not changing
+
 use leptos::config::get_configuration;
 use leptos_axum::generate_route_list;
 use leptos_website_maj::app::App;
