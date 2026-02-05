@@ -3,7 +3,7 @@
 # Add the contents of this file to `config.toml` to enable "fast build" configuration. Please read the notes below.
 [target.x86_64-unknown-linux-gnu]
 linker = "clang"
-rustflags = ["-C", "link-arg=-fuse-ld=mold"]
+rustflags = ["-C", "link-arg=-fuse-ld=lld"]
 
 
 # Environment variables set for all `cargo ...` commands

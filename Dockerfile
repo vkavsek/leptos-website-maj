@@ -8,7 +8,7 @@ RUN wget --progress=dot:giga https://github.com/cargo-bins/cargo-binstall/releas
 
 # Install required tools
 RUN apt-get update -y \
-  && apt-get install -y --no-install-recommends clang mold
+  && apt-get install -y --no-install-recommends clang lld
 
 # Install cargo-leptos
 RUN cargo binstall cargo-leptos -y \
@@ -21,6 +21,7 @@ RUN mkdir -p /app
 WORKDIR /app
 COPY . .
 
+ENV RUSTFLAGS="--cfg erase_components"
 # Build the app
 RUN cargo leptos build --release -vv
 
