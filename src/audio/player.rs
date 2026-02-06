@@ -25,7 +25,6 @@ pub fn AudioPlayer() -> impl IntoView {
     // NodeRefs
     let audio_ref = NodeRef::<Audio>::new();
     let vol_percent_ref = NodeRef::<Div>::new();
-    let play_btn_ref = NodeRef::<Button>::new();
     let timeline_ref = NodeRef::<Div>::new();
     let volume_slider_ref = NodeRef::<Div>::new();
     let progress_ref = NodeRef::<Div>::new();
@@ -98,7 +97,6 @@ pub fn AudioPlayer() -> impl IntoView {
     let play_click = move |_: MouseEvent| {
         let audio = audio_ref.get().unwrap();
 
-        let play_btn = play_btn_ref.get().unwrap();
         if audio.paused() {
             set_play_btn_class.set("pause");
             let _ = audio.play();
@@ -168,7 +166,6 @@ pub fn AudioPlayer() -> impl IntoView {
                 <button
                     class=play_btn_class
                     on:click=play_click
-                    node_ref=play_btn_ref
                     title="Play / Pause"
                 ></button>
             </div>

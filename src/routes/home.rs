@@ -110,20 +110,37 @@ pub fn Home() -> impl IntoView {
 
 #[component]
 fn AlbumPromo() -> impl IntoView {
+    let minorflaw_ref: NodeRef<Div> = NodeRef::new();
     let galaterna_ref: NodeRef<Div> = NodeRef::new();
+    let is_hovered_minorf = use_element_hover(minorflaw_ref);
     let is_hovered_gala = use_element_hover(galaterna_ref);
     let (get_id, set_id) = signal("home-animated");
 
-    let dyn_id = move || {
-        if is_hovered_gala.get() {
+    let anim_id = move || {
+        if is_hovered_minorf.get() {
             set_id.set("");
         }
         get_id.get()
     };
 
+    let minorf_display = move || {
+        if is_hovered_gala.get() {
+            "none"
+        } else {
+            "grid"
+        }
+    };
+    let gala_display = move || {
+        if is_hovered_minorf.get() {
+            "none"
+        } else {
+            "grid"
+        }
+    };
+
     view! {
         <div class="home-container">
-            <div class="home-center minorflaw-promo" id=dyn_id node_ref=galaterna_ref>
+            <div class="home-center minorflaw-promo" id=anim_id node_ref=minorflaw_ref style:display=minorf_display>
                 <div id="album-img-title-wrap">
                     // TODO:
                     <img src="/img/MINORFLAW-01_600p.webp" width="600" height="600" id="home-album-img" alt="Album Artwork"/>
@@ -132,8 +149,8 @@ fn AlbumPromo() -> impl IntoView {
                 <div id="home-hide">
                     <h3>"New Album Release!"</h3>
                     <p id="home-album-text">
-                        "A number of songs are available on YouTube, but you can check them out on the "
-                        <a href="/media">"media page of this site."</a>
+                        "Listen to the album promo here, or find individual songs on YouTube. For more content, visit our"
+                        <a href="/media"> "media page" </a>"."
                     </p>
                     <p id="home-album-text">
                         "Buy a digital copy on "
@@ -148,7 +165,7 @@ fn AlbumPromo() -> impl IntoView {
                     <LinkWithModal loc=LinkLocation::BandcampMinorFlaw if_add_image=true/>
                 </div>
             </div>
-            <div class="home-center galaterna-promo">
+            <div class="home-center galaterna-promo" node_ref=galaterna_ref style:display=gala_display>
                 <div id="album-img-title-wrap">
                     <img src="/img/album_artwork_360p.webp" width="360" height="360" id="home-album-img" alt="Album Artwork"/>
                     <h1 id="album-promo-title">"GALATERNA"</h1>
