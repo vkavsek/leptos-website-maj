@@ -149,8 +149,8 @@ fn AlbumPromo() -> impl IntoView {
                 <div id="home-hide">
                     <h3>"New Album Release!"</h3>
                     <p id="home-album-text">
-                        "Listen to the album promo here, or find individual songs on YouTube. For more content, visit our"
-                        <a href="/media"> "media page" </a>"."
+                        "Listen to the album promo here, or find individual songs on YouTube. For more content, visit our "
+                        <a href="/media"> "media page." </a>
                     </p>
                     <p id="home-album-text">
                         "Buy a digital copy on "
