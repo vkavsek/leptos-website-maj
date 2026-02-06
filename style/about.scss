@@ -4,355 +4,354 @@ $maj-yel: #fad549;
 $maj-pink: #ff3988;
 
 #about-components {
-	gap: 5px;
+  gap: 5px;
 }
 
 @media screen and (orientation: portrait) and (max-height: 700px) {
-	#about-components {
-		height: 85%;
-	}
+  #about-components {
+    height: 85%;
+  }
 }
 
 @media screen and (orientation: portrait) and (min-height: 700px) {
-	#about-components {
-		height: 90%;
-	}
+  #about-components {
+    height: 90%;
+  }
 }
 
 #about-wrap {
-	width: 100%;
-	overflow: hidden;
-	margin: 0;
+  width: 100%;
+  overflow: hidden;
+  margin: 0;
 }
 
 @media screen and (orientation: portrait) {
-
-	/* #about-title { */
-	/*   margin-top: 20%; */
-	/* } */
-	#about-wrap {
-		max-height: 100%;
-		display: grid;
-		justify-items: center;
-	}
+  /* #about-title { */
+  /*   margin-top: 20%; */
+  /* } */
+  #about-wrap {
+    max-height: 100%;
+    display: grid;
+    justify-items: center;
+  }
 }
 
 @media screen and (orientation: landscape) {
-	#about-wrap {
-		max-height: 100%;
-		display: flex;
-		flex-direction: row-reverse;
-		justify-content: space-evenly;
-	}
+  #about-wrap {
+    max-height: 100%;
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: space-evenly;
+  }
 }
 
 .fullscreen-container {
-	position: absolute;
-	top: 0;
-	bottom: 0;
-	left: 0;
-	right: 0;
-	display: flex;
-	justify-content: center;
-	align-items: center;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 
-	background-color: rgba(9, 4, 21, 0.7);
-	z-index: 10;
+  background-color: rgba(9, 4, 21, 0.7);
+  z-index: 10;
 }
 
 .fullscreen-img-buttons {
-	justify-content: center;
-	max-width: 80%;
+  justify-content: center;
+  max-width: 80%;
 }
 
 .fullscreen-close {
-	font-family: "IBM Plex Mono", sans-serif;
-	border: 1px solid $maj-pink;
-	border-radius: 10px;
-	height: 4rem;
-	width: 4rem;
-	padding: 0;
-	background-color: rgba(9, 4, 21, 0.7);
-	color: $maj-pink;
-	cursor: pointer;
-	position: absolute;
-	right: 5%;
-	top: 4vw;
+  font-family: "IBM Plex Mono", sans-serif;
+  border: 1px solid $maj-pink;
+  border-radius: 10px;
+  height: 4rem;
+  width: 4rem;
+  padding: 0;
+  background-color: rgba(9, 4, 21, 0.7);
+  color: $maj-pink;
+  cursor: pointer;
+  position: absolute;
+  right: 5%;
+  top: 4vw;
 }
 
 .fullscreen-close:hover {
-	background-color: rgba(31, 12, 98, 1);
+  background-color: rgba(31, 12, 98, 1);
 }
 
 .fullscreen-img {
-	all: unset;
+  all: unset;
 }
 
 @media screen and (min-height: 500px) {
-	.fullscreen-img {
-		max-width: 80%;
-	}
+  .fullscreen-img {
+    max-width: 80%;
+  }
 }
 
 @media screen and (max-height: 500px) {
-	.fullscreen-img {
-		max-width: 65%;
-	}
+  .fullscreen-img {
+    max-width: 65%;
+  }
 }
 
 .fullscreen-nav-button {
-	all: unset;
-	background-color: rgba(9, 4, 21, 0.7);
-	border-radius: 15px;
-	border: 1px solid $maj-pink;
-	height: 20%;
-	cursor: pointer;
+  all: unset;
+  background-color: rgba(9, 4, 21, 0.7);
+  border-radius: 15px;
+  border: 1px solid $maj-pink;
+  height: 20%;
+  cursor: pointer;
 }
 
 .fullscreen-nav-button:hover {
-	background-color: rgba(31, 12, 98, 1);
+  background-color: rgba(31, 12, 98, 1);
 }
 
 .fullscreen-nav-button.next-button {
-	position: absolute;
-	top: 40%;
+  position: absolute;
+  top: 40%;
 }
 
 .fullscreen-nav-button.back-button {
-	position: absolute;
-	top: 40%;
+  position: absolute;
+  top: 40%;
 }
 
 .next-img {
-	transform: rotate(180deg);
+  transform: rotate(180deg);
 }
 
 @media screen and (orientation: portrait) {
-	.about-gallery {
-		display: grid;
-		justify-items: center;
-		align-items: center;
-		width: 100%;
-	}
+  .about-gallery {
+    display: grid;
+    justify-items: center;
+    align-items: center;
+    width: 100%;
+  }
 
-	.about-text {
-		padding: 1rem;
-		width: 85vw;
-		max-height: 100%;
-	}
+  .about-text {
+    padding: 1rem;
+    width: 85vw;
+    max-height: 100%;
+  }
 
-	.about-text>* {
-		padding: 0.5rem;
-	}
+  .about-text > * {
+    padding: 0.5rem;
+  }
 
-	.about-images-scroller {
-		display: grid;
-		grid-auto-flow: column;
-		grid-auto-columns: 25%;
-		gap: 16px;
-		height: 65px;
-		width: 100%;
-		padding: 16px;
-		align-items: center;
-		margin-bottom: 30px;
+  .about-images-scroller {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 25%;
+    gap: 16px;
+    height: 65px;
+    width: 100%;
+    padding: 16px;
+    align-items: center;
+    margin-bottom: 30px;
 
-		overflow-x: auto;
-		overscroll-behavior-inline: contain;
-	}
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+  }
 
-	.snaps-inline {
-		scroll-snap-type: inline mandatory;
-		scroll-padding-inline: 1rem;
-	}
+  .snaps-inline {
+    scroll-snap-type: inline mandatory;
+    scroll-padding-inline: 1rem;
+  }
 
-	.snaps-inline>* {
-		scroll-snap-align: start;
-	}
+  .snaps-inline > * {
+    scroll-snap-align: start;
+  }
 
-	.fullscreen-nav-button.next-button {
-		right: 0;
-	}
+  .fullscreen-nav-button.next-button {
+    right: 0;
+  }
 
-	.fullscreen-nav-button.back-button {
-		left: 0;
-	}
+  .fullscreen-nav-button.back-button {
+    left: 0;
+  }
 
-	.fullscreen-nav-button>* {
-		padding: 0.5rem;
-	}
+  .fullscreen-nav-button > * {
+    padding: 0.5rem;
+  }
 }
 
 @media screen and (orientation: landscape) {
-	.about-gallery {
-		height: 90%;
-		width: 40%;
-	}
+  .about-gallery {
+    height: 90%;
+    width: 40%;
+  }
 
-	.about-images-scroller {
-		display: grid;
-		grid-auto-rows: 30%;
-		gap: 32px;
-		width: 80%;
-		justify-items: center;
-		margin-bottom: 30px;
+  .about-images-scroller {
+    display: grid;
+    grid-auto-rows: 30%;
+    gap: 32px;
+    width: 80%;
+    justify-items: center;
+    margin-bottom: 30px;
 
-		overflow-y: auto;
-		overscroll-behavior-block: contain;
-	}
+    overflow-y: auto;
+    overscroll-behavior-block: contain;
+  }
 
-	.snaps-inline {
-		scroll-snap-type: block mandatory;
-		scroll-padding-block: 8px;
-	}
+  .snaps-inline {
+    scroll-snap-type: block mandatory;
+    scroll-padding-block: 8px;
+  }
 
-	.snaps-inline>* {
-		width: 70%;
-		scroll-snap-align: start;
-	}
+  .snaps-inline > * {
+    width: 70%;
+    scroll-snap-align: start;
+  }
 
-	.fullscreen-nav-button.next-button {
-		right: 5vw;
-	}
+  .fullscreen-nav-button.next-button {
+    right: 5vw;
+  }
 
-	.fullscreen-nav-button.back-button {
-		left: 5vw;
-	}
+  .fullscreen-nav-button.back-button {
+    left: 5vw;
+  }
 
-	.fullscreen-nav-button>* {
-		padding: 1rem;
-	}
+  .fullscreen-nav-button > * {
+    padding: 1rem;
+  }
 
-	.back-img {
-		transform: scale(1.2);
-	}
+  .back-img {
+    transform: scale(1.2);
+  }
 
-	.next-img {
-		transform: scale(1.2) rotate(180deg);
-	}
+  .next-img {
+    transform: scale(1.2) rotate(180deg);
+  }
 }
 
 @media screen and (orientation: landscape) and (min-height: 700px) {
-	.about-images-scroller {
-		height: 80%;
-	}
+  .about-images-scroller {
+    height: 80%;
+  }
 
-	.about-text {
-		padding: 2rem;
-		width: 80%;
-		max-height: 75%;
-	}
+  .about-text {
+    padding: 2rem;
+    width: 80%;
+    max-height: 75%;
+  }
 
-	.about-text>* {
-		padding: 1rem;
-	}
+  .about-text > * {
+    padding: 1rem;
+  }
 
-	.about-images-scroller {
-		padding: 2rem;
-	}
+  .about-images-scroller {
+    padding: 2rem;
+  }
 }
 
 @media screen and (orientation: landscape) and (max-height: 700px) {
-	.about-images-scroller {
-		height: 100%;
-	}
+  .about-images-scroller {
+    height: 100%;
+  }
 
-	.about-text {
-		padding: 2rem;
-		width: 90%;
-		max-height: 75%;
-	}
+  .about-text {
+    padding: 2rem;
+    width: 90%;
+    max-height: 75%;
+  }
 
-	.about-text>* {
-		padding: 1rem;
-	}
+  .about-text > * {
+    padding: 1rem;
+  }
 }
 
 .nav-button-img {
-	width: 30px;
-	height: 30px;
+  width: 30px;
+  height: 30px;
 }
 
 .image-about {
-	border-radius: 10px;
-	aspect-ratio: 16/9;
-	object-fit: cover;
-	cursor: pointer;
+  border-radius: 10px;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+  cursor: pointer;
 }
 
 .about-text {
-	border-radius: 15px;
-	border-top-right-radius: 10px;
-	border-bottom-right-radius: 10px;
-	color: $maj-pink;
-	background: rgba(9, 4, 21, 0.7);
-	/* color: $maj-yel; */
-	overflow: auto;
+  border-radius: 15px;
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+  color: $maj-pink;
+  background: rgba(9, 4, 21, 0.85);
+  /* color: $maj-yel; */
+  overflow: auto;
 }
 
 .about-text:hover {
-	background: rgba(9, 4, 25, 0.9);
+  background: rgba(9, 4, 25, 0.95);
 }
 
 .change-color-button {
-	all: unset;
+  all: unset;
 }
 
 @media screen and (orientation: portrait) {
-	.change-color-button {
-		width: 20%;
-		bottom: 0.5rem;
-		right: 0;
-	}
+  .change-color-button {
+    width: 20%;
+    bottom: 0.5rem;
+    right: 0;
+  }
 }
 
 @media screen and (orientation: landscape) and (min-width: 800px) {
-	.change-color-button {
-		width: 15%;
-		bottom: 2%;
-		right: 2%;
-	}
+  .change-color-button {
+    width: 15%;
+    bottom: 2%;
+    right: 2%;
+  }
 }
 
 @media screen and (orientation: landscape) and (max-width: 800px) {
-	.change-color-button {
-		width: 27%;
-		bottom: 0%;
-		right: 0%;
-	}
+  .change-color-button {
+    width: 27%;
+    bottom: 0%;
+    right: 0%;
+  }
 }
 
 .change-color-button {
-	padding: 0.2rem;
-	border: 1px solid rgba(255, 57, 136, 0.5);
-	border-radius: 7px;
-	background-color: rgba(9, 4, 25, 0.9);
-	display: flex;
-	justify-content: space-around;
-	align-items: center;
+  padding: 0.2rem;
+  border: 1px solid rgba(255, 57, 136, 0.5);
+  border-radius: 7px;
+  background-color: rgba(9, 4, 25, 0.9);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
 
-	position: sticky;
-	margin-left: auto;
+  position: sticky;
+  margin-left: auto;
 
-	cursor: pointer;
+  cursor: pointer;
 
-	transition: 0.1s ease-in-out;
-	opacity: 0.5;
+  transition: 0.1s ease-in-out;
+  opacity: 0.5;
 }
 
 .change-color-button:hover {
-	opacity: 1;
+  opacity: 1;
 }
 
 .color-box {
-	width: 0.7rem;
-	height: 0.7rem;
+  width: 0.7rem;
+  height: 0.7rem;
 }
 
 .button-next-arrow {
-	width: 2rem;
-	transform: rotate(180deg) scaleX(0.8);
+  width: 2rem;
+  transform: rotate(180deg) scaleX(0.8);
 }
 
 .change-color-button:hover {
-	background-color: rgba(15, 8, 80, 0.9);
+  background-color: rgba(15, 8, 80, 0.9);
 }

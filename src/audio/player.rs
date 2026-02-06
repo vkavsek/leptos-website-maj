@@ -42,7 +42,7 @@ pub fn AudioPlayer() -> impl IntoView {
         // } else {
         // "/music/audio-promo_small.mp3".to_string()
         // }
-        "/music/audio-promo_small.mp3"
+        "/music/MINORFLAW_albumpromo.mp3"
     };
 
     // DOM should be built by the time we call the closures so we unwrap them all
