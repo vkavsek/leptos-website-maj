@@ -13,6 +13,8 @@ pub fn AudioPlayer() -> impl IntoView {
     let (time, set_time) = signal(0u64);
     let (duration, set_duration) = signal(0u64);
     let (name, set_name) = signal::<Option<String>>(None);
+    let (play_btn_class, set_play_btn_class) = signal("pause");
+    let (vol_btn_class, set_vol_btn_class) = signal("ico-vol-med");
     // Derived signals
     let _song_title = move || Song::from_filenamename(&name.get().unwrap_or(String::new())).title();
     let _song_artist =
@@ -26,7 +28,6 @@ pub fn AudioPlayer() -> impl IntoView {
     let play_btn_ref = NodeRef::<Button>::new();
     let timeline_ref = NodeRef::<Div>::new();
     let volume_slider_ref = NodeRef::<Div>::new();
-    let vol_el_ref = NodeRef::<Button>::new();
     let progress_ref = NodeRef::<Div>::new();
 
     // Import the selector and the List of songs
@@ -57,9 +58,7 @@ pub fn AudioPlayer() -> impl IntoView {
             ));
             set_time.set(audio.current_time() as u64);
             if audio.ended() {
-                let play_btn = play_btn_ref.get_untracked().unwrap();
-                let _ = play_btn.clone().class(("pause", false));
-                let _ = play_btn.class(("play", true));
+                set_play_btn_class.set("play");
             }
             if let Some(_slider) = volume_slider_ref.get_untracked() {
                 if let Some(vol_percent) = vol_percent_ref.get_untracked() {
@@ -77,10 +76,7 @@ pub fn AudioPlayer() -> impl IntoView {
     Effect::new_isomorphic(move |_| {
         // subscribe to selector
         let _ = selector.get();
-        if let Some(play_btn) = play_btn_ref.get() {
-            let _ = play_btn.clone().class(("pause", false));
-            let _ = play_btn.class(("play", true));
-        }
+        set_play_btn_class.set("play");
         if let Some(audio) = audio_ref.get() {
             let _ = audio.pause();
         }
@@ -104,12 +100,10 @@ pub fn AudioPlayer() -> impl IntoView {
 
         let play_btn = play_btn_ref.get().unwrap();
         if audio.paused() {
-            let _ = play_btn.clone().class(("play", false));
-            let _ = play_btn.clone().class(("pause", true));
+            set_play_btn_class.set("pause");
             let _ = audio.play();
         } else {
-            let _ = play_btn.clone().class(("pause", false));
-            let _ = play_btn.class(("play", true));
+            set_play_btn_class.set("play");
             let _ = audio.pause();
         }
     };
@@ -122,9 +116,9 @@ pub fn AudioPlayer() -> impl IntoView {
         let t_width = window()
             .get_computed_style(&timeline)
             .unwrap_or(None)
-            .expect("the style to be calculated")
+            .expect("style should be initialized")
             .get_property_value("width")
-            .expect("the width to be calculated");
+            .expect("width should be initialized");
         let time_to_seek = ev.offset_x() as f64 / px_to_f64(&t_width) * audio.duration();
         audio.set_current_time(time_to_seek);
     };
@@ -138,7 +132,7 @@ pub fn AudioPlayer() -> impl IntoView {
         if let Ok(Some(slider_width)) = window().get_computed_style(&slider) {
             let slider_width = slider_width
                 .get_property_value("width")
-                .expect("the width to be calculated");
+                .expect("widht should be initialized");
             let new_volume = ev.offset_x() as f64 / px_to_f64(&slider_width);
             if new_volume > 0.0 {
                 audio.set_muted(false)
@@ -151,20 +145,17 @@ pub fn AudioPlayer() -> impl IntoView {
     // Volume Button
     let vol_button_click = move |_| {
         let audio = audio_ref.get().unwrap();
-        let vol_el = vol_el_ref.get().unwrap();
         let vol_percent = vol_percent_ref.get().unwrap();
 
         audio.set_muted(!audio.muted());
 
         if audio.muted() {
             let _ = vol_percent.style(("width", "0%"));
-            let _ = vol_el.clone().class(("ico-vol-med", false));
-            let _ = vol_el.clone().class(("ico-vol-mute", true));
+            set_vol_btn_class.set("ico-vol-mute");
         } else {
             let volume = f64_to_u64(audio.volume());
             let _ = vol_percent.style(("width", format!("{}%", volume)));
-            let _ = vol_el.clone().class(("ico-vol-mute", false));
-            let _ = vol_el.class(("ico-vol-med", true));
+            set_vol_btn_class.set("ico-vol-med");
         }
     };
 
@@ -175,7 +166,7 @@ pub fn AudioPlayer() -> impl IntoView {
             </audio>
             <div class="play-container">
                 <button
-                    class="play"
+                    class=play_btn_class
                     on:click=play_click
                     node_ref=play_btn_ref
                     title="Play / Pause"
@@ -194,9 +185,8 @@ pub fn AudioPlayer() -> impl IntoView {
                 <div class="song-info"></div>
                 <div class="volume-container">
                     <button
-                        class="ico-vol-med"
+                        class=vol_btn_class
                         on:click=vol_button_click
-                        node_ref=vol_el_ref
                         title="Volume / Mute"
                     ></button>
                     <div

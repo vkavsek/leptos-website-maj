@@ -1,9 +1,6 @@
-A personal portfolio website.
-
-WIP
+# A personal portfolio website
 
 TODO:
-dodaj album
-naredi hišico
-zrihti play gumb
-cv, diskografija
+zrihti albume na telefonih
+
+cv, diskografija?

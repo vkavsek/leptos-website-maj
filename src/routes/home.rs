@@ -11,7 +11,8 @@ enum LinkLocation {
     TikTok,
     Ig,
     Yt,
-    BandcampAut,
+    BandcampGala,
+    BandcampMinorFlaw,
     AutRecords,
 }
 
@@ -43,8 +44,14 @@ impl LinkLocation {
                 177,
                 128,
             ),
-            LinkLocation::BandcampAut => (
+            LinkLocation::BandcampGala => (
                 "https://autrecords.bandcamp.com/album/galaterna",
+                "/img/foreign-logos/bandcamp-fin.svg",
+                256,
+                256,
+            ),
+            LinkLocation::BandcampMinorFlaw => (
+                "https://jazzcerkno.bandcamp.com/album/minor-flaw",
                 "/img/foreign-logos/bandcamp-fin.svg",
                 256,
                 256,
@@ -103,46 +110,69 @@ pub fn Home() -> impl IntoView {
 
 #[component]
 fn AlbumPromo() -> impl IntoView {
-    let center_ref: NodeRef<Div> = NodeRef::new();
-    let is_hovered = use_element_hover(center_ref);
+    let galaterna_ref: NodeRef<Div> = NodeRef::new();
+    let is_hovered_gala = use_element_hover(galaterna_ref);
     let (get_id, set_id) = signal("home-animated");
 
     let dyn_id = move || {
-        if is_hovered.get() {
+        if is_hovered_gala.get() {
             set_id.set("");
         }
         get_id.get()
     };
 
     view! {
-        <div class="home-center" id=dyn_id node_ref=center_ref>
-            <div id="album-img-title-wrap">
-                <img src="/img/album_artwork_360p.webp" width="360" height="360" id="home-album-img" alt="Album Artwork"/>
-                <h1 id="album-promo-title">"GALATERNA"</h1>
+        <div class="home-container">
+            <div class="home-center minorflaw-promo" id=dyn_id node_ref=galaterna_ref>
+                <div id="album-img-title-wrap">
+                    // TODO:
+                    <img src="/img/MINORFLAW-01_600p.webp" width="600" height="600" id="home-album-img" alt="Album Artwork"/>
+                    <h1 id="album-promo-title">"MINOR FLAW"</h1>
+                </div>
+                <div id="home-hide">
+                    <h3>"New Album Release!"</h3>
+                    <p id="home-album-text">
+                        "A number of songs are available on YouTube, but you can check them out on the "
+                        <a href="/media">"media page of this site."</a>
+                    </p>
+                    <p id="home-album-text">
+                        "Buy a digital copy on "
+                        <LinkWithModal
+                            loc=LinkLocation::BandcampMinorFlaw
+                            if_add_image=false
+                            opt_text="Bandcamp".to_string()
+                        /> "."
+                    </p>
+                </div>
+                <div id="home-album-links">
+                    <LinkWithModal loc=LinkLocation::BandcampMinorFlaw if_add_image=true/>
+                </div>
             </div>
-            <div id="home-hide">
-                <h3>"New Album Release!"</h3>
-                <p id="home-album-text">
-                    "A number of songs are available on YouTube, but you can check them out on the "
-                    <a href="/media">"media page of this site."</a>
-                </p>
-                <p id="home-album-text">
-                    "Buy a digital copy on "
-                    <LinkWithModal
-                        loc=LinkLocation::BandcampAut
-                        if_add_image=false
-                        opt_text="Bandcamp".to_string()
-                    /> " or a hard copy on the "
-                    <LinkWithModal
-                        loc=LinkLocation::AutRecords
-                        if_add_image=false
-                        opt_text="label's website!".to_string()
-                    />
-                </p>
-            </div>
-            <div id="home-album-links">
-                <LinkWithModal loc=LinkLocation::BandcampAut if_add_image=true/>
-                <LinkWithModal loc=LinkLocation::AutRecords if_add_image=true/>
+            <div class="home-center galaterna-promo">
+                <div id="album-img-title-wrap">
+                    <img src="/img/album_artwork_360p.webp" width="360" height="360" id="home-album-img" alt="Album Artwork"/>
+                    <h1 id="album-promo-title">"GALATERNA"</h1>
+                </div>
+                <div id="home-hide">
+                    <h3>"Galaterna (2024)"</h3>
+                    <p id="home-album-text">
+                        "Buy a digital copy on "
+                        <LinkWithModal
+                            loc=LinkLocation::BandcampGala
+                            if_add_image=false
+                            opt_text="Bandcamp".to_string()
+                        /> " or a hard copy on the "
+                        <LinkWithModal
+                            loc=LinkLocation::AutRecords
+                            if_add_image=false
+                            opt_text="label's website!".to_string()
+                        />
+                    </p>
+                </div>
+                <div id="home-album-links">
+                    <LinkWithModal loc=LinkLocation::BandcampGala if_add_image=true/>
+                    <LinkWithModal loc=LinkLocation::AutRecords if_add_image=true/>
+                </div>
             </div>
         </div>
     }
@@ -164,7 +194,12 @@ fn LinkWithModal(
         LinkLocation::TikTok => "A link to TikTok",
         LinkLocation::Yt => "A link to YouTube",
         LinkLocation::AutRecords => "A link to the label company",
-        LinkLocation::BandcampAut => "A link to label company's Bandcamp page",
+        LinkLocation::BandcampGala => {
+            "A link to the digital release of Galaterna, hosted on Bandcamp"
+        }
+        LinkLocation::BandcampMinorFlaw => {
+            "A link to the digital release of Minor Flaw, hosted on Bandcamp"
+        }
     };
 
     let click_on_link = move |ev: MouseEvent| {

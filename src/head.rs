@@ -29,13 +29,15 @@ pub fn NavBar(
     view! {
         <nav class="nav-links">
             <A href="/" on:click=click_home attr:class="nav-link" attr:id="home-nav-link">
-                <img class="nav-icon nav-icon-1" src="/img/nota.svg" alt="Home" width="512" height="217"/>
+                <img class="nav-icon nav-icon-1" src="/img/home.svg" alt="Home" width="200" height="200"/>
             </A>
             <A href="/about_me" on:click=click_about attr:class="nav-link">
                 <img class="nav-icon nav-icon-2" src="/img/izkaznica.svg" alt="About Me" width="378" height="330"/>
             </A>
             <A href="/shows" on:click=click_concerts attr:class="nav-link">
-                <img class="nav-icon nav-icon-3" src="/img/trobenta.svg" alt="Shows" width="144" height="158"/>
+                <img class="nav-icon nav-icon-3" src="/img/trobenta.svg" alt="Shows" width="512" height="217"/>
+                // NOTE: old icon kept for width and height reference should they be needed again
+                // <img class="nav-icon nav-icon-3" src="/img/nota.svg" alt="Shows" width="144" height="158"/>
             </A>
             <A href="/media" on:click=click_media attr:class="nav-link">
                 <img class="nav-icon nav-icon-4" src="/img/media.svg" alt="Media" width="395" height="336"/>
