@@ -39,8 +39,7 @@ pub fn Media() -> impl IntoView {
 pub fn CreateVideo(video: YoutubeUrl) -> impl IntoView {
     view! {
         <div class="yt-vid-container">
-            <iframe class="yt-video" src=video.url title="YouTube video player">
-            </iframe>
+            <iframe class="yt-video" src=video.url title="YouTube video player"></iframe>
         </div>
     }
 }

@@ -76,31 +76,29 @@ pub fn Home() -> impl IntoView {
     const IG: LinkLocation = LinkLocation::Ig;
     const YT: LinkLocation = LinkLocation::Yt;
     view! {
-        <Link rel="icon" href="/img/trobenta.svg" type_="image/svg"/>
-        <Title text="Home"/>
+        <Link rel="icon" href="/img/trobenta.svg" type_="image/svg" />
+        <Title text="Home" />
         <div class="components" id="home-components">
-            <div>
-                <div class="title">
-                    <h1 id="home-title">"Maj Kavšek"</h1>
-                </div>
+            <div class="title">
+                <h1 id="home-title">"Maj Kavšek"</h1>
             </div>
-            <AlbumPromo/>
+            // <AlbumPromo/>
             <div class="contents" id="home-bottom">
                 <div class="all-contacts">
                     <div class="contacts-wrap">
-                        <Mail/>
+                        <Mail />
                     </div>
                     <div class="contacts-wrap">
-                        <LinkWithModal loc=FB if_add_image=true/>
+                        <LinkWithModal loc=FB if_add_image=true />
                     </div>
                     <div class="contacts-wrap">
-                        <LinkWithModal loc=IG if_add_image=true/>
+                        <LinkWithModal loc=IG if_add_image=true />
                     </div>
                     <div class="contacts-wrap">
-                        <LinkWithModal loc=TIKTOK if_add_image=true/>
+                        <LinkWithModal loc=TIKTOK if_add_image=true />
                     </div>
                     <div class="contacts-wrap">
-                        <LinkWithModal loc=YT if_add_image=true/>
+                        <LinkWithModal loc=YT if_add_image=true />
                     </div>
                 </div>
             </div>
@@ -140,17 +138,28 @@ fn AlbumPromo() -> impl IntoView {
 
     view! {
         <div class="home-container">
-            <div class="home-center minorflaw-promo" id=anim_id node_ref=minorflaw_ref style:display=minorf_display>
+            <div
+                class="home-center minorflaw-promo"
+                id=anim_id
+                node_ref=minorflaw_ref
+                style:display=minorf_display
+            >
                 <div id="album-img-title-wrap">
                     // TODO:
-                    <img src="/img/MINORFLAW-01_600p.webp" width="600" height="600" id="home-album-img" alt="Album Artwork"/>
+                    <img
+                        src="/img/MINORFLAW-01_600p.webp"
+                        width="600"
+                        height="600"
+                        id="home-album-img"
+                        alt="Album Artwork"
+                    />
                     <h1 id="album-promo-title">"MINOR FLAW"</h1>
                 </div>
                 <div id="home-hide">
                     <h3>"New Album Release!"</h3>
                     <p id="home-album-text">
                         "Listen to the album promo here, or find individual songs on YouTube. For more content, visit our "
-                        <a href="/media"> "media page." </a>
+                        <a href="/media">"media page."</a>
                     </p>
                     <p id="home-album-text">
                         "Buy a digital copy on "
@@ -162,12 +171,22 @@ fn AlbumPromo() -> impl IntoView {
                     </p>
                 </div>
                 <div id="home-album-links">
-                    <LinkWithModal loc=LinkLocation::BandcampMinorFlaw if_add_image=true/>
+                    <LinkWithModal loc=LinkLocation::BandcampMinorFlaw if_add_image=true />
                 </div>
             </div>
-            <div class="home-center galaterna-promo" node_ref=galaterna_ref style:display=gala_display>
+            <div
+                class="home-center galaterna-promo"
+                node_ref=galaterna_ref
+                style:display=gala_display
+            >
                 <div id="album-img-title-wrap">
-                    <img src="/img/album_artwork_360p.webp" width="360" height="360" id="home-album-img" alt="Album Artwork"/>
+                    <img
+                        src="/img/album_artwork_360p.webp"
+                        width="360"
+                        height="360"
+                        id="home-album-img"
+                        alt="Album Artwork"
+                    />
                     <h1 id="album-promo-title">"GALATERNA"</h1>
                 </div>
                 <div id="home-hide">
@@ -187,8 +206,8 @@ fn AlbumPromo() -> impl IntoView {
                     </p>
                 </div>
                 <div id="home-album-links">
-                    <LinkWithModal loc=LinkLocation::BandcampGala if_add_image=true/>
-                    <LinkWithModal loc=LinkLocation::AutRecords if_add_image=true/>
+                    <LinkWithModal loc=LinkLocation::BandcampGala if_add_image=true />
+                    <LinkWithModal loc=LinkLocation::AutRecords if_add_image=true />
                 </div>
             </div>
         </div>
@@ -253,7 +272,13 @@ fn LinkWithModal(
             {if_add_image
                 .then_some(
                     view! {
-                        <img class="contacts-img" src=src_target alt=alt width=width height=height/>
+                        <img
+                            class="contacts-img"
+                            src=src_target
+                            alt=alt
+                            width=width
+                            height=height
+                        />
                     },
                 )}
 
@@ -419,7 +444,7 @@ fn Mail() -> impl IntoView {
                         placeholder="Your message"
                         required
                     ></textarea>
-                    <input class="submit-button" type="submit" value="Send"/>
+                    <input class="submit-button" type="submit" value="Send" />
                     {display_mail_status}
                 </ActionForm>
             </div>

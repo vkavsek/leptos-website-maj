@@ -87,6 +87,7 @@ $maj-pink: #ff3988;
       width: 30%;
     }
   }
+
   .home-container {
     display: flex;
     justify-content: space-around;
@@ -104,6 +105,7 @@ $maj-pink: #ff3988;
     flex-direction: column;
     margin: 0;
     max-height: 100%;
+    grid-row: 3;
   }
 
   .home-center#home-animated {

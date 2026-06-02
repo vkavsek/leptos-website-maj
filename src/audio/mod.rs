@@ -26,10 +26,7 @@ pub fn AudioWrapper() -> impl IntoView {
     provide_context(names);
     provide_context(selector);
 
-    view! {
-        <AudioPlayer/>
-        //<AudioList/>
-    }
+    view! { <AudioPlayer /> }
 }
 
 /// A song info struct

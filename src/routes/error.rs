@@ -63,12 +63,14 @@ pub fn ErrorTemplate(
                                 <h2 class="error-subtitle">{error_code.to_string()}</h2>
                                 <p>"The site you are looking for doesn't exist!"</p>
                                 <A href="/">"Go back to the home page."</A>
-                            }.into_any()
+                            }
+                                .into_any()
                         } else {
                             view! {
                                 <h2 class="error-subtitle">{error_code.to_string()}</h2>
                                 <p>"Error: " {error_string}</p>
-                            }.into_any()
+                            }
+                                .into_any()
                         }
                     }
                 />

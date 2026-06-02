@@ -153,8 +153,8 @@ fn RenderShows(selector: EventSelector) -> impl IntoView {
                                                 .collect::<Vec<_>>()
                                         }
                                     };
-
                                     if shows_col.is_empty() {
+
                                         view! {
                                             <p class="shows-no-shows">
                                                 "There are currently no events to display here. Come back later."

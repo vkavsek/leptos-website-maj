@@ -18,14 +18,12 @@ pub fn AudioList() -> impl IntoView {
             let name = Song::from_filenamename(name);
 
             view! {
-                    <button on:click=click class=cls>
-                        {name.title()}
-                    </button>
+                <button on:click=click class=cls>
+                    {name.title()}
+                </button>
             }
         })
         .collect_view();
 
-    view! {
-        <p class="audio-list">{buttons}</p>
-    }
+    view! { <p class="audio-list">{buttons}</p> }
 }

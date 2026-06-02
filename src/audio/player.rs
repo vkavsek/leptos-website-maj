@@ -163,11 +163,7 @@ pub fn AudioPlayer() -> impl IntoView {
                 "Audio Player"
             </audio>
             <div class="play-container">
-                <button
-                    class=play_btn_class
-                    on:click=play_click
-                    title="Play / Pause"
-                ></button>
+                <button class=play_btn_class on:click=play_click title="Play / Pause"></button>
             </div>
             <div class="time-container">
                 <div class="timeline" node_ref=timeline_ref on:click=timeline_click>

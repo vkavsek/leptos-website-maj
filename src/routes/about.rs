@@ -62,14 +62,83 @@ impl Color {
 #[component]
 pub fn About() -> impl IntoView {
     let text_content = [
-        view! {<strong>"Maj Kavšek"</strong>" was born on April 12, 2000, in Ljubljana, Slovenia. His musical journey began at 8 when he first picked up the trumpet. After finishing his studies at the Conservatorium for Music in Ljubljana, he decided to further his musical education by enrolling at the prestigious "<strong>"Jazz Institut Berlin (UdK Berlin - University of Arts Berlin)"</strong>". This move allowed him to expand his musical knowledge and study under renowned professors, including "<strong>"Ralph Alessi"</strong>", "<strong>"Greg Cohen"</strong>", "<strong>"Reggie Moore"</strong>", "<strong>"James Robert Rotondi"</strong>", "<strong>"Nate Wooley"</strong>"... His studies in Berlin gave him the opportunity to explore a wide range of musical ideas and develop his skills in both performance and composition."}.into_any(),
-        view! {"In 2023, he was invited to perform with the "<strong>"Euroradio Jazz Orchestra"</strong>" in Lithuania and "<strong>"Fame's Institute Orchestra"</strong>"in North Macedonia. In 2025 he was awarded the "<strong>"Yuhedi Menuhin: LiveMusicNow scholarship"</strong>" and a "<strong>"third prize at Jazzon: Composition Award"</strong>". The same year he also won the "<strong><cite><b>"Jazz Incubator"</b></cite>" Residency at Festival Jazz Cerkno"</strong>", where he recorded his second album."}.into_any(),
-        view! {"Maj has been an active participant in various jazz festivals and venues, where he has performed both as a bandleader and a side-man. These opportunities have given him the chance to collaborate with many esteemed musicians, including "<strong>"Jure Pukl, Marko Churnchetz, Chris Pitsiokos, Philipp Gropper, Bram De Looze, David Gazarov, Felix Henkelhausen, Julius Gawlik, Jan Bang and Arve Henriksen"</strong>", among others. Through these collaborations, Maj has demonstrated his adaptability and ability to work in diverse musical environments."}.into_any(),
-        view! {"In 2024, he released his debut album, "<strong><cite><q>"Galaterna"</q></cite></strong>", recorded with his quintet and released under the "<strong>"Aut Records"</strong>" label. The album has been well received by critics, being praised for its dynamic and expressive qualities."}.into_any(),
-        view! {"As "<strong>"Pierre Dulieu"</strong>" of JazzMania wrote on September 27, 2024: “This energetic and warm music, tailor-made for club performances, radiates freshness, features generous solos (listening to the trumpeter soar on 'Philosopher’s Stoned' is a treat), and boasts collective playing confidence that makes it exhilarating. Definitely worth a listen!”" }.into_any(),
-        view! {"Additionally, "<strong>"Jan Granlie"</strong>" of "<strong>"Salt Peanuts"</strong>" noted on July 5, 2024, that the album "<cite><q>"showcases exceptionally well-played music that draws threads back to the American jazz traditions of the 1960s, while maintaining a clear forward-looking perspective."</q></cite>}.into_any(),
-        view! {"In 2026, he released his second album, "<strong>"MINOR FLAW"</strong>", which features a collection of compositions carefully crafted to represent the creative approach he has developed over the years. Featuring a chordless quartet, the project explores the possibilities of expression and tests the limitations of compositional concepts while maintaining a strong connection to the given structure and form. The music carries the influences that shaped his musical identity, ranging from folk and classical music to traditional as well as contemporary jazz."}.into_any(),
-        view! {"Through his dedication to his craft and his passion for music, Maj Kavšek continues to make a mark on the international music scene. His performances, recordings, and collaborations showcase his versatility and his ability to inspire both audiences and fellow musicians alike."}.into_any(),
+        view! {
+            <strong>"Maj Kavšek"</strong>
+            " was born on April 12, 2000, in Ljubljana, Slovenia. His musical journey began at 8 when he first picked up the trumpet. After finishing his studies at the Conservatorium for Music in Ljubljana, he decided to further his musical education by enrolling at the prestigious "
+            <strong>"Jazz Institut Berlin (UdK Berlin - University of Arts Berlin)"</strong>
+            ". This move allowed him to expand his musical knowledge and study under renowned professors, including "
+            <strong>"Ralph Alessi"</strong>
+            ", "
+            <strong>"Greg Cohen"</strong>
+            ", "
+            <strong>"Reggie Moore"</strong>
+            ", "
+            <strong>"James Robert Rotondi"</strong>
+            ", "
+            <strong>"Nate Wooley"</strong>
+            "... His studies in Berlin gave him the opportunity to explore a wide range of musical ideas and develop his skills in both performance and composition."
+        }.into_any(),
+        view! {
+            "In 2023, he was invited to perform with the "
+            <strong>"Euroradio Jazz Orchestra"</strong>
+            " in Lithuania and "
+            <strong>"Fame's Institute Orchestra"</strong>
+            "in North Macedonia. In 2025 he was awarded the "
+            <strong>"Yuhedi Menuhin: LiveMusicNow scholarship"</strong>
+            " and a "
+            <strong>"third prize at Jazzon: Composition Award"</strong>
+            ". The same year he also won the "
+            <strong>
+                <cite>
+                    <b>"Jazz Incubator"</b>
+                </cite>
+                " Residency at Festival Jazz Cerkno"
+            </strong>
+            ", where he recorded his second album."
+        }.into_any(),
+        view! {
+            "Maj has been an active participant in various jazz festivals and venues, where he has performed both as a bandleader and a side-man. These opportunities have given him the chance to collaborate with many esteemed musicians, including "
+            <strong>
+                "Jure Pukl, Marko Churnchetz, Chris Pitsiokos, Philipp Gropper, Bram De Looze, David Gazarov, Felix Henkelhausen, Julius Gawlik, Jan Bang and Arve Henriksen"
+            </strong>
+            ", among others. Through these collaborations, Maj has demonstrated his adaptability and ability to work in diverse musical environments."
+        }.into_any(),
+        view! {
+            "In 2024, he released his debut album, "
+            <strong>
+                <cite>
+                    <q>"Galaterna"</q>
+                </cite>
+            </strong>
+            ", recorded with his quintet and released under the "
+            <strong>"Aut Records"</strong>
+            " label. The album has been well received by critics, being praised for its dynamic and expressive qualities."
+        }.into_any(),
+        view! {
+            "As "
+            <strong>"Pierre Dulieu"</strong>
+            " of JazzMania wrote on September 27, 2024: “This energetic and warm music, tailor-made for club performances, radiates freshness, features generous solos (listening to the trumpeter soar on 'Philosopher’s Stoned' is a treat), and boasts collective playing confidence that makes it exhilarating. Definitely worth a listen!”"
+        }.into_any(),
+        view! {
+            "Additionally, "
+            <strong>"Jan Granlie"</strong>
+            " of "
+            <strong>"Salt Peanuts"</strong>
+            " noted on July 5, 2024, that the album "
+            <cite>
+                <q>
+                    "showcases exceptionally well-played music that draws threads back to the American jazz traditions of the 1960s, while maintaining a clear forward-looking perspective."
+                </q>
+            </cite>
+        }.into_any(),
+        view! {
+            "In 2026, he released his second album, "
+            <strong>"MINOR FLAW"</strong>
+            ", which features a collection of compositions carefully crafted to represent the creative approach he has developed over the years. Featuring a chordless quartet, the project explores the possibilities of expression and tests the limitations of compositional concepts while maintaining a strong connection to the given structure and form. The music carries the influences that shaped his musical identity, ranging from folk and classical music to traditional as well as contemporary jazz."
+        }.into_any(),
+        view! {
+            "Through his dedication to his craft and his passion for music, Maj Kavšek continues to make a mark on the international music scene. His performances, recordings, and collaborations showcase his versatility and his ability to inspire both audiences and fellow musicians alike."
+        }.into_any(),
     ];
 
     let text_content = text_content
