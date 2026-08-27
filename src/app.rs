@@ -1,7 +1,7 @@
 use crate::{
     audio::AudioWrapper,
     head::*,
-    routes::{about::*, error::ErrorTemplate, home::*, media::*, shows::*},
+    routes::{about::*, discography::*, error::ErrorTemplate, home::*, media::*, shows::*},
     MajServerError,
 };
 use core::time::Duration;
@@ -85,6 +85,8 @@ pub fn App() -> impl IntoView {
                             <Route path=path!("/past") view=PastShows />
                             <Route path=path!("/future") view=FutureShows />
                         </ParentRoute>
+                        <Route path=path!("/discography") view=Discography />
+                        <Route path=path!("/discography/:name") view=DiscographyDisplayAlbum />
                         <Route path=path!("/media") view=Media />
                     </Routes>
                 </main>

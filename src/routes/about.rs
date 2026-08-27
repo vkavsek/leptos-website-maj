@@ -364,7 +364,7 @@ async fn read_image_files() -> Result<Vec<String>, ServerFnError> {
 #[cfg(feature = "ssr")]
 fn extract_name(path: Option<&str>) -> String {
     if let Some(path) = path {
-        match path.split('/').last().map(|res| res.to_owned()) {
+        match path.split('/').next_back().map(|res| res.to_owned()) {
             Some(path) => format!("/img/about_pics/{}", path),
             None => "".to_owned(),
         }

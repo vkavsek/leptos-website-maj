@@ -3,6 +3,7 @@
 @import "shows.scss";
 @import "media.scss";
 @import "audio_player.scss";
+@import "discography.scss";
 
 /* app.rs ------ MAIN LAYOUT */
 $maj-yel: #fad549;
@@ -102,7 +103,7 @@ iframe {
     translate: none;
     display: grid;
     justify-items: center;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
   }
 }
 
@@ -123,7 +124,7 @@ iframe {
     position: fixed;
 
     display: grid;
-    grid-template-rows: 1fr 1fr 1fr 1fr;
+    grid-template-rows: repeat(5, 1fr);
     justify-items: center;
     gap: 2%;
   }

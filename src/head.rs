@@ -22,6 +22,9 @@ pub fn NavBar(
     let click_concerts = move |_| {
         do_style(bg_div_ref, ("background-position", "0 bottom"));
     };
+    let click_disco = move |_| {
+        do_style(bg_div_ref, ("background-position", "0 top"));
+    };
     let click_media = move |_| {
         do_style(bg_div_ref, ("background-position", "100% 90%"));
     };
@@ -55,11 +58,18 @@ pub fn NavBar(
                     height="217"
                 />
             </A>
-            // NOTE: old icon kept for width and height reference should they be needed again
-            // <img class="nav-icon nav-icon-3" src="/img/nota.svg" alt="Shows" width="144" height="158"/>
-            <A href="/media" on:click=click_media attr:class="nav-link">
+            <A href="/discography" on:click=click_disco attr:class="nav-link">
                 <img
                     class="nav-icon nav-icon-4"
+                    src="/img/nota.svg"
+                    alt="Shows"
+                    width="108"
+                    height="119"
+                />
+            </A>
+            <A href="/media" on:click=click_media attr:class="nav-link">
+                <img
+                    class="nav-icon nav-icon-5"
                     src="/img/media.svg"
                     alt="Media"
                     width="395"
