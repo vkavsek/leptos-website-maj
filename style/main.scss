@@ -1,9 +1,9 @@
-@import "home.scss";
-@import "about.scss";
-@import "shows.scss";
-@import "media.scss";
-@import "audio_player.scss";
-@import "discography.scss";
+@use "home.scss";
+@use "about.scss";
+@use "shows.scss";
+@use "media.scss";
+@use "audio_player.scss";
+@use "discography.scss";
 
 /* app.rs ------ MAIN LAYOUT */
 $maj-yel: #fad549;

@@ -2,7 +2,7 @@ use super::Song;
 use crate::app::use_interval;
 use leptos::ev::MouseEvent;
 use leptos::{
-    html::{Audio, Button, Div},
+    html::{Audio, Div},
     prelude::*,
 };
 
@@ -97,6 +97,7 @@ pub fn AudioPlayer() -> impl IntoView {
     let play_click = move |_: MouseEvent| {
         let audio = audio_ref.get().unwrap();
 
+        set_duration.set(audio.duration() as u64);
         if audio.paused() {
             set_play_btn_class.set("pause");
             let _ = audio.play();
@@ -199,7 +200,10 @@ pub fn AudioPlayer() -> impl IntoView {
 // ->   UTILS
 // ###################################
 fn extract_name(path: String) -> Option<String> {
-    let res = path.split('/').last().map(|name| name.split('.').next());
+    let res = path
+        .split('/')
+        .next_back()
+        .map(|name| name.split('.').next());
     match res {
         Some(Some(name)) => Some(name.to_string()),
         _ => None,

@@ -3,6 +3,7 @@ use leptos::prelude::*;
 use leptos_meta::{Link, Title};
 use leptos_router::components::A;
 use leptos_router::{hooks::use_params, params::Params};
+use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
 // ###################################
@@ -11,11 +12,8 @@ use strum_macros::EnumIter;
 
 #[component]
 pub fn Discography() -> impl IntoView {
-    // FIX: REMOVE and replace with proper Enum iteration
-    let albums = ALBUMS
-        .iter()
-        .map(|name| {
-            let album = Album::try_init_from_str(*name).expect("valid name in ALBUMS const");
+    let albums = Album::iter()
+        .map(|album| {
             let ae = Album::get_entry(&album);
             let img = Album::get_image(&album);
 
@@ -52,7 +50,7 @@ pub fn Discography() -> impl IntoView {
             </div>
             <div class="contents" id="disco-wrap">
                 <div id="leader-wrap">
-                    <h4 id="disco-heading">"As leader:"</h4>
+                    // <h4 id="disco-heading">"As leader:"</h4>
                     <div id="album-wrap">{albums}</div>
                 </div>
             // <div id="guest-wrap">
@@ -82,7 +80,24 @@ pub fn DiscographyDisplayAlbum() -> impl IntoView {
     let content = move || {
         if let (Some(album), Some(ae)) = (album(), ae()) {
             let image = Album::get_image_hi_res(&album);
-            let links = Album::get_links(&album);
+            let links = Album::get_links(&album).map(|links| {
+                links
+                    .iter()
+                    .map(|link| {
+                        view! {
+                            <a href=link.link class="album-logo" target="_blank" rel="noopener noreferrer">
+                                <img
+                                    src=link.logo_path
+                                    alt=format!("{} Album Artwork", link.link)
+                                    width=link.logo_size_xy.0
+                                    height=link.logo_size_xy.1
+                                />
+                            </a>
+                        }
+                    })
+                    .collect_view()
+            });
+
             let notes = ae
                 .notes
                 .iter()
@@ -108,6 +123,9 @@ pub fn DiscographyDisplayAlbum() -> impl IntoView {
                             width=image.img_size.0
                             height=image.img_size.1
                         />
+                        <div class="album-logo-wrap">
+                            {links}
+                        </div>
                     </div>
                     <div class="album-desc-wrap">
                         {notes} <br /> <p>{ae.label}</p> <p>{ae.release_year}</p>
@@ -135,8 +153,6 @@ pub fn DiscographyDisplayAlbum() -> impl IntoView {
 // ###################################
 // ->     STATICS
 // ###################################
-
-const ALBUMS: [&str; 2] = ["minorflaw", "galaterna"]; //, "galaterna", "minorflaw"];
 
 // const GUEST_APPEARANCES: [&str; 17] = todo!();
 
@@ -199,7 +215,7 @@ impl Album {
                     (256, 256),
                 ),
                 LinkLogo::new(
-                    "https://www.autrecords.com/",
+                    "https://www.autrecords.com/store/maj-kavsek-galaterna/",
                     "/img/foreign-logos/aut-fin.svg",
                     (256, 256),
                 ),
