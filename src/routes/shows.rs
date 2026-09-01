@@ -4,7 +4,7 @@ use leptos_meta::{Link, Title};
 use leptos_router::components::{Outlet, A};
 use serde::{Deserialize, Serialize};
 
-use crate::routes::error::ErrorTemplate;
+use crate::{routes::error::ErrorTemplate, MajServerError};
 
 // ###################################
 // ->   ROUTES
@@ -208,13 +208,9 @@ fn RenderShows(selector: EventSelector) -> impl IntoView {
 /// Only reads the files, deserializes and sorts them on the initial call.
 /// Further calls just return a clone of `Shows`.
 #[server(GetShows, "/api", "GetJson", "get_shows")]
-async fn get_shows() -> Result<EventsSorted, ServerFnError> {
-    let shows = get_shows_util()
-        .await
-        .as_ref()
-        .map_err(ServerFnError::WrappedServerError)?;
-
-    Ok(shows.clone())
+async fn get_shows() -> Result<EventsSorted, MajServerError> {
+    // TODO: Inline this function call. It's like this as a remnant of a previous implementation.
+    get_shows_util().await.to_owned()
 }
 
 #[cfg(feature = "ssr")]

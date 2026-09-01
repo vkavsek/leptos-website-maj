@@ -42,7 +42,7 @@ pub fn Discography() -> impl IntoView {
     //     .collect_view();
 
     view! {
-        <Link rel="icon" href="/img/nota.svg" type_="image/svg" />
+        <Link rel="icon" href="/img/vinyl.svg" type_="image/svg" />
         <Title text="Discography" />
         <div class="components" id="disco-components">
             <div class="title" id="disco-title">
@@ -140,7 +140,7 @@ pub fn DiscographyDisplayAlbum() -> impl IntoView {
         }
     };
     view! {
-        <Link rel="icon" href="/img/nota.svg" type_="image/svg" />
+        <Link rel="icon" href="/img/vinyl.svg" type_="image/svg" />
         <Title text=title />
         <div class="components" id="disco-display-components">
             <div class="title" id="disco-display-title">

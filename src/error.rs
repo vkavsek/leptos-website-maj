@@ -1,12 +1,14 @@
 use http::status::StatusCode;
-use serde::Serialize;
+use leptos::server_fn::error::FromServerFnError;
+use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum MajServerError {
     Internal,
     NotFound,
     Io(String),
     SerdeJson(String),
+    LeptosServerFnError(String),
 }
 
 #[cfg(feature = "ssr")]
@@ -32,6 +34,14 @@ impl From<StatusCode> for MajServerError {
             StatusCode::NOT_FOUND => MajServerError::NotFound,
             _ => MajServerError::Internal,
         }
+    }
+}
+
+impl FromServerFnError for MajServerError {
+    type Encoder = leptos::server_fn::codec::JsonEncoding;
+
+    fn from_server_fn_error(value: leptos::prelude::ServerFnErrorErr) -> Self {
+        Self::LeptosServerFnError(value.to_string())
     }
 }
 

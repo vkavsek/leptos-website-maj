@@ -53,13 +53,9 @@ pub struct YoutubeUrl {
 // ->   Server
 // ###################################
 #[server(GetMediaVideos, "/api", "GetJson", "get_media_videos")]
-async fn get_youtube_videos() -> Result<Vec<YoutubeUrl>, ServerFnError> {
-    let res = get_shows_util()
-        .await
-        .as_ref()
-        .map_err(ServerFnError::WrappedServerError)?;
-
-    Ok(res.clone())
+async fn get_youtube_videos() -> Result<Vec<YoutubeUrl>, crate::MajServerError> {
+    // TODO: Inline this function call. It's like this as a remnant of a previous implementation.
+    get_shows_util().await.to_owned()
 }
 
 #[cfg(feature = "ssr")]

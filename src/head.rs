@@ -61,7 +61,7 @@ pub fn NavBar(
             <A href="/discography" on:click=click_disco attr:title="Discography" attr:class="nav-link">
                 <img
                     class="nav-icon nav-icon-4"
-                    src="/img/nota.svg"
+                    src="/img/vinyl.svg"
                     alt="Shows"
                     width="108"
                     height="119"
