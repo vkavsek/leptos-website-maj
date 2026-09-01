@@ -266,7 +266,7 @@ fn LinkWithModal(
     });
 
     view! {
-        <a href=href_target on:click=click_on_link>
+        <a href=href_target title=alt on:click=click_on_link>
             {opt_text}
             // On each dispatch evaluates if it needs to display an icon, doesn't dynamically change!
             {if_add_image

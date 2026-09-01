@@ -145,7 +145,7 @@ pub fn About() -> impl IntoView {
         .map(|line| view! { <p>{line}</p> })
         .collect_view();
 
-    let mut color = Color::Pink;
+    let mut color = Color::Yellow;
     let init_color = format!("color: {}", color.return_val());
     let init_bg_color = format!("background-color: {}", color.return_val());
     let init_next_bg_color = format!("background-color: {}", (color.other()).return_val());

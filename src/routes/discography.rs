@@ -19,7 +19,7 @@ pub fn Discography() -> impl IntoView {
 
             let addr = ae.title.to_lowercase().replace(" ", "");
             view! {
-                <A href=addr.clone() attr:class="discography-link">
+                <A href=addr.clone() attr:title=format!("More info - {}", ae.title) attr:class="discography-link">
                     <div id="disco-link-container">
                         <img
                             class=format!("album-artwork-{addr}")
@@ -85,7 +85,7 @@ pub fn DiscographyDisplayAlbum() -> impl IntoView {
                     .iter()
                     .map(|link| {
                         view! {
-                            <a href=link.link class="album-logo" target="_blank" rel="noopener noreferrer">
+                            <a href=link.link class="album-logo" title="More info" target="_blank" rel="noopener noreferrer">
                                 <img
                                     src=link.logo_path
                                     alt=format!("{} Album Artwork", link.link)
@@ -129,7 +129,7 @@ pub fn DiscographyDisplayAlbum() -> impl IntoView {
                     </div>
                     <div class="album-desc-wrap">
                         {notes} <br /> <p>{ae.label}</p> <p>{ae.release_year}</p>
-                        <A href="/discography">"Back"</A>
+                        <A href="/discography" attr:title="Return">"Back"</A>
                     </div>
                 </div>
             }

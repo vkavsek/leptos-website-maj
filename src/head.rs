@@ -31,7 +31,7 @@ pub fn NavBar(
 
     view! {
         <nav class="nav-links">
-            <A href="/" on:click=click_home attr:class="nav-link" attr:id="home-nav-link">
+            <A href="/" on:click=click_home attr:title="Home" attr:class="nav-link" attr:id="home-nav-link">
                 <img
                     class="nav-icon nav-icon-1"
                     src="/img/home.svg"
@@ -40,7 +40,7 @@ pub fn NavBar(
                     height="200"
                 />
             </A>
-            <A href="/about_me" on:click=click_about attr:class="nav-link">
+            <A href="/about_me" on:click=click_about attr:title="About" attr:class="nav-link">
                 <img
                     class="nav-icon nav-icon-2"
                     src="/img/izkaznica.svg"
@@ -49,7 +49,7 @@ pub fn NavBar(
                     height="330"
                 />
             </A>
-            <A href="/shows" on:click=click_concerts attr:class="nav-link">
+            <A href="/shows" on:click=click_concerts attr:title="Shows" attr:class="nav-link">
                 <img
                     class="nav-icon nav-icon-3"
                     src="/img/trobenta.svg"
@@ -58,7 +58,7 @@ pub fn NavBar(
                     height="217"
                 />
             </A>
-            <A href="/discography" on:click=click_disco attr:class="nav-link">
+            <A href="/discography" on:click=click_disco attr:title="Discography" attr:class="nav-link">
                 <img
                     class="nav-icon nav-icon-4"
                     src="/img/nota.svg"
@@ -67,7 +67,7 @@ pub fn NavBar(
                     height="119"
                 />
             </A>
-            <A href="/media" on:click=click_media attr:class="nav-link">
+            <A href="/media" on:click=click_media attr:title="Media" attr:class="nav-link">
                 <img
                     class="nav-icon nav-icon-5"
                     src="/img/media.svg"
