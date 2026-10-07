@@ -115,7 +115,13 @@ enum EventSelector {
 #[component]
 fn RenderShows(selector: EventSelector) -> impl IntoView {
     let shows_resource = Resource::new(|| (), |_| async move { get_shows().await });
-    let pivot_date = Utc::now();
+    let pivot_date = Utc::now()
+        .with_time(
+            NaiveTime::from_hms_milli_opt(0, 0, 0, 0)
+                .expect("Unexpected error creating 0000 NaiveTime"),
+        )
+        .single()
+        .unwrap_or(Utc::now());
 
     view! {
         <Link rel="icon" href="/img/nota.svg" type_="image/svg" />
