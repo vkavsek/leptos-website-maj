@@ -1,13 +1,18 @@
 @use "theme";
 
 .email-form {
+  box-sizing: border-box;
   font-size: 0.9rem;
-  height: 80%;
   width: 80%;
   display: grid;
-  grid-template-rows: 1fr 1fr 1fr 6fr 0.5fr;
+  grid-template-rows: repeat(3, auto) minmax(8rem, 1fr) auto;
   justify-items: center;
   gap: 12px;
+
+  * {
+    box-sizing: border-box;
+    min-width: 0;
+  }
 
   > * {
     width: 100%;
@@ -42,6 +47,7 @@ input[type="email"],
 }
 
 .email-form > textarea {
+  min-height: 8rem;
   resize: none;
   font-size: 0.9rem;
   background-color: rgba(10, 30, 51, 1);

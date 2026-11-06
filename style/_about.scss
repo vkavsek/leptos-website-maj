@@ -23,9 +23,6 @@
 }
 
 @media screen and (orientation: portrait) {
-  
-  
-  
   #about-wrap {
     max-height: 100%;
     display: grid;
@@ -43,11 +40,10 @@
 }
 
 .fullscreen-container {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  position: fixed;
+  inset: 0;
+  box-sizing: border-box;
+  padding: 1rem;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -59,6 +55,7 @@
 .fullscreen-img-buttons {
   justify-content: center;
   max-width: 80%;
+  max-height: 100%;
 }
 
 .fullscreen-close {
@@ -81,7 +78,12 @@
 }
 
 .fullscreen-img {
-  all: unset;
+  display: block;
+  width: auto;
+  height: auto;
+  max-height: calc(100vh - 2rem);
+  max-height: calc(100dvh - 2rem);
+  object-fit: contain;
 }
 
 @media screen and (min-height: 500px) {
@@ -281,7 +283,6 @@
   border-bottom-right-radius: 10px;
   color: theme.$pink;
   background: rgba(theme.$background, 0.85);
-  
   overflow: auto;
 
   &:hover {

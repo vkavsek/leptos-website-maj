@@ -30,7 +30,6 @@
 
   .contacts-img:hover {
     transform: scale(1.05);
-    transition: 0.2s ease-in-out;
   }
 }
 
@@ -76,4 +75,7 @@
   cursor: pointer;
   width: 60%;
   height: auto;
+  transition:
+    filter 0.2s ease-in-out,
+    transform 0.2s ease-in-out;
 }

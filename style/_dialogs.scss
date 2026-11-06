@@ -1,72 +1,13 @@
 @use "theme";
 
-@media screen and (orientation: portrait) {
-  .modal {
-    top: 25%;
-    bottom: 25%;
-    left: 10%;
-    right: 10%;
-  }
-
-  .link-modal {
-    left: 2%;
-    right: 2%;
-    top: 34%;
-    bottom: 34%;
-
-    p {
-      padding: 5px;
-      font-size: 1.2rem;
-    }
-  }
-}
-
-@media screen and (orientation: landscape) and (min-height: 700px) {
-  .modal {
-    top: 20%;
-    bottom: 20%;
-    left: 30%;
-    right: 30%;
-    font-size: 1.5rem;
-  }
-
-  .link-modal {
-    left: 25%;
-    right: 25%;
-    top: 26%;
-    bottom: 26%;
-
-    p {
-      padding: 10px;
-      font-size: 1.4rem;
-    }
-
-    .link-buttons button {
-      font-size: 1rem;
-    }
-  }
-}
-
-@media screen and (orientation: landscape) and (max-height: 700px) {
-  .modal {
-    top: 10%;
-    bottom: 10%;
-    left: 20%;
-    right: 20%;
-    font-size: 1.2rem;
-  }
-}
-
-// These defaults intentionally follow responsive rules to preserve the existing cascade.
 .modal {
-  top: 5%;
-  bottom: 5%;
-  left: 5%;
-  right: 5%;
+  inset: 5%;
   position: fixed;
+  box-sizing: border-box;
+  padding: 3.5rem 0 1rem;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
   text-align: center;
   color: theme.$pink;
@@ -76,6 +17,10 @@
   overflow: auto;
 
   > * {
+    box-sizing: border-box;
+    flex-shrink: 0;
+    min-width: 0;
+    max-width: 100%;
     padding: 1rem;
   }
 
@@ -84,6 +29,21 @@
     border: 1px solid theme.$pink;
     border-radius: 20px;
     margin: 1rem;
+  }
+
+  @media screen and (orientation: portrait) {
+    inset: 25% 10%;
+  }
+
+  @media screen and (orientation: landscape) and (min-height: 700px) {
+    inset: 20% 30%;
+    font-size: 1.5rem;
+  }
+
+  // At exactly 700px, retain the compact landscape layout.
+  @media screen and (orientation: landscape) and (max-height: 700px) {
+    inset: 10% 20%;
+    font-size: 1.2rem;
   }
 }
 
@@ -136,12 +96,55 @@
   z-index: 1;
 }
 
-@media screen and (orientation: landscape) and (max-height: 700px) {
-  .link-modal {
-    left: 15%;
-    right: 15%;
-    top: 10%;
-    bottom: 10%;
+.link-modal {
+  display: grid;
+  position: fixed;
+  box-sizing: border-box;
+  background-color: rgba(9, 4, 25, 0.9);
+  border-radius: 15px;
+  justify-items: center;
+  align-items: center;
+  padding: 8px;
+  z-index: 2;
+  overflow: auto;
+
+  > * {
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  p {
+    overflow-wrap: anywhere;
+    text-align: center;
+    border: 1px solid rgba(205, 46, 112, 0.7);
+    border-radius: 7px;
+  }
+
+  @media screen and (orientation: portrait) {
+    inset: 34% 2%;
+
+    p {
+      padding: 5px;
+      font-size: 1.2rem;
+    }
+  }
+
+  @media screen and (orientation: landscape) and (min-height: 700px) {
+    inset: 26% 25%;
+
+    p {
+      padding: 10px;
+      font-size: 1.4rem;
+    }
+
+    .link-buttons button {
+      font-size: 1rem;
+    }
+  }
+
+  @media screen and (orientation: landscape) and (max-height: 700px) {
+    inset: 10% 15%;
 
     p {
       padding: 10px;
@@ -154,21 +157,10 @@
   }
 }
 
-.link-modal {
-  display: grid;
-  position: fixed;
-  background-color: rgba(9, 4, 25, 0.9);
-  border-radius: 15px;
-  justify-items: center;
-  align-items: center;
-  padding: 8px;
-  z-index: 2;
-
-  p {
-    text-align: center;
-    border: 1px solid rgba(205, 46, 112, 0.7);
-    border-radius: 7px;
-  }
+.link-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .link-buttons button {
