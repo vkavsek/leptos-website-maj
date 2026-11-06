@@ -1,8 +1,7 @@
-$maj-yel: #fad549;
-$maj-pink: #ff3988;
+@use "theme";
 
 #disco-display-components {
-  background-color: rgba(9, 4, 21, 1);
+  background-color: rgba(theme.$background, 1);
 }
 
 #disco-wrap {
@@ -32,56 +31,56 @@ $maj-pink: #ff3988;
   overflow: auto;
   overflow-wrap: anywhere;
   margin: 2rem;
-  background-color: rgba(9, 4, 21, 0.8);
+  background-color: rgba(theme.$background, 0.8);
   padding: 2rem;
   width: 70%;
   height: 60%;
   border-radius: 8px;
-}
 
-#guest-album-wrap > p {
-  margin: 1rem;
+  > p {
+    margin: 1rem;
+  }
 }
 
 #disco-heading {
   all: unset;
-  font-family: "LilitaOne", sans-serif;
+  font-family: theme.$font-display, sans-serif;
   font-size: 2rem;
-  text-shadow: 1px 1px $maj-pink;
+  text-shadow: 1px 1px theme.$pink;
   justify-self: start;
   margin: 0 10%;
   width: 100%;
 }
 
 .discography-link {
-  font-family: "IBM Plex Mono", sans-serif;
+  font-family: theme.$font-mono, sans-serif;
   text-decoration: none;
-  color: $maj-yel;
+  color: theme.$yellow;
   border-radius: 8px;
   margin: 0.5rem;
   width: 66%;
   height: fit-content;
   transition: width 0.1s ease-in;
-}
 
-.discography-link:hover {
-  border: 0.2rem solid $maj-pink;
-  width: 70%;
+  &:hover {
+    border: 0.2rem solid theme.$pink;
+    width: 70%;
+  }
 }
 
 #disco-link-container {
-  background-color: rgba(9, 4, 21, 0.6);
+  background-color: rgba(theme.$background, 0.6);
   border-radius: 8px;
   display: flex;
   flex-direction: column;
   align-items: center;
-}
 
-#disco-link-container > img {
-  margin: 1rem;
-  margin-bottom: 0.2rem;
-  max-width: 95%;
-  height: auto;
+  > img {
+    margin: 1rem;
+    margin-bottom: 0.2rem;
+    max-width: 95%;
+    height: auto;
+  }
 }
 
 .album-display-wrap {
@@ -106,14 +105,14 @@ $maj-pink: #ff3988;
   display: flex;
   justify-content: space-around;
   height: fit-content;
-}
 
-.album-logo-wrap > a {
-  width: 20%;
-}
+  > a {
+    width: 20%;
+  }
 
-.album-logo-wrap > a > img {
-  height: auto;
+  > a > img {
+    height: auto;
+  }
 }
 .album-logo-wrap > a:hover > img {
   filter: hue-rotate(-295deg) saturate(100%) brightness(2.5) contrast(100%);
@@ -126,15 +125,15 @@ $maj-pink: #ff3988;
 
 .album-desc-wrap > a {
   all: unset;
-  font-family: "LilitaOne", sans-serif;
+  font-family: theme.$font-display, sans-serif;
   font-size: 2rem;
-  text-shadow: 1px 1px $maj-pink;
+  text-shadow: 1px 1px theme.$pink;
   margin-left: 50%;
 }
 .album-desc-wrap > a:hover {
   cursor: pointer;
-  color: $maj-pink;
-  text-shadow: 1px 1px $maj-yel;
+  color: theme.$pink;
+  text-shadow: 1px 1px theme.$yellow;
 }
 .album-desc-wrap > p {
   margin: 1rem;

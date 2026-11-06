@@ -1,0 +1,91 @@
+@use "theme";
+
+.email-form {
+  font-size: 0.9rem;
+  height: 80%;
+  width: 80%;
+  display: grid;
+  grid-template-rows: 1fr 1fr 1fr 6fr 0.5fr;
+  justify-items: center;
+  gap: 12px;
+
+  > * {
+    width: 100%;
+  }
+}
+
+.form-div {
+  display: grid;
+  justify-items: center;
+
+  > * {
+    height: fit-content;
+    width: 100%;
+  }
+}
+
+input[type="text"],
+input[type="email"],
+.form-div > input,
+.email-form > textarea {
+  width: 100%;
+  font-family: theme.$font-mono, sans-serif;
+  padding: 5px;
+}
+
+.form-div > input {
+  border: none;
+  font-size: 0.9rem;
+  background-color: rgba(10, 30, 51, 1);
+  color: theme.$yellow;
+  border-radius: 10px;
+}
+
+.email-form > textarea {
+  resize: none;
+  font-size: 0.9rem;
+  background-color: rgba(10, 30, 51, 1);
+  color: theme.$yellow;
+  padding: 1rem;
+  border: none;
+  border-radius: 10px;
+}
+
+.submit-button {
+  font-weight: 800;
+  font-size: 1.2rem;
+  border: none;
+  border-radius: 10px;
+  background-color: rgba(10, 30, 51, 1);
+  color: theme.$yellow;
+  font-family: theme.$font-mono, sans-serif;
+  padding: 10px;
+  cursor: pointer;
+  transition: 0.2s ease-in-out;
+
+  &:hover {
+    background-color: rgba(15, 20, 80, 1);
+  }
+}
+
+.submit-button:active {
+  background-color: rgba(45, 8, 80, 1);
+}
+
+.email-sending {
+  width: 30px;
+  height: 30px;
+  background: linear-gradient(theme.$yellow, theme.$pink);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}

@@ -1,0 +1,244 @@
+@use "theme";
+
+@mixin full-grid-stretch {
+  grid-column-start: 1;
+  grid-column-end: 11;
+}
+
+#home-img {
+  width: 80%;
+  padding-top: 10px;
+}
+
+#home-components {
+  align-items: center;
+  grid-template-rows: 1fr 10fr 1fr;
+  grid-template-columns: repeat(10, 1fr);
+
+  > *:first-child {
+    @include full-grid-stretch;
+  }
+
+  > *:last-child {
+    @include full-grid-stretch;
+  }
+
+  @media screen and (orientation: portrait) {
+    & {
+      height: 100%;
+    }
+
+    #home-title {
+      margin-top: 30%;
+    }
+
+    #home-bottom {
+      height: 100%;
+      justify-content: flex-end;
+      align-items: center;
+      margin-left: 0;
+    }
+
+    .home-center {
+      justify-items: center;
+      width: 50%;
+      max-height: 70%;
+
+      &:hover {
+        position: fixed;
+        inset: 0;
+        width: 100vw;
+        bottom: 0;
+      }
+
+      &:hover #home-album-img {
+        max-width: 50%;
+      }
+    }
+
+    .galaterna-promo {
+      width: 40%;
+    }
+  }
+
+  @media screen and (orientation: landscape) {
+    #home-bottom {
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    .home-center {
+      grid-auto-flow: column;
+      justify-items: center;
+      align-items: center;
+      justify-content: space-around;
+      width: 20%;
+      max-height: 80%;
+
+      &:hover {
+        width: 80%;
+      }
+    }
+
+    .minorflaw-promo {
+      width: 30%;
+    }
+  }
+
+  .home-container {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    overflow: scroll;
+
+    width: 100%;
+    grid-column-start: 1;
+    grid-column-end: 11;
+  }
+
+  #home-bottom {
+    display: flex;
+    align-self: end;
+    flex-direction: column;
+    margin: 0;
+    max-height: 100%;
+    grid-row: 3;
+  }
+
+  .home-center#home-animated {
+    animation: inflateDeflate 1.8s 2;
+
+    @keyframes inflateDeflate {
+      30%,
+      60% {
+        transform: scale(1);
+      }
+
+      38% {
+        transform: scale(1.1);
+      }
+
+      45% {
+        transform: scale(0.99);
+      }
+
+      52% {
+        transform: scale(1.05);
+      }
+    }
+  }
+
+  .home-center {
+    padding: 20px;
+    border-radius: 6px;
+    background-color: rgba(9, 4, 32, 0.7);
+
+    overflow: auto;
+
+    &:hover {
+      background-color: rgba(9, 4, 32, 0.9);
+    }
+
+    #album-img-title-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #album-promo-title {
+      font-family: theme.$font-display, sans-serif;
+      text-shadow: 2px 2px theme.$pink;
+      font-size: 1rem;
+      margin: 0;
+      margin-top: 5px;
+      transition: font-size 0.2s;
+    }
+
+    &:hover #album-promo-title {
+      font-size: 2rem;
+    }
+
+    #home-hide {
+      padding: 16px 32px;
+      text-align: center;
+      max-width: 600px;
+      display: none;
+      transition: display 0s 0.2s;
+
+      > * {
+        padding: 4px;
+        transition:
+          display 0s 0.2s,
+          opacity 0.2s ease-in-out;
+      }
+
+      > * a {
+        color: theme.$pink;
+      }
+    }
+
+    #home-album-img {
+      max-width: 100%;
+      height: auto;
+      transition: max-width 0.2s ease-out;
+    }
+
+    &:hover #home-hide {
+      display: block;
+    }
+
+    &:hover #home-hide > * {
+      display: block;
+    }
+
+    &:hover #home-hide > * a {
+      color: theme.$pink;
+    }
+
+    #home-album-text {
+      font-size: 0.9rem;
+    }
+
+    #home-album-links {
+      flex-direction: column;
+      display: none;
+      width: 50%;
+      justify-content: space-evenly;
+      transition: display 0s 0.2s;
+
+      > a {
+        width: 100%;
+        display: grid;
+        align-content: center;
+        justify-items: center;
+        margin: 24px 0px;
+
+        &:hover .contacts-img {
+          filter: hue-rotate(-295deg) saturate(100%) brightness(2)
+            contrast(100%);
+          transform: scale(1.2);
+        }
+
+        > * {
+          width: 80%;
+          height: auto;
+        }
+      }
+    }
+
+    &:hover #home-album-links {
+      display: flex;
+    }
+
+    @media screen and (orientation: portrait) {
+      #home-album-links {
+        flex-direction: row;
+        width: 100%;
+      }
+
+      #home-album-links > a {
+        width: 10%;
+      }
+    }
+  }
+}

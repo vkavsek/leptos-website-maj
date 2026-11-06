@@ -1,14 +1,16 @@
-@use "home.scss";
-@use "about.scss";
-@use "shows.scss";
-@use "media.scss";
-@use "audio_player.scss";
-@use "discography.scss";
+@use "theme";
 
-/* app.rs ------ MAIN LAYOUT */
-$maj-yel: #fad549;
-$maj-pink: #ff3988;
+@use "home";
+@use "contacts";
+@use "dialogs";
+@use "forms";
+@use "about";
+@use "shows";
+@use "media";
+@use "audio-player";
+@use "discography";
 
+// Scrollbars
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
@@ -19,7 +21,7 @@ $maj-pink: #ff3988;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(9, 4, 21, 0.6);
+  background: rgba(theme.$background, 0.6);
   border-radius: 30px;
   border-bottom-left-radius: 0;
   border-top-left-radius: 0;
@@ -31,35 +33,36 @@ $maj-pink: #ff3988;
 }
 
 #shows-wrap::-webkit-scrollbar-track {
-  background: rgba(9, 4, 21, 0.9);
+  background: rgba(theme.$background, 0.9);
   border-top-right-radius: 0;
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 57, 136, 0.5);
+  background-color: rgba(theme.$pink, 0.5);
   border-radius: 30px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: $maj-pink;
+  background-color: theme.$pink;
 }
 
 ::-webkit-scrollbar-thumb:active {
-  background-color: $maj-yel;
+  background-color: theme.$yellow;
 }
 
 @supports (scrollbar-color: red blue) {
   * {
-    scrollbar-color: rgba(255, 57, 136, 0.5) rgba(9, 4, 21, 0.6);
+    scrollbar-color: rgba(theme.$pink, 0.5) rgba(theme.$background, 0.6);
   }
 }
 
+// Base elements
 body {
   margin: 0;
   padding: 0;
-  background-color: rgba(9, 4, 21, 1);
-  font-family: "IBM Plex Mono", sans-serif;
-  color: $maj-yel;
+  background-color: rgba(theme.$background, 1);
+  font-family: theme.$font-mono, sans-serif;
+  color: theme.$yellow;
 
   font-size: 1rem;
   font-weight: 400;
@@ -87,6 +90,7 @@ iframe {
   border-color: rgba(0, 0, 0, 0);
 }
 
+// App layout and navigation
 @media screen and (orientation: portrait) {
   .bg-wrapper {
     display: flex;
@@ -152,7 +156,7 @@ iframe {
   background-repeat: no-repeat;
 }
 
-/* routes.rs ------ GENERAL LAYOUT */
+// Shared route layout
 .components {
   display: grid;
   justify-items: center;
@@ -201,14 +205,14 @@ iframe {
   justify-content: center;
   align-items: center;
   transition: 0.2s ease-in-out;
-}
 
-.nav-link:hover {
-  transform: scale(1.2);
-}
+  &:hover {
+    transform: scale(1.2);
+  }
 
-.nav-link[aria-current="page"] {
-  transform: scale(1);
+  &[aria-current="page"] {
+    transform: scale(1);
+  }
 }
 
 .nav-icon {
@@ -238,16 +242,16 @@ iframe {
 .title {
   display: flex;
   justify-content: center;
-  font-family: "LilitaOne", sans-serif;
-}
+  font-family: theme.$font-display, sans-serif;
 
-.title h1 {
-  all: unset;
-  font-family: "LilitaOne", sans-serif;
-  text-align: center;
-  margin-top: 5%;
-  margin-bottom: 3%;
-  text-shadow: 5px 5px $maj-pink;
+  & h1 {
+    all: unset;
+    font-family: theme.$font-display, sans-serif;
+    text-align: center;
+    margin-top: 5%;
+    margin-bottom: 3%;
+    text-shadow: 5px 5px theme.$pink;
+  }
 }
 
 @media screen and (orientation: portrait) {
@@ -284,42 +288,42 @@ iframe {
   justify-content: center;
 }
 
-/* ERRORS */
+// Error pages
 .error-wrap {
   display: flex;
   justify-content: center;
   align-items: center;
   height: 100vh;
   margin-left: 15%;
-}
 
-.error-wrap > * {
-  background-color: rgba(9, 4, 21, 0.6);
-  border-radius: 16px;
-  display: flex;
-  flex-direction: column;
-  align-content: center;
-  padding: 16px;
-}
+  > * {
+    background-color: rgba(theme.$background, 0.6);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    align-content: center;
+    padding: 16px;
+  }
 
-.error-wrap > * > * {
-  text-align: center;
-  font-size: 1.5rem;
-  padding: 16px;
-}
+  > * > * {
+    text-align: center;
+    font-size: 1.5rem;
+    padding: 16px;
+  }
 
-.error-wrap > * > a {
-  all: unset;
-  text-align: center;
-  font-size: 1.5rem;
-  padding: 16px;
-  border-radius: 16px;
-  background-color: $maj-pink;
-}
+  > * > a {
+    all: unset;
+    text-align: center;
+    font-size: 1.5rem;
+    padding: 16px;
+    border-radius: 16px;
+    background-color: theme.$pink;
+  }
 
-.error-wrap > * > a:hover {
-  cursor: pointer;
-  background-color: rgba(230, 50, 120, 1);
+  > * > a:hover {
+    cursor: pointer;
+    background-color: rgba(230, 50, 120, 1);
+  }
 }
 
 .error-subtitle {
@@ -328,7 +332,7 @@ iframe {
 }
 
 .error-title {
-  font-family: "LilitaOne", sans-serif;
+  font-family: theme.$font-display, sans-serif;
   font-size: 4rem;
-  text-shadow: 5px 5px $maj-pink;
+  text-shadow: 5px 5px theme.$pink;
 }
