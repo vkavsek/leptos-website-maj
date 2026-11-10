@@ -35,3 +35,7 @@ Recent commits use `FEAT:`, `FIX:`, or `UPDATE:` followed by short descriptions.
 ## Security & Generated Files
 
 Supply `PORKMAIL_PWD` through the environment; never commit credentials. Treat `target/site/` and `pkg/` as generated output. Edit source assets in `public/` and `style/` instead.
+
+## Additional Guidelines
+
+The project is being actively developed on multiple different machines. Avoid including machine specific instructions in general documentation. For instance: keep it generic to Linux, not my Raspberry Pi.

@@ -2,6 +2,12 @@ use leptos::{ev::MouseEvent, form::ActionForm, html::Div, prelude::*};
 use leptos_meta::{Link, Title};
 use leptos_use::use_element_hover;
 
+#[cfg(feature = "ssr")]
+use std::{
+    sync::Mutex,
+    time::{Duration, Instant},
+};
+
 #[allow(unused)]
 const EMAIL_ADDR: &str = "kavsekmaj@gmail.com";
 
@@ -307,10 +313,15 @@ fn LinkWithModal(
     }
 }
 
+const MAX_NAME_LENGTH: usize = 100;
+const MAX_EMAIL_LENGTH: usize = 254;
+const MAX_SUBJECT_LENGTH: usize = 200;
+const MAX_MESSAGE_LENGTH: usize = 10_000;
+const MAIL_RATE_LIMIT_MESSAGE: &str =
+    "The contact form has reached its hourly sending limit. Please try again later.";
+
 #[component]
 fn Mail() -> impl IntoView {
-    const EMAIL_PATTERN: &str = r".+@.+\..+";
-
     let (show_mail, set_show_mail) = signal(false);
     let mail_ref = NodeRef::new();
 
@@ -330,6 +341,20 @@ fn Mail() -> impl IntoView {
     });
 
     let mail_action = ServerAction::<SendMail>::new();
+    let mail_error_ref = NodeRef::<leptos::html::P>::new();
+
+    // Keep server errors visible inside the scrollable dialog.
+    Effect::new(move |_| {
+        if mail_action
+            .value()
+            .get()
+            .is_some_and(|result| result.is_err())
+        {
+            if let Some(error) = mail_error_ref.get() {
+                error.scroll_into_view_with_bool(false);
+            }
+        }
+    });
 
     // TODO: Improve this, does it have to be this complicated?
     let (control_input, set_control_input) = signal(0);
@@ -356,6 +381,7 @@ fn Mail() -> impl IntoView {
             Some(
                 view! {
                     <div
+                        role="status"
                         style:display="flex"
                         style:width="100%"
                         style="justify-content: space-evenly"
@@ -368,8 +394,15 @@ fn Mail() -> impl IntoView {
             )
         } else {
             mail_action.value().get().map(|mail| match mail {
-                Ok(_) => view! { <p>"Email sent!"</p> }.into_any(),
-                Err(_) => view! { <p>"Internal server error! Couldn't send the email, please try again later!"</p> }.into_any(),
+                Ok(_) => view! { <p role="status">"Email sent!"</p> }.into_any(),
+                Err(error) => {
+                    let message = match error {
+                        ServerFnError::Args(message) => message,
+                        ServerFnError::ServerError(message) if message == MAIL_RATE_LIMIT_MESSAGE => message,
+                        _ => "Internal server error! Couldn't send the email, please try again later!".to_owned(),
+                    };
+                    view! { <p role="alert" node_ref=mail_error_ref>{message}</p> }.into_any()
+                },
             })
         }
     };
@@ -409,6 +442,7 @@ fn Mail() -> impl IntoView {
                             type="text"
                             class="name-input"
                             placeholder="Your Name"
+                            maxlength=MAX_NAME_LENGTH
                         />
                     </div>
                     <div class="form-div">
@@ -420,7 +454,7 @@ fn Mail() -> impl IntoView {
                             id="email"
                             class="email-input"
                             type="email"
-                            pattern=EMAIL_PATTERN
+                            maxlength=MAX_EMAIL_LENGTH
                             placeholder="email@example.com"
                             required
                         />
@@ -435,6 +469,7 @@ fn Mail() -> impl IntoView {
                             id="email-subject"
                             type="text"
                             placeholder="Message subject"
+                            maxlength=MAX_SUBJECT_LENGTH
                             required
                         />
                     </div>
@@ -442,9 +477,15 @@ fn Mail() -> impl IntoView {
                         class="email-content"
                         name="email_content"
                         placeholder="Your message"
+                        maxlength=MAX_MESSAGE_LENGTH
                         required
                     ></textarea>
-                    <input class="submit-button" type="submit" value="Send" />
+                    <input
+                        class="submit-button"
+                        type="submit"
+                        value="Send"
+                        disabled=move || mail_action.pending().get()
+                    />
                     {display_mail_status}
                 </ActionForm>
             </div>
@@ -455,8 +496,69 @@ fn Mail() -> impl IntoView {
 // ###################################
 // ->   SERVER
 // ###################################
-/// Takes (Name, Email, Email Subject, Email Content) as input and sends an email, returning errors
-/// if any.
+#[cfg(feature = "ssr")]
+// shortcut: allowance resets per process; use shared storage for a durable cap across replicas.
+static MAIL_ATTEMPTS: Mutex<Vec<Instant>> = Mutex::new(Vec::new());
+
+#[cfg(feature = "ssr")]
+fn validate_mail(
+    name: &str,
+    email: &str,
+    subject: &str,
+    message: &str,
+) -> Result<(), ServerFnError> {
+    if name.encode_utf16().count() > MAX_NAME_LENGTH || name.chars().any(char::is_control) {
+        return Err(ServerFnError::Args(format!(
+            "Name must be a single line of at most {MAX_NAME_LENGTH} characters."
+        )));
+    }
+    if email.is_empty()
+        || email.len() > MAX_EMAIL_LENGTH
+        || email.chars().any(char::is_control)
+        || email.parse::<lettre::Address>().is_err()
+    {
+        return Err(ServerFnError::Args(
+            "Email address is invalid or too long.".to_owned(),
+        ));
+    }
+    if subject.trim().is_empty()
+        || subject.encode_utf16().count() > MAX_SUBJECT_LENGTH
+        || subject.chars().any(char::is_control)
+    {
+        return Err(ServerFnError::Args(format!(
+            "Enter a single-line subject of 1 to {MAX_SUBJECT_LENGTH} characters."
+        )));
+    }
+    if message.trim().is_empty()
+        || message.encode_utf16().count() > MAX_MESSAGE_LENGTH
+        || message
+            .chars()
+            .any(|ch| ch.is_control() && !matches!(ch, '\r' | '\n' | '\t'))
+    {
+        return Err(ServerFnError::Args(format!(
+            "Enter a message of 1 to {MAX_MESSAGE_LENGTH} characters, using normal text, line breaks or tabs."
+        )));
+    }
+    Ok(())
+}
+
+#[cfg(feature = "ssr")]
+fn reserve_mail_attempt(
+    attempts: &Mutex<Vec<Instant>>,
+    now: Instant,
+) -> Result<bool, ServerFnError> {
+    let mut attempts = attempts
+        .lock()
+        .map_err(|_| ServerFnError::new("The email service is temporarily unavailable."))?;
+    attempts.retain(|attempt| now.saturating_duration_since(*attempt) < Duration::from_secs(3600));
+    if attempts.len() >= 10 {
+        return Ok(false);
+    }
+    attempts.push(now);
+    Ok(true)
+}
+
+/// Validates a contact message and reserves one of ten send attempts per rolling hour.
 #[server(name = SendMail)]
 async fn send_mail(
     name: String,
@@ -470,12 +572,31 @@ async fn send_mail(
     };
     use tracing::{error, info};
 
+    let name = name.trim();
+    let email = email.trim();
+    let email_subject = email_subject.trim();
+    let email_content = email_content.trim();
+    let response = use_context::<leptos_axum::ResponseOptions>();
+
+    if let Err(error) = validate_mail(name, email, email_subject, email_content) {
+        if let Some(response) = response {
+            response.set_status(http::StatusCode::BAD_REQUEST);
+        }
+        return Err(error);
+    }
+    if !reserve_mail_attempt(&MAIL_ATTEMPTS, Instant::now())? {
+        if let Some(response) = response {
+            response.set_status(http::StatusCode::TOO_MANY_REQUESTS);
+        }
+        return Err(ServerFnError::new(MAIL_RATE_LIMIT_MESSAGE));
+    }
+
     info!(name = %name, address = %email, subject = %email_subject, email_content = %email_content, "SENDING EMAIL");
     let email = Message::builder()
         .from("Info <info@majkavsek.com>".parse().unwrap())
         .to("Maj <kavsekmaj@gmail.com>".parse().unwrap())
         .cc("Vid <vkavsek@gmail.com>".parse().unwrap())
-        .subject(email_subject.clone())
+        .subject(email_subject)
         .header(ContentType::TEXT_PLAIN)
         .body(format!(
             "Sender INFO:\n\n{:*>20}{name}\n{:*>20}{email}\n\n\nEmail CONTENT:\n\n{email_content}",
@@ -502,4 +623,190 @@ async fn send_mail(
     }
     // Map the `Response` to `()` and convert Error.
     res.map(|_res| {}).map_err(|e| e.into())
+}
+
+#[cfg(all(test, feature = "ssr"))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mail_validation_accepts_unicode_and_boundary_lengths() {
+        assert!(validate_mail(
+            "Žan Kavšek",
+            "booking+concert@example.com",
+            "Koncert v Ljubljani",
+            "Pozdravljeni,\r\n\tSe lahko dogovorimo za koncert?\nHvala!"
+        )
+        .is_ok());
+        assert!(validate_mail("", "booking@example.com", "Booking", "Hello").is_ok());
+
+        let email = format!(
+            "{}@{}.{}.{}",
+            "a".repeat(64),
+            "b".repeat(63),
+            "c".repeat(63),
+            "d".repeat(61)
+        );
+        assert_eq!(email.len(), 254);
+        assert!(validate_mail(
+            &"🎺".repeat(50),
+            &email,
+            &"š".repeat(200),
+            &"🎺".repeat(5000)
+        )
+        .is_ok());
+    }
+
+    #[test]
+    fn mail_validation_rejects_missing_malformed_and_control_character_input() {
+        for (name, email, subject, message) in [
+            ("", "", "Booking", "Hello"),
+            ("", " ", "Booking", "Hello"),
+            ("", "not-an-email", "Booking", "Hello"),
+            ("", "Name <booking@example.com>", "Booking", "Hello"),
+            ("", "booking@example.com\n", "Booking", "Hello"),
+            ("", "booking@example.com", "", "Hello"),
+            ("", "booking@example.com", " \t ", "Hello"),
+            ("", "booking@example.com", "Booking", ""),
+            ("", "booking@example.com", "Booking", " \r\n\t "),
+            ("A\nB", "booking@example.com", "Booking", "Hello"),
+            (
+                "",
+                "booking@example.com",
+                "Booking\r\nBcc: other@example.com",
+                "Hello",
+            ),
+            ("", "booking@example.com", "Booking", "Hello\0"),
+            ("", "booking@example.com", "Booking", "Hello\u{7f}"),
+        ] {
+            assert!(matches!(
+                validate_mail(name, email, subject, message),
+                Err(ServerFnError::Args(_))
+            ));
+        }
+    }
+
+    #[test]
+    fn mail_validation_rejects_overlong_fields() {
+        assert!(
+            validate_mail(&"n".repeat(101), "booking@example.com", "Booking", "Hello").is_err()
+        );
+        assert!(
+            validate_mail(&"🎺".repeat(51), "booking@example.com", "Booking", "Hello").is_err()
+        );
+        let email = format!(
+            "{}@{}.{}.{}",
+            "a".repeat(64),
+            "b".repeat(63),
+            "c".repeat(63),
+            "d".repeat(62)
+        );
+        assert_eq!(email.len(), 255);
+        assert!(validate_mail("", &email, "Booking", "Hello").is_err());
+        assert!(validate_mail("", "booking@example.com", &"s".repeat(201), "Hello").is_err());
+        assert!(validate_mail("", "booking@example.com", "Booking", &"m".repeat(10_001)).is_err());
+    }
+
+    #[test]
+    fn mail_rate_limit_uses_a_rolling_hour_and_bounds_storage() {
+        let attempts = Mutex::new(Vec::new());
+        let start = Instant::now();
+        for _ in 0..9 {
+            assert!(reserve_mail_attempt(&attempts, start).unwrap());
+        }
+        assert!(reserve_mail_attempt(&attempts, start + Duration::from_secs(1)).unwrap());
+        assert!(!reserve_mail_attempt(&attempts, start + Duration::from_secs(3599)).unwrap());
+        assert_eq!(attempts.lock().unwrap().len(), 10);
+
+        for _ in 0..9 {
+            assert!(reserve_mail_attempt(&attempts, start + Duration::from_secs(3600)).unwrap());
+        }
+        assert!(!reserve_mail_attempt(&attempts, start + Duration::from_secs(3600)).unwrap());
+        assert!(reserve_mail_attempt(&attempts, start + Duration::from_secs(3601)).unwrap());
+        assert!(!reserve_mail_attempt(&attempts, start + Duration::from_secs(3601)).unwrap());
+        assert_eq!(attempts.lock().unwrap().len(), 10);
+    }
+
+    #[test]
+    fn mail_rate_limit_is_atomic_across_threads() {
+        let attempts = Mutex::new(Vec::new());
+        let barrier = std::sync::Barrier::new(20);
+        let now = Instant::now();
+        let admitted: usize = std::thread::scope(|scope| {
+            let workers = (0..20)
+                .map(|_| {
+                    scope.spawn(|| {
+                        barrier.wait();
+                        reserve_mail_attempt(&attempts, now).unwrap()
+                    })
+                })
+                .collect::<Vec<_>>();
+            workers
+                .into_iter()
+                .map(|worker| usize::from(worker.join().unwrap()))
+                .sum()
+        });
+        assert_eq!(admitted, 10);
+        assert_eq!(attempts.lock().unwrap().len(), 10);
+    }
+
+    #[test]
+    fn mail_rate_limit_rejects_sending_if_the_mutex_is_poisoned() {
+        let attempts = Mutex::new(Vec::new());
+        let _ = std::panic::catch_unwind(|| {
+            let _guard = attempts.lock().unwrap();
+            panic!("Simulate a failed limiter update");
+        });
+        assert!(reserve_mail_attempt(&attempts, Instant::now()).is_err());
+    }
+
+    #[tokio::test]
+    async fn mail_handler_rejects_invalid_and_limited_requests_before_smtp() {
+        use axum::{
+            body::{to_bytes, Body},
+            routing::post,
+            Router,
+        };
+        use http::{
+            header::{ACCEPT, CONTENT_TYPE},
+            Request, StatusCode,
+        };
+        use leptos::server_fn::{error::FromServerFnError, ServerFn};
+        use tower::ServiceExt;
+
+        let app = Router::new().route(SendMail::PATH, post(leptos_axum::handle_server_fns));
+        let request = |body: &str| {
+            Request::post(SendMail::PATH)
+                .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .header(ACCEPT, "application/json")
+                .body(Body::from(body.to_owned()))
+                .unwrap()
+        };
+        for body in [
+            "name=&email=bad&email_subject=Booking&email_content=Hello",
+            "name=&email=booking%40example.com&email_subject=%20%09&email_content=Hello",
+            "name=&email=booking%40example.com&email_subject=Booking&email_content=%20%0A%09",
+        ] {
+            let response = app.clone().oneshot(request(body)).await.unwrap();
+            assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+            let body = to_bytes(response.into_body(), 4096).await.unwrap();
+            let error: ServerFnError = ServerFnError::de(body);
+            assert!(matches!(error, ServerFnError::Args(_)));
+            assert!(MAIL_ATTEMPTS.lock().unwrap().is_empty());
+        }
+
+        *MAIL_ATTEMPTS.lock().unwrap() = vec![Instant::now(); 10];
+        let response = app.oneshot(request(
+            "name=%20%20&email=%20booking%40example.com%20&email_subject=%20Booking%20&email_content=%20Hello%20"
+        )).await.unwrap();
+        let attempts = MAIL_ATTEMPTS.lock().unwrap().len();
+        MAIL_ATTEMPTS.lock().unwrap().clear();
+        assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS);
+        assert_eq!(attempts, 10);
+        let body = to_bytes(response.into_body(), 4096).await.unwrap();
+        assert_eq!(
+            ServerFnError::de(body),
+            ServerFnError::new(MAIL_RATE_LIMIT_MESSAGE)
+        );
+    }
 }
