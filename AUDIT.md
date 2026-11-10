@@ -27,6 +27,15 @@ What this repo does: A public portfolio for Maj Kavšek, built with Rust, Leptos
    - **Problem:** The log includes the sender’s name, address, subject, and complete message—even when sending fails.
    - **Fix:** Log the request ID and delivery result; remove message contents and personal fields. This follows [OWASP logging guidance](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html).
    - **If we skip it:** Private correspondence also lives in the hosting logs, with separate access and retention.
+   - **Status:** Resolved on 2026-11-10. Contact delivery logs now record only
+     `delivery=sent` or `delivery=failed` in the existing request ID span. Personal
+     fields, message contents, and raw SMTP success/error replies are omitted;
+     see [the documented logging policy](BUILD.md#contact-form-protections).
+   - **Verified:** All seven Rust tests, formatting, Clippy, and a source allowlist check
+     passed; the handler's only log events contain static delivery outcomes, and the
+     request ID span is retained. No SMTP delivery was attempted.
+   - **Known limit:** Previously recorded private data remains subject to the hosting
+     provider's log access and retention controls; this code change does not delete it.
 
 3. **Audio ranges and cache checks are discarded** — [fallback.rs:20](/home/vkav/PROJECTS/rust/leptos-website-maj/src/fallback.rs:20), [serve.rs:158](/home/vkav/PROJECTS/rust/leptos-website-maj/src/serve.rs:158)
 
@@ -125,6 +134,7 @@ What this repo does: A public portfolio for Maj Kavšek, built with Rust, Leptos
 
 Original audit verification (2026-11-08): Checked all application source, styles, content files, build/deploy configuration, and existing tests. Main routes and read-only APIs responded locally; all 78 show dates parsed. The WebAssembly compilation check passed. Browser checks used the existing build artifacts. No source files changed during the audit, and the audit server was stopped.
 
-Verdict: Contact validation and sending limits are fixed. Fix private-message logging and file serving next; replace the obsolete browser test.  
+Verdict: Contact validation, sending limits, and private-message logging are fixed. Fix file serving next; replace the obsolete browser test.
+
 Lean: -300 lines, -1 dependency possible, plus over 61 MB of unused backgrounds.  
 Not checked: Live email delivery, Fly production behavior, a full Docker/release build, dependency advisories, or load testing.

@@ -591,7 +591,6 @@ async fn send_mail(
         return Err(ServerFnError::new(MAIL_RATE_LIMIT_MESSAGE));
     }
 
-    info!(name = %name, address = %email, subject = %email_subject, email_content = %email_content, "SENDING EMAIL");
     let email = Message::builder()
         .from("Info <info@majkavsek.com>".parse().unwrap())
         .to("Maj <kavsekmaj@gmail.com>".parse().unwrap())
@@ -618,8 +617,8 @@ async fn send_mail(
     let res = mailer.send(email).await;
 
     match res {
-        Ok(ref response) => info!("Sent email: {:?}", response),
-        Err(ref e) => error!("{e}"),
+        Ok(_) => info!(delivery = "sent", "Contact email delivery"),
+        Err(_) => error!(delivery = "failed", "Contact email delivery"),
     }
     // Map the `Response` to `()` and convert Error.
     res.map(|_res| {}).map_err(|e| e.into())

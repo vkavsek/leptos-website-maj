@@ -23,8 +23,8 @@ Notes on building for development and publishing to production.
 
 ## Contact form protections
 
-The server trims surrounding whitespace and validates each submission before logging it,
-reserving a sending slot, or contacting SMTP:
+The server trims surrounding whitespace and validates each submission before reserving
+a sending slot or contacting SMTP:
 
 | Field | Requirement |
 | --- | --- |
@@ -46,6 +46,13 @@ The allowance lives in memory and resets on restart. Each replica has its own al
 and one visitor can use the entire shared allowance. The policy is implemented beside
 `send_mail` in `src/routes/home.rs`; no new environment settings or services are needed.
 Continue supplying `PORKMAIL_PWD` through the environment.
+
+Contact delivery logs contain only `delivery=sent` or `delivery=failed` within the
+existing request span (`req`, with its `id` from `x-request-id`). Names, email addresses,
+subjects, message bodies, and raw SMTP replies are not logged by the contact handler.
+Use the request ID to correlate delivery results with HTTP request logs. This change
+does not remove private data already present in hosting logs; manage those logs using
+the hosting provider's access and retention controls.
 
 On Linux, run the focused tests with the same component-erasure flag used by the
 Dockerfile, without SMTP credentials:
