@@ -43,6 +43,15 @@ What this repo does: A public portfolio for Maj Kavšek, built with Rust, Leptos
    - **Problem:** A request for two audio bytes returned a full-file response of 6.9 MB. Matching cache checks also returned `200`, because headers are removed and the replacement date comparison excludes equality.
    - **Fix:** Pass the original headers to `ServeDir`, preserve its responses except genuine missing-file responses, and delete the custom date handling.
    - **If we skip it:** Seeking and repeat visits transfer unnecessary data.
+   - **Status:** Resolved on 2026-11-10. Original request headers reach `ServeDir`,
+     and only its `404` responses render the app's error page. The custom date
+     middleware/parser and direct `lazy-regex` dependency were removed. Existing
+     compression and Cache-Control policy remain; see [file-response behavior](BUILD.md#static-file-responses).
+   - **Verified:** Four regression tests cover two-byte audio ranges, matching and
+     older/newer/invalid cache dates, HEAD responses, unsatisfiable ranges, unsupported
+     methods, failed preconditions, directory redirects, and the HTML `404` fallback.
+     All eleven Rust tests, formatting, and Clippy passed. Production/browser playback
+     and a full Docker/release build were not checked.
 
 4. **One invalid show date can crash both show lists** — [shows.rs:146](/home/vkav/PROJECTS/rust/leptos-website-maj/src/routes/shows.rs:146)
 
@@ -134,7 +143,7 @@ What this repo does: A public portfolio for Maj Kavšek, built with Rust, Leptos
 
 Original audit verification (2026-11-08): Checked all application source, styles, content files, build/deploy configuration, and existing tests. Main routes and read-only APIs responded locally; all 78 show dates parsed. The WebAssembly compilation check passed. Browser checks used the existing build artifacts. No source files changed during the audit, and the audit server was stopped.
 
-Verdict: Contact validation, sending limits, and private-message logging are fixed. Fix file serving next; replace the obsolete browser test.
+Verdict: Contact validation, sending limits, private-message logging, and file serving are fixed. Fix show date validation next; replace the obsolete browser test.
 
 Lean: -300 lines, -1 dependency possible, plus over 61 MB of unused backgrounds.  
 Not checked: Live email delivery, Fly production behavior, a full Docker/release build, dependency advisories, or load testing.

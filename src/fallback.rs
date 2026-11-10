@@ -17,23 +17,15 @@ pub async fn static_file_and_err_handler(
     let root = options.site_root.clone();
     let (parts, body) = req.into_parts();
 
-    let mut static_parts = parts.clone();
-    static_parts.headers.clear();
-    if let Some(encodings) = parts.headers.get("accept-encoding") {
-        static_parts
-            .headers
-            .insert("accept-encoding", encodings.clone());
-    }
-
-    let res = match get_static_file(Request::from_parts(static_parts, Body::empty()), &root).await {
+    let res = match get_static_file(Request::from_parts(parts.clone(), Body::empty()), &root).await
+    {
         Ok(res) => res,
         Err(err) => err.into_response(),
     };
 
-    // Return the file if found or render App to stream,
-    // in which case the App renders the 404 page.
-    if res.status() == StatusCode::OK {
-        res.into_response()
+    // Only missing files should render the app's 404 page.
+    if res.status() != StatusCode::NOT_FOUND {
+        res
     } else {
         let request = format!("{} @ {}", parts.method, parts.uri);
 

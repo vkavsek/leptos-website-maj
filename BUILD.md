@@ -63,3 +63,21 @@ env -u PORKMAIL_PWD RUSTFLAGS="--cfg erase_components" cargo test --locked --off
 
 The tests cover validation, rolling expiry, simultaneous requests, and rejected HTTP
 requests. They do not send email.
+
+## Static file responses
+
+Static requests pass their original headers to `ServeDir`, which handles byte ranges
+and cache preconditions. Audio range requests return `206` with the requested bytes;
+an `If-Modified-Since` value matching `Last-Modified` returns an empty `304` response.
+Only missing files render the app's HTML `404` page. Other file-service responses,
+including redirects, failed preconditions, and unsatisfiable ranges, pass through.
+
+The existing cache policy remains: development sends
+`no-store, no-cache, must-revalidate, proxy-revalidate`; release sends
+`max-age=3600, must-revalidate`.
+
+Run the file-response regression tests on Linux with:
+
+```sh
+env -u PORKMAIL_PWD RUSTFLAGS="--cfg erase_components" cargo test --locked --offline --lib --features ssr serve::tests
+```

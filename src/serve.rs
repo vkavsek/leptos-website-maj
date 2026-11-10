@@ -81,11 +81,7 @@ pub async fn serve(
         .fallback(static_file_and_err_handler)
         //  Set the compression layer for all routes.
         .layer(tower_http::compression::CompressionLayer::new())
-        // Detect and insert `If-modified-since` header into Response extensions for all routes.
-        .layer(middleware::from_fn(
-            midware::if_modified_to_extensions_midware,
-        ))
-        // Insert appropriate headers and handle `If-modified-since` for all routes.
+        // Add Cache-Control without changing file-service responses.
         .layer(middleware::map_response(midware::response_mapper_midware))
         .with_state(state);
 
@@ -99,74 +95,13 @@ async fn health() -> axum::http::StatusCode {
 }
 
 mod midware {
-    use std::ops::{Deref, DerefMut};
-
-    use axum::{extract::Request, middleware::Next, response::Response};
-    use chrono::{DateTime, TimeZone, Utc};
-    use http::{
-        header::{CACHE_CONTROL, IF_MODIFIED_SINCE, LAST_MODIFIED, VARY},
-        StatusCode,
-    };
+    use axum::response::Response;
+    use http::header::CACHE_CONTROL;
     use tracing::debug;
 
-    #[derive(Clone)]
-    struct IfModifiedSince(DateTime<Utc>);
-    impl Deref for IfModifiedSince {
-        type Target = DateTime<Utc>;
-        fn deref(&self) -> &Self::Target {
-            &self.0
-        }
-    }
-    impl DerefMut for IfModifiedSince {
-        fn deref_mut(&mut self) -> &mut Self::Target {
-            &mut self.0
-        }
-    }
-
-    /// Tries to find `If-modified-since` header, if it finds the header it stores it in the Response
-    /// extensions so that it can be handled by the response mapper.
-    pub async fn if_modified_to_extensions_midware(req: Request, next: Next) -> Response {
-        let modified = req.headers().get(IF_MODIFIED_SINCE).cloned();
-
-        let mut response = next.run(req).await;
-
-        if let Some(modified) = modified {
-            if let Ok(modified) = modified.to_str() {
-                if let Some(dt) = get_datetime_utc(modified) {
-                    response.extensions_mut().insert(IfModifiedSince(dt));
-                }
-            }
-        }
-        response
-    }
-
-    /// Adds appropriate `Cache-control` headers & tries to handle `If-modified-since` header if
-    /// it's present in the response extensions *AND* `Last-modified` header is available.
+    /// Adds Cache-Control without replacing the file service's status, headers, or body.
     pub async fn response_mapper_midware(res: Response) -> Response {
         let mut resp = res;
-
-        // Detect and Handle `If-modified-since` header if possible
-        let if_modified_since = resp.extensions().get::<IfModifiedSince>();
-        if let Some(if_modified_since) = if_modified_since {
-            if let Some(last_modified_header) = resp.headers().get(LAST_MODIFIED).cloned() {
-                if let Some(last_modified) =
-                    get_datetime_utc(last_modified_header.to_str().unwrap_or_default())
-                {
-                    debug!("If-modified-since: {}", **if_modified_since);
-                    debug!("Last-modified: {}", last_modified);
-
-                    if **if_modified_since > last_modified {
-                        resp = Response::default();
-                        *resp.status_mut() = StatusCode::NOT_MODIFIED;
-                        // Add headers into the response
-                        resp.headers_mut()
-                            .insert(VARY, "accept-encoding".parse().unwrap());
-                        resp.headers_mut()
-                            .insert(LAST_MODIFIED, last_modified_header);
-                    }
-                }
-            }
-        }
 
         // Add `Cache-control` header
         debug!("Adding cache control header");
@@ -186,36 +121,136 @@ mod midware {
 
         resp
     }
+}
 
-    /// Tries to create a `DateTime<Utc>` from `If-modified-since` or `Last-modified` header values (as &str).
-    fn get_datetime_utc(input: &str) -> Option<DateTime<Utc>> {
-        static MONTHS: [&str; 12] = [
-            "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-        ];
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::body::to_bytes;
+    use http::{header::*, StatusCode};
+    use std::io::Read;
+    use tower::ServiceExt;
 
-        let regex = lazy_regex::regex_captures!(
-            r#"\s*(\w{3}),\s*(\d{2})\s*(\w{3})\s*(\d{4})\s*(\d{2}):(\d{2}):(\d{2})\s*GMT"#,
-            input
+    const AUDIO: &str = "/music/audio-promo_small.mp3";
+    const AUDIO_FILE: &str = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/public/music/audio-promo_small.mp3"
+    );
+
+    async fn file_response(request: http::request::Builder) -> axum::response::Response {
+        let options = LeptosOptions::builder()
+            .output_name("leptos-website-maj")
+            .site_root(concat!(env!("CARGO_MANIFEST_DIR"), "/public"))
+            .build();
+        Router::new()
+            .leptos_routes(&options, Vec::new(), || ())
+            .fallback(static_file_and_err_handler)
+            .layer(tower_http::compression::CompressionLayer::new())
+            .layer(middleware::map_response(midware::response_mapper_midware))
+            .with_state(options)
+            .oneshot(request.body(Body::empty()).unwrap())
+            .await
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn audio_range_returns_only_the_requested_bytes() {
+        let mut audio = std::fs::File::open(AUDIO_FILE).unwrap();
+        let length = audio.metadata().unwrap().len();
+        let mut expected = [0; 2];
+        audio.read_exact(&mut expected).unwrap();
+
+        let response = file_response(
+            Request::get(AUDIO)
+                .header(RANGE, "bytes=0-1")
+                .header(ACCEPT_ENCODING, "gzip, br"),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::PARTIAL_CONTENT);
+        assert_eq!(
+            response.headers()[CONTENT_RANGE],
+            format!("bytes 0-1/{length}")
         );
+        assert_eq!(response.headers()[CONTENT_LENGTH], "2");
+        assert_eq!(response.headers()[CONTENT_TYPE], "audio/mpeg");
+        assert!(response.headers().get(CONTENT_ENCODING).is_none());
+        assert_eq!(
+            to_bytes(response.into_body(), 2).await.unwrap(),
+            &expected[..]
+        );
+    }
 
-        let (_full_input, _day_str, day, month, year, hour, min, sec) = regex?;
-        let day: u32 = day.parse().ok()?;
-        let month = MONTHS
-            .iter()
-            .enumerate()
-            .find(|(_i, &m)| m == month)
-            .map(|(i, _)| i + 1)? as u32;
-        let year: i32 = year.parse().ok()?;
-        let hour: u32 = hour.parse().ok()?;
-        let min: u32 = min.parse().ok()?;
-        let sec: u32 = sec.parse().ok()?;
+    #[tokio::test]
+    async fn file_cache_checks_use_the_original_headers() {
+        let response = file_response(Request::head(AUDIO)).await;
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            response.headers()[CONTENT_LENGTH],
+            std::fs::metadata(AUDIO_FILE).unwrap().len().to_string()
+        );
+        let last_modified = response.headers()[LAST_MODIFIED].clone();
+        assert!(to_bytes(response.into_body(), 0).await.unwrap().is_empty());
 
-        let date_time = match Utc.with_ymd_and_hms(year, month, day, hour, min, sec) {
-            chrono::offset::LocalResult::Single(res) => res,
-            chrono::offset::LocalResult::Ambiguous(_early, latest) => latest,
-            chrono::offset::LocalResult::None => return None,
-        };
+        let response =
+            file_response(Request::get(AUDIO).header(IF_MODIFIED_SINCE, last_modified.clone()))
+                .await;
+        assert_eq!(response.status(), StatusCode::NOT_MODIFIED);
+        assert_eq!(response.headers()[LAST_MODIFIED], last_modified);
+        assert!(response.headers().contains_key(CACHE_CONTROL));
+        assert!(to_bytes(response.into_body(), 0).await.unwrap().is_empty());
 
-        Some(date_time)
+        for (date, status) in [
+            ("Thu, 01 Jan 2099 00:00:00 GMT", StatusCode::NOT_MODIFIED),
+            ("Thu, 01 Jan 1970 00:00:00 GMT", StatusCode::OK),
+            ("invalid date", StatusCode::OK),
+        ] {
+            let response =
+                file_response(Request::head(AUDIO).header(IF_MODIFIED_SINCE, date)).await;
+            assert_eq!(response.status(), status, "If-Modified-Since: {date}");
+            assert!(to_bytes(response.into_body(), 0).await.unwrap().is_empty());
+        }
+    }
+
+    #[tokio::test]
+    async fn file_errors_are_not_replaced_with_html() {
+        let length = std::fs::metadata(AUDIO_FILE).unwrap().len();
+        let response =
+            file_response(Request::get(AUDIO).header(RANGE, format!("bytes={length}-"))).await;
+        assert_eq!(response.status(), StatusCode::RANGE_NOT_SATISFIABLE);
+        assert_eq!(
+            response.headers()[CONTENT_RANGE],
+            format!("bytes */{length}")
+        );
+        assert!(to_bytes(response.into_body(), 0).await.unwrap().is_empty());
+
+        let response = file_response(Request::post(AUDIO)).await;
+        assert_eq!(response.status(), StatusCode::METHOD_NOT_ALLOWED);
+        assert_eq!(response.headers()[ALLOW], "GET,HEAD");
+        assert!(to_bytes(response.into_body(), 0).await.unwrap().is_empty());
+
+        let response = file_response(
+            Request::get(AUDIO).header(IF_UNMODIFIED_SINCE, "Thu, 01 Jan 1970 00:00:00 GMT"),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::PRECONDITION_FAILED);
+        assert!(to_bytes(response.into_body(), 0).await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn only_missing_files_render_the_app_error_page() {
+        let response = file_response(Request::get("/fonts")).await;
+        assert_eq!(response.status(), StatusCode::TEMPORARY_REDIRECT);
+        assert_eq!(response.headers()[LOCATION], "/fonts/");
+
+        let response = file_response(Request::get("/missing-audit-test-file.mp3")).await;
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        assert!(response.headers()[CONTENT_TYPE]
+            .to_str()
+            .unwrap()
+            .starts_with("text/html"));
+        let body = to_bytes(response.into_body(), 100_000).await.unwrap();
+        assert!(std::str::from_utf8(&body)
+            .unwrap()
+            .contains("doesn't exist!"));
     }
 }
