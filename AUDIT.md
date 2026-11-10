@@ -59,6 +59,15 @@ What this repo does: A public portfolio for Maj Kavšek, built with Rust, Leptos
    - **Problem:** JSON accepts missing or invalid dates, but rendering calls `expect()`. A record containing `"date": "31.02.2026"` reaches a panic.
    - **Fix:** Validate dates when loading the file and return a normal error before caching invalid records.
    - **If we skip it:** A content typo can break both show pages.
+   - **Status:** Resolved on 2026-11-10. The shared loader validates every show date
+     before sorting and caching show records. A missing or invalid date returns the
+     existing data error with the record number instead of reaching the list filters.
+     See [show date requirements and reload instructions](BUILD.md#show-dates).
+   - **Verified:** Three new tests cover missing/null/empty/impossible/malformed dates,
+     leap days, chronological ordering, empty lists, and the current show file. All
+     fourteen Rust tests, formatting, and Clippy passed.
+   - **Known limit:** The existing per-process cache also retains load errors. Correct
+     the file and restart or redeploy the server to reload it.
 
 5. **Release content loading ignores the configured site directory** — [shows.rs:234](/home/vkav/PROJECTS/rust/leptos-website-maj/src/routes/shows.rs:234), [media.rs:72](/home/vkav/PROJECTS/rust/leptos-website-maj/src/routes/media.rs:72), [about.rs:338](/home/vkav/PROJECTS/rust/leptos-website-maj/src/routes/about.rs:338)
 
@@ -143,7 +152,7 @@ What this repo does: A public portfolio for Maj Kavšek, built with Rust, Leptos
 
 Original audit verification (2026-11-08): Checked all application source, styles, content files, build/deploy configuration, and existing tests. Main routes and read-only APIs responded locally; all 78 show dates parsed. The WebAssembly compilation check passed. Browser checks used the existing build artifacts. No source files changed during the audit, and the audit server was stopped.
 
-Verdict: Contact validation, sending limits, private-message logging, and file serving are fixed. Fix show date validation next; replace the obsolete browser test.
+Verdict: Contact validation, sending limits, private-message logging, file serving, and show date validation are fixed. Fix configured content paths next; replace the obsolete browser test.
 
 Lean: -300 lines, -1 dependency possible, plus over 61 MB of unused backgrounds.  
 Not checked: Live email delivery, Fly production behavior, a full Docker/release build, dependency advisories, or load testing.

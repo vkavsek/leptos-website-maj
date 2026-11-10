@@ -209,8 +209,8 @@ fn RenderShows(selector: EventSelector) -> impl IntoView {
 // ->   SERVER
 // ###################################
 
-/// Uses `OnceCell` to deserialize and sort `Shows` from JSON.
-/// Can return an Error if there was a problem reading the file or parsing the JSON.
+/// Uses `OnceCell` to deserialize, validate dates, and sort `Shows` from JSON.
+/// Can return an Error if reading, parsing, or date validation fails.
 /// Only reads the files, deserializes and sorts them on the initial call.
 /// Further calls just return a clone of `Shows`.
 #[server(GetShows, "/api", "GetJson", "get_shows")]
@@ -221,7 +221,6 @@ async fn get_shows() -> Result<EventsSorted, MajServerError> {
 
 #[cfg(feature = "ssr")]
 async fn get_shows_util() -> &'static Result<EventsSorted, crate::MajServerError> {
-    use std::cmp::Reverse;
     use tokio::sync::OnceCell;
     use tracing::info;
 
@@ -239,19 +238,90 @@ async fn get_shows_util() -> &'static Result<EventsSorted, crate::MajServerError
 
             info!("Initializing SHOWS");
             let show_json = tokio::fs::read_to_string(path).await?;
-            let mut shows: EventsDeser = serde_json::from_str(&show_json)?;
-            shows.0.sort_by_key(|show_a| Reverse(show_a.get_date()));
-
-            let date_desc = shows.0.clone();
-            let mut date_asc = shows.0;
-            date_asc.reverse();
-
-            let events_sorted = EventsSorted {
-                date_desc,
-                date_asc,
-            };
-
-            Ok(events_sorted)
+            parse_shows(&show_json)
         })
         .await
+}
+
+#[cfg(feature = "ssr")]
+fn parse_shows(json: &str) -> Result<EventsSorted, MajServerError> {
+    use std::cmp::Reverse;
+
+    let mut shows: EventsDeser = serde_json::from_str(json)?;
+    for (index, show) in shows.0.iter().enumerate() {
+        if show.get_date().is_none() {
+            return Err(MajServerError::SerdeJson(format!(
+                "Show {} must have a valid date in day.month.year format.",
+                index + 1
+            )));
+        }
+    }
+    shows.0.sort_by_key(|show| Reverse(show.get_date()));
+
+    let date_desc = shows.0.clone();
+    let mut date_asc = shows.0;
+    date_asc.reverse();
+
+    Ok(EventsSorted {
+        date_desc,
+        date_asc,
+    })
+}
+
+#[cfg(all(test, feature = "ssr"))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn invalid_dates_reject_the_entire_show_file() {
+        for invalid in [
+            r#"{}"#,
+            r#"{"date":null}"#,
+            r#"{"date":""}"#,
+            r#"{"date":"31.02.2026"}"#,
+            r#"{"date":"29.02.2025"}"#,
+            r#"{"date":"00.12.2026"}"#,
+            r#"{"date":"01.13.2026"}"#,
+            r#"{"date":"2026-11-10"}"#,
+        ] {
+            let json = format!(r#"[{{"date":"10.11.2026"}},{invalid}]"#);
+            let error = parse_shows(&json).unwrap_err();
+            assert!(
+                matches!(error, MajServerError::SerdeJson(ref message) if message.contains("Show 2")),
+                "{invalid}: {error}"
+            );
+        }
+    }
+
+    #[test]
+    fn valid_dates_include_leap_days_and_sort_chronologically() {
+        let shows =
+            parse_shows(r#"[{"date":"01.01.2027"},{"date":"29.02.2024"},{"date":"31.12.2025"}]"#)
+                .unwrap();
+        let ascending: Vec<_> = shows
+            .get_asc()
+            .iter()
+            .map(|show| show.date.as_deref())
+            .collect();
+        assert_eq!(
+            ascending,
+            [Some("29.02.2024"), Some("31.12.2025"), Some("01.01.2027")]
+        );
+        assert!(shows.get_asc().iter().all(|show| show.get_date().is_some()));
+        assert!(shows.get_desc().iter().eq(shows.get_asc().iter().rev()));
+    }
+
+    #[test]
+    fn current_show_file_and_empty_list_are_valid() {
+        let json = include_str!("../../public/data_json/shows.json");
+        let expected: EventsDeser = serde_json::from_str(json).unwrap();
+        let shows = parse_shows(json).unwrap();
+        assert_eq!(shows.get_asc().len(), expected.0.len());
+        assert!(shows.get_asc().iter().all(|show| show.get_date().is_some()));
+        assert!(shows.get_desc().iter().eq(shows.get_asc().iter().rev()));
+
+        let empty = parse_shows("[]").unwrap();
+        assert!(empty.get_asc().is_empty());
+        assert!(empty.get_desc().is_empty());
+    }
 }

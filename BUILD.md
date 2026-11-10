@@ -81,3 +81,19 @@ Run the file-response regression tests on Linux with:
 ```sh
 env -u PORKMAIL_PWD RUSTFLAGS="--cfg erase_components" cargo test --locked --offline --lib --features ssr serve::tests
 ```
+
+## Show dates
+
+Every record in `public/data_json/shows.json` must include a real calendar date in
+day.month.year format, for example `29.02.2024`. Missing, null, empty, malformed, or
+impossible dates reject the entire file before sorting or caching any show records.
+Both show lists use the existing error display when loading fails.
+
+The loader caches its result, including errors, for the life of the server process.
+After correcting the content file, restart or redeploy the server to reload it.
+
+Run the date-validation regression tests on Linux with:
+
+```sh
+env -u PORKMAIL_PWD RUSTFLAGS="--cfg erase_components" cargo test --locked --offline --lib --features ssr routes::shows::tests
+```
