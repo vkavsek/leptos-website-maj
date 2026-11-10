@@ -47,11 +47,11 @@ and one visitor can use the entire shared allowance. The policy is implemented b
 `send_mail` in `src/routes/home.rs`; no new environment settings or services are needed.
 Continue supplying `PORKMAIL_PWD` through the environment.
 
-On the Raspberry Pi, run the focused tests with one build job and the same
-component-erasure flag used by the Dockerfile, without SMTP credentials:
+On Linux, run the focused tests with the same component-erasure flag used by the
+Dockerfile, without SMTP credentials:
 
 ```sh
-env -u PORKMAIL_PWD RUSTFLAGS="--cfg erase_components" cargo test --locked --offline --lib --features ssr --jobs 1 routes::home::tests
+env -u PORKMAIL_PWD RUSTFLAGS="--cfg erase_components" cargo test --locked --offline --lib --features ssr routes::home::tests
 ```
 
 The tests cover validation, rolling expiry, simultaneous requests, and rejected HTTP

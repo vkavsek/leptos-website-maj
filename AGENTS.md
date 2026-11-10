@@ -38,4 +38,4 @@ Supply `PORKMAIL_PWD` through the environment; never commit credentials. Treat `
 
 ## Additional Guidelines
 
-The project is being actively developed on multiple different machines. Avoid including machine specific instructions in general documentation. For instance: keep it generic to Linux, not my Raspberry Pi.
+The project is being actively developed on multiple different machines. Avoid including machine specific instructions in general documentation. Keep instructions generic to Linux.
