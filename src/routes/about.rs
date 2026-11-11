@@ -1,3 +1,4 @@
+use crate::{routes::error::ErrorTemplate, MajServerError};
 use leptos::{
     html::{Button, Div},
     prelude::*,
@@ -198,10 +199,7 @@ pub fn About() -> impl IntoView {
 
 #[component]
 pub fn ImagesAbout() -> impl IntoView {
-    let files = Resource::new(
-        move || (),
-        |_| async move { read_image_files().await.unwrap() },
-    );
+    let files = Resource::new(move || (), |_| async move { read_image_files().await });
 
     // This is named like this because we get warnings because of macros.
     let _gallery_ref = NodeRef::<Div>::new();
@@ -217,7 +215,7 @@ pub fn ImagesAbout() -> impl IntoView {
 
     let next = move || {
         if let Some(img) = current_img.get() {
-            if let Some(files) = files.get() {
+            if let Some(Ok(files)) = files.get() {
                 let pos = files
                     .iter()
                     .position(|file_path| file_path.contains(&img))
@@ -237,7 +235,7 @@ pub fn ImagesAbout() -> impl IntoView {
     };
     let back = move || {
         if let Some(img) = current_img.get() {
-            if let Some(files) = files.get() {
+            if let Some(Ok(files)) = files.get() {
                 let pos = files
                     .iter()
                     .position(|file_path| file_path.contains(&img))
@@ -299,29 +297,31 @@ pub fn ImagesAbout() -> impl IntoView {
                 <Suspense fallback=move || {
                     view! { <p>"Loading"</p> }
                 }>
-                    {move || {
-                        files
-                            .get()
-                            .map(|files| {
-                                files
-                                    .into_iter()
-                                    .map(|file| {
-                                        let file_c = file.clone();
-                                        let click_image = move |ev: leptos::ev::MouseEvent| {
-                                            ev.prevent_default();
-                                            set_current_img.set(Some(file_c.clone()));
-                                            set_show_img.set(true);
-                                        };
-                                        view! {
-                                            <a on:click=click_image>
-                                                <img src=file class="image-about" />
-                                            </a>
-                                        }
-                                    })
-                                    .collect_view()
+                    <ErrorBoundary fallback=move |errors| {
+                        view! { <ErrorTemplate errors /> }
+                    }>
+                        {move || {
+                            files.get().map(|result| {
+                                result.map(|files| {
+                                    files.into_iter()
+                                        .map(|file| {
+                                            let file_c = file.clone();
+                                            let click_image = move |ev: leptos::ev::MouseEvent| {
+                                                ev.prevent_default();
+                                                set_current_img.set(Some(file_c.clone()));
+                                                set_show_img.set(true);
+                                            };
+                                            view! {
+                                                <a on:click=click_image>
+                                                    <img src=file class="image-about" />
+                                                </a>
+                                            }
+                                        })
+                                        .collect_view()
+                                })
                             })
-                    }}
-
+                        }}
+                    </ErrorBoundary>
                 </Suspense>
             </div>
         </div>
@@ -333,30 +333,25 @@ pub fn ImagesAbout() -> impl IntoView {
 // ###################################
 
 #[server(ReadImageFiles, "/api", "GetJson", "get_image_files")]
-async fn read_image_files() -> Result<Vec<String>, ServerFnError> {
+async fn read_image_files() -> Result<Vec<String>, MajServerError> {
     use tokio::sync::OnceCell;
-    let path = if cfg!(not(debug_assertions)) {
-        "/app/site/img/about_pics"
-    } else {
-        "./public/img/about_pics"
-    };
-    static INIT: OnceCell<Result<Vec<String>, ServerFnError>> = OnceCell::const_new();
-    INIT.get_or_init(|| async {
-        let mut files = tokio::fs::read_dir(path).await?;
-        let mut res = Vec::new();
-        while let Some(file) = files.next_entry().await? {
-            tracing::debug!(
-                "path to file: {}",
-                file.path()
-                    .to_str()
-                    .expect("Got an empty Filename in about.rs -> read_files()")
-            );
-            res.push(extract_name(file.path().to_str()));
-        }
-        Ok(res)
-    })
-    .await
-    .clone()
+    let options = use_context::<leptos::config::LeptosOptions>().ok_or(MajServerError::Internal)?;
+    static INIT: OnceCell<Result<Vec<String>, MajServerError>> = OnceCell::const_new();
+    INIT.get_or_init(|| load_image_files(&options.site_root))
+        .await
+        .clone()
+}
+
+#[cfg(feature = "ssr")]
+async fn load_image_files(site_root: &str) -> Result<Vec<String>, MajServerError> {
+    let path = std::path::Path::new(site_root).join("img/about_pics");
+    let mut files = tokio::fs::read_dir(path).await?;
+    let mut res = Vec::new();
+    while let Some(file) = files.next_entry().await? {
+        tracing::debug!("path to file: {}", file.path().display());
+        res.push(extract_name(file.path().to_str()));
+    }
+    Ok(res)
 }
 
 /// Returns a string in the format: "/img/about_pics/{filename}",
@@ -370,5 +365,58 @@ fn extract_name(path: Option<&str>) -> String {
         }
     } else {
         "".to_owned()
+    }
+}
+
+#[cfg(all(test, feature = "ssr"))]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn gallery_loader_uses_configured_roots_and_keeps_public_urls() {
+        for root in [
+            concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/site"),
+            "tests/fixtures/site",
+        ] {
+            let images = load_image_files(root).await.unwrap();
+            assert_eq!(images, ["/img/about_pics/gallery-test.svg"]);
+        }
+        assert!(matches!(
+            load_image_files("tests/fixtures/missing-site").await,
+            Err(MajServerError::Io(_))
+        ));
+    }
+
+    #[tokio::test]
+    async fn gallery_loading_failure_renders_an_error_without_panicking() {
+        use axum::{
+            body::{to_bytes, Body},
+            Router,
+        };
+        use http::Request;
+        use leptos_axum::{generate_route_list, LeptosRoutes};
+        use tower::ServiceExt;
+
+        let options = leptos::config::LeptosOptions::builder()
+            .output_name("leptos-website-maj")
+            .site_root(concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/tests/fixtures/missing-site"
+            ))
+            .build();
+        let app = Router::new()
+            .leptos_routes(&options, generate_route_list(crate::app::App), {
+                let options = options.clone();
+                move || crate::app::app_shell(options.clone())
+            })
+            .with_state(options);
+        let response = app
+            .oneshot(Request::get("/about_me").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        let body = to_bytes(response.into_body(), 100_000).await.unwrap();
+        let html = std::str::from_utf8(&body).unwrap();
+        assert!(html.contains("error-wrap"));
+        assert!(html.contains("Io("));
     }
 }

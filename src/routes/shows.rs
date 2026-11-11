@@ -215,32 +215,24 @@ fn RenderShows(selector: EventSelector) -> impl IntoView {
 /// Further calls just return a clone of `Shows`.
 #[server(GetShows, "/api", "GetJson", "get_shows")]
 async fn get_shows() -> Result<EventsSorted, MajServerError> {
-    // TODO: Inline this function call. It's like this as a remnant of a previous implementation.
-    get_shows_util().await.to_owned()
-}
-
-#[cfg(feature = "ssr")]
-async fn get_shows_util() -> &'static Result<EventsSorted, crate::MajServerError> {
     use tokio::sync::OnceCell;
-    use tracing::info;
 
-    static SHOWS_INIT: OnceCell<Result<EventsSorted, crate::MajServerError>> =
-        OnceCell::const_new();
+    let options = use_context::<leptos::config::LeptosOptions>().ok_or(MajServerError::Internal)?;
+    static SHOWS_INIT: OnceCell<Result<EventsSorted, MajServerError>> = OnceCell::const_new();
 
     tracing::debug!("Retrieving SHOWS");
     SHOWS_INIT
-        .get_or_init(|| async {
-            let path = if cfg!(not(debug_assertions)) {
-                "/app/site/data_json/shows.json"
-            } else {
-                "./public/data_json/shows.json"
-            };
-
-            info!("Initializing SHOWS");
-            let show_json = tokio::fs::read_to_string(path).await?;
-            parse_shows(&show_json)
-        })
+        .get_or_init(|| load_shows(&options.site_root))
         .await
+        .clone()
+}
+
+#[cfg(feature = "ssr")]
+async fn load_shows(site_root: &str) -> Result<EventsSorted, MajServerError> {
+    let path = std::path::Path::new(site_root).join("data_json/shows.json");
+    tracing::info!("Initializing SHOWS");
+    let show_json = tokio::fs::read_to_string(path).await?;
+    parse_shows(&show_json)
 }
 
 #[cfg(feature = "ssr")]
@@ -271,6 +263,25 @@ fn parse_shows(json: &str) -> Result<EventsSorted, MajServerError> {
 #[cfg(all(test, feature = "ssr"))]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn show_loader_uses_configured_roots_and_reports_missing_files() {
+        for root in [
+            concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/site"),
+            "tests/fixtures/site",
+        ] {
+            let shows = load_shows(root).await.unwrap();
+            assert_eq!(shows.get_asc().len(), 1);
+            assert_eq!(
+                shows.get_asc()[0].name.as_deref(),
+                Some("Configured site root")
+            );
+        }
+        assert!(matches!(
+            load_shows("tests/fixtures/missing-site").await,
+            Err(MajServerError::Io(_))
+        ));
+    }
 
     #[test]
     fn invalid_dates_reject_the_entire_show_file() {

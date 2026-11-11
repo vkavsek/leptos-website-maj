@@ -131,6 +131,33 @@ mod tests {
     use std::io::Read;
     use tower::ServiceExt;
 
+    #[tokio::test]
+    async fn json_content_apis_use_the_site_root_from_router_state() {
+        let options = LeptosOptions::builder()
+            .output_name("leptos-website-maj")
+            .site_root(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/site"))
+            .build();
+        let app = Router::new()
+            .leptos_routes(&options, Vec::new(), || ())
+            .with_state(options);
+        for (path, marker) in [
+            ("/api/get_shows", "Configured site root"),
+            ("/api/get_media_videos", "configured-root-test"),
+        ] {
+            let response = app
+                .clone()
+                .oneshot(Request::get(path).body(Body::empty()).unwrap())
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::OK);
+            let body = to_bytes(response.into_body(), 4096).await.unwrap();
+            assert!(
+                std::str::from_utf8(&body).unwrap().contains(marker),
+                "{path}"
+            );
+        }
+    }
+
     const AUDIO: &str = "/music/audio-promo_small.mp3";
     const AUDIO_FILE: &str = concat!(
         env!("CARGO_MANIFEST_DIR"),

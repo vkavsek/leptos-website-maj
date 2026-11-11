@@ -54,33 +54,49 @@ pub struct YoutubeUrl {
 // ###################################
 #[server(GetMediaVideos, "/api", "GetJson", "get_media_videos")]
 async fn get_youtube_videos() -> Result<Vec<YoutubeUrl>, crate::MajServerError> {
-    // TODO: Inline this function call. It's like this as a remnant of a previous implementation.
-    get_shows_util().await.to_owned()
-}
-
-#[cfg(feature = "ssr")]
-async fn get_shows_util() -> &'static Result<Vec<YoutubeUrl>, crate::MajServerError> {
     use tokio::sync::OnceCell;
-    use tracing::{debug, info};
 
-    static SHOWS_INIT: OnceCell<Result<Vec<YoutubeUrl>, crate::MajServerError>> =
+    let options =
+        use_context::<leptos::config::LeptosOptions>().ok_or(crate::MajServerError::Internal)?;
+    static VIDEOS_INIT: OnceCell<Result<Vec<YoutubeUrl>, crate::MajServerError>> =
         OnceCell::const_new();
 
     tracing::debug!("Retrieving Yt Videos");
-    SHOWS_INIT
-        .get_or_init(|| async {
-            let path = if cfg!(not(debug_assertions)) {
-                "/app/site/data_json/yt_videos.json"
-            } else {
-                "./public/data_json/yt_videos.json"
-            };
-
-            info!("Initializing YT videos");
-            let videos_json = tokio::fs::read_to_string(path).await?;
-            debug!("videos_json: {videos_json}");
-            let videos: Vec<YoutubeUrl> = serde_json::from_str(&videos_json)?;
-
-            Ok(videos)
-        })
+    VIDEOS_INIT
+        .get_or_init(|| load_youtube_videos(&options.site_root))
         .await
+        .clone()
+}
+
+#[cfg(feature = "ssr")]
+async fn load_youtube_videos(site_root: &str) -> Result<Vec<YoutubeUrl>, crate::MajServerError> {
+    let path = std::path::Path::new(site_root).join("data_json/yt_videos.json");
+    tracing::info!("Initializing YT videos");
+    let videos_json = tokio::fs::read_to_string(path).await?;
+    tracing::debug!("videos_json: {videos_json}");
+    Ok(serde_json::from_str(&videos_json)?)
+}
+
+#[cfg(all(test, feature = "ssr"))]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn video_loader_uses_configured_roots_and_reports_missing_files() {
+        for root in [
+            concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/site"),
+            "tests/fixtures/site",
+        ] {
+            let videos = load_youtube_videos(root).await.unwrap();
+            assert_eq!(videos.len(), 1);
+            assert_eq!(
+                videos[0].url,
+                "https://www.youtube.com/embed/configured-root-test"
+            );
+        }
+        assert!(matches!(
+            load_youtube_videos("tests/fixtures/missing-site").await,
+            Err(crate::MajServerError::Io(_))
+        ));
+    }
 }

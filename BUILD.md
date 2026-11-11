@@ -97,3 +97,27 @@ Run the date-validation regression tests on Linux with:
 ```sh
 env -u PORKMAIL_PWD RUSTFLAGS="--cfg erase_components" cargo test --locked --offline --lib --features ssr routes::shows::tests
 ```
+
+## Content directory
+
+Shows, videos, and gallery filenames load from the same `LeptosOptions.site_root`
+used for static files, in both development and release builds. The configured root
+must contain `data_json/shows.json`, `data_json/yt_videos.json`, and `img/about_pics/`.
+Gallery URLs remain `/img/about_pics/<filename>`.
+
+The project defaults to `target/site`, populated by `cargo leptos watch` or
+`cargo leptos build`. To run the server directly against source assets on Linux:
+
+```sh
+env LEPTOS_SITE_ROOT=public RUSTFLAGS="--cfg erase_components" cargo run --features ssr
+```
+
+For a built server, use `LEPTOS_SITE_ROOT` to select a different site directory:
+
+```sh
+env LEPTOS_SITE_ROOT=/path/to/site ./target/release/leptos-website-maj
+```
+
+Content results, including load errors, are cached per server process. Restart after
+changing the root or correcting a failed load. Gallery loading failures use the
+existing error display instead of panicking.

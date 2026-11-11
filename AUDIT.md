@@ -75,6 +75,16 @@ What this repo does: A public portfolio for Maj Kavšek, built with Rust, Leptos
    - **Problem:** Release builds always read `/app/site`, even when `LEPTOS_SITE_ROOT` points elsewhere. The gallery additionally unwraps the resulting error.
    - **Fix:** Build these paths from `LeptosOptions.site_root`, and display gallery loading errors without panicking.
    - **If we skip it:** Release runs outside the exact Docker directory layout lose these sections.
+   - **Status:** Resolved on 2026-11-11. All three loaders build paths from the
+     configured `LeptosOptions.site_root` in both development and release builds.
+     Gallery load failures reach the existing error display; the resource no longer
+     unwraps them. See [content directory configuration](BUILD.md#content-directory).
+   - **Verified:** Five new tests cover relative/absolute roots, missing files, public
+     gallery URLs, configuration supplied through the JSON API router, and a rendered
+     gallery load error. All nineteen Rust tests, formatting, Clippy, and native
+     `hydrate` feature compilation passed.
+   - **Known limit:** Content results and errors remain cached per process; restart
+     after changing configuration or correcting a failed load.
 
 6. **Gallery and audio controls cannot be operated with a keyboard** — [about.rs:316](/home/vkav/PROJECTS/rust/leptos-website-maj/src/routes/about.rs:316), [player.rs:170](/home/vkav/PROJECTS/rust/leptos-website-maj/src/audio/player.rs:170)
 
@@ -152,7 +162,7 @@ What this repo does: A public portfolio for Maj Kavšek, built with Rust, Leptos
 
 Original audit verification (2026-11-08): Checked all application source, styles, content files, build/deploy configuration, and existing tests. Main routes and read-only APIs responded locally; all 78 show dates parsed. The WebAssembly compilation check passed. Browser checks used the existing build artifacts. No source files changed during the audit, and the audit server was stopped.
 
-Verdict: Contact validation, sending limits, private-message logging, file serving, and show date validation are fixed. Fix configured content paths next; replace the obsolete browser test.
+Verdict: Contact validation, sending limits, private-message logging, file serving, show date validation, and configured content paths are fixed. Fix keyboard controls next; replace the obsolete browser test.
 
 Lean: -300 lines, -1 dependency possible, plus over 61 MB of unused backgrounds.  
 Not checked: Live email delivery, Fly production behavior, a full Docker/release build, dependency advisories, or load testing.
