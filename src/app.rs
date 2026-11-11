@@ -1,6 +1,5 @@
 use crate::{
     audio::AudioPlayer,
-    head::*,
     routes::{about::*, discography::*, error::ErrorTemplate, home::*, media::*, shows::*},
     MajServerError,
 };
@@ -59,8 +58,6 @@ pub fn app_shell(options: LeptosOptions) -> impl IntoView {
 pub fn App() -> impl IntoView {
     provide_meta_context();
 
-    let bg_div_ref = NodeRef::new();
-
     let formatter = |text| format!("{text} - Maj Kavšek");
     view! {
         <Stylesheet id="leptos" href="/pkg/leptos-website-maj.css" />
@@ -68,8 +65,70 @@ pub fn App() -> impl IntoView {
         <Link rel="shortcut icon" type_="image/svg" href="/img/trobenta.svg" />
         <Title formatter />
         <Router>
-            <div class="bg-wrapper" node_ref=bg_div_ref>
-                <NavBar bg_div_ref />
+            <PageLayout />
+        </Router>
+    }
+}
+
+#[component]
+fn PageLayout() -> impl IntoView {
+    let location = leptos_router::hooks::use_location();
+    let background_position = move || match location.pathname.get().split('/').nth(1) {
+        Some("about_me") => "35% 60%",
+        Some("shows") => "0 bottom",
+        Some("discography") => "0 top",
+        Some("media") => "100% 90%",
+        _ => "48% 8%",
+    };
+    view! {
+            <div class="bg-wrapper" style:background-position=background_position>
+                <nav class="nav-links">
+                    <A href="/" attr:title="Home" attr:class="nav-link" attr:id="home-nav-link">
+                        <img
+                            class="nav-icon nav-icon-1"
+                            src="/img/home.svg"
+                            alt="Home"
+                            width="200"
+                            height="200"
+                        />
+                    </A>
+                    <A href="/about_me" attr:title="About" attr:class="nav-link">
+                        <img
+                            class="nav-icon nav-icon-2"
+                            src="/img/izkaznica.svg"
+                            alt="About Me"
+                            width="378"
+                            height="330"
+                        />
+                    </A>
+                    <A href="/shows" attr:title="Shows" attr:class="nav-link">
+                        <img
+                            class="nav-icon nav-icon-3"
+                            src="/img/trobenta.svg"
+                            alt="Shows"
+                            width="512"
+                            height="217"
+                        />
+                    </A>
+                    <A href="/discography" attr:title="Discography" attr:class="nav-link">
+                        <img
+                            class="nav-icon nav-icon-4"
+                            src="/img/vinyl.svg"
+                            alt="Discography"
+                            width="108"
+                            height="119"
+                        />
+                    </A>
+                    <A href="/media" attr:title="Media" attr:class="nav-link">
+                        <img
+                            class="nav-icon nav-icon-5"
+                            src="/img/media.svg"
+                            alt="Media"
+                            width="395"
+                            height="336"
+                        />
+                    </A>
+                </nav>
                 <AudioPlayer />
                 <main>
                     <Routes fallback=|| {
@@ -90,7 +149,6 @@ pub fn App() -> impl IntoView {
                     </Routes>
                 </main>
             </div>
-        </Router>
     }
 }
 

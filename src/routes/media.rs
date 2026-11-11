@@ -6,7 +6,7 @@ use crate::routes::error::ErrorTemplate;
 
 #[component]
 pub fn Media() -> impl IntoView {
-    let videos_res = Resource::new(|| (), |_| async move { get_youtube_videos().await });
+    let videos_res = Resource::new_blocking(|| (), |_| async move { get_youtube_videos().await });
 
     view! {
         <Link rel="icon" href="/img/media.svg" type_="image/svg" />

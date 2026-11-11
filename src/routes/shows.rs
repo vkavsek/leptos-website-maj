@@ -65,14 +65,8 @@ impl EventsSorted {
     pub fn get_desc(&self) -> &[Event] {
         &self.date_desc
     }
-    pub fn get_desc_mut(&mut self) -> &mut [Event] {
-        &mut self.date_asc
-    }
     pub fn get_asc(&self) -> &[Event] {
         &self.date_asc
-    }
-    pub fn get_asc_mut(&mut self) -> &mut [Event] {
-        &mut self.date_asc
     }
 }
 
@@ -114,7 +108,7 @@ enum EventSelector {
 /// Past or Future
 #[component]
 fn RenderShows(selector: EventSelector) -> impl IntoView {
-    let shows_resource = Resource::new(|| (), |_| async move { get_shows().await });
+    let shows_resource = Resource::new_blocking(|| (), |_| async move { get_shows().await });
     let pivot_date = Utc::now()
         .with_time(
             NaiveTime::from_hms_milli_opt(0, 0, 0, 0)

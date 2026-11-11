@@ -4,17 +4,17 @@ use axum::{
     body::{to_bytes, Body},
     Router,
 };
-use http::Request;
+use http::{Request, StatusCode};
 use leptos::config::LeptosOptions;
 use leptos_axum::LeptosRoutes;
 use leptos_website_maj::app::{app_shell, App};
 use tower::ServiceExt;
 
 #[tokio::test]
-async fn media_content_failure_renders_an_error() {
+async fn content_failures_return_internal_server_error_before_streaming() {
     let options = LeptosOptions::builder()
         .output_name("leptos-website-maj")
-        .site_root("tests/fixtures/missing-site")
+        .site_root("tests/fixtures/invalid-site")
         .build();
     let app = Router::new()
         .leptos_routes(&options, leptos_axum::generate_route_list(App), {
@@ -22,14 +22,26 @@ async fn media_content_failure_renders_an_error() {
             move || app_shell(options.clone())
         })
         .with_state(options);
-    let response = app
-        .oneshot(Request::get("/media").body(Body::empty()).unwrap())
-        .await
-        .unwrap();
-    let body = to_bytes(response.into_body(), 100_000).await.unwrap();
-    let html = std::str::from_utf8(&body).unwrap();
-    assert!(html.contains("error-wrap"));
-    assert!(html.contains("500 Internal Server Error"));
-    assert!(html.contains("Io("));
-    assert!(!html.contains("class=\"yt-video\""));
+    for (path, error) in [
+        ("/media", "SerdeJson("),
+        ("/shows/past", "SerdeJson("),
+        ("/shows/future", "SerdeJson("),
+        ("/about_me", "Io("),
+    ] {
+        let response = app
+            .clone()
+            .oneshot(Request::get(path).body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(
+            response.status(),
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "{path}"
+        );
+        let body = to_bytes(response.into_body(), 100_000).await.unwrap();
+        let html = std::str::from_utf8(&body).unwrap();
+        assert!(html.contains("error-wrap"), "{path}");
+        assert!(html.contains("500 Internal Server Error"), "{path}");
+        assert!(html.contains(error), "{path}");
+    }
 }

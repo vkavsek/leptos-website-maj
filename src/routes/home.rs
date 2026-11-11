@@ -426,6 +426,18 @@ async fn send_mail(
         }
         return Err(error);
     }
+    let porkmail_pwd = match std::env::var("PORKMAIL_PWD") {
+        Ok(password) if !password.is_empty() => SecretString::from(password),
+        _ => {
+            error!("Contact email configuration is missing or empty");
+            if let Some(response) = response {
+                response.set_status(http::StatusCode::INTERNAL_SERVER_ERROR);
+            }
+            return Err(ServerFnError::new(
+                "The contact form is unavailable. Please try again later.",
+            ));
+        }
+    };
     if !reserve_mail_attempt(&MAIL_ATTEMPTS, Instant::now()) {
         if let Some(response) = response {
             response.set_status(http::StatusCode::TOO_MANY_REQUESTS);
@@ -445,7 +457,6 @@ async fn send_mail(
         ))
         .map_err(<lettre::error::Error as Into<ServerFnError>>::into)?;
 
-    let porkmail_pwd = SecretString::from(std::env::var("PORKMAIL_PWD").unwrap_or_default());
     let creds = Credentials::new(
         "info@majkavsek.com".to_owned(),
         porkmail_pwd.expose_secret().to_owned(),
@@ -458,14 +469,18 @@ async fn send_mail(
             .build();
 
     // Send the email
-    let res = mailer.send(email).await;
+    let res = match tokio::time::timeout(Duration::from_secs(20), mailer.send(email)).await {
+        Ok(result) => result.map(|_| ()).map_err(ServerFnError::from),
+        Err(_) => Err(ServerFnError::new(
+            "Email delivery timed out. Please try again later.",
+        )),
+    };
 
     match res {
         Ok(_) => info!(delivery = "sent", "Contact email delivery"),
         Err(_) => error!(delivery = "failed", "Contact email delivery"),
     }
-    // Map the `Response` to `()` and convert Error.
-    res.map(|_res| {}).map_err(|e| e.into())
+    res
 }
 
 #[cfg(all(test, feature = "ssr"))]
@@ -629,7 +644,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn mail_handler_rejects_invalid_and_limited_requests_before_smtp() {
+    async fn mail_handler_rejects_invalid_unconfigured_and_limited_requests_before_smtp() {
         use axum::{
             body::{to_bytes, Body},
             routing::post,
@@ -663,12 +678,35 @@ mod tests {
             assert!(MAIL_ATTEMPTS.lock().is_empty());
         }
 
+        let valid_body =
+            "name=&email=booking%40example.com&email_subject=Booking&email_content=Hello";
+        // This is the only test that invokes SendMail; all configured requests below are rate-limited.
+        let original_password = std::env::var_os("PORKMAIL_PWD");
+        for password in [None, Some("")] {
+            match password {
+                Some(value) => std::env::set_var("PORKMAIL_PWD", value),
+                None => std::env::remove_var("PORKMAIL_PWD"),
+            }
+            let response = app.clone().oneshot(request(valid_body)).await.unwrap();
+            assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+            assert!(MAIL_ATTEMPTS.lock().is_empty());
+            let body = to_bytes(response.into_body(), 4096).await.unwrap();
+            assert_eq!(
+                ServerFnError::de(body),
+                ServerFnError::new("The contact form is unavailable. Please try again later.")
+            );
+        }
+        std::env::set_var("PORKMAIL_PWD", "unused-test-password");
         *MAIL_ATTEMPTS.lock() = vec![Instant::now(); 10];
         let response = app.oneshot(request(
             "name=%20%20&email=%20booking%40example.com%20&email_subject=%20Booking%20&email_content=%20Hello%20"
         )).await.unwrap();
         let attempts = MAIL_ATTEMPTS.lock().len();
         MAIL_ATTEMPTS.lock().clear();
+        match original_password {
+            Some(value) => std::env::set_var("PORKMAIL_PWD", value),
+            None => std::env::remove_var("PORKMAIL_PWD"),
+        }
         assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS);
         assert_eq!(attempts, 10);
         let body = to_bytes(response.into_body(), 4096).await.unwrap();

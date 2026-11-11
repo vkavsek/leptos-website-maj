@@ -113,6 +113,17 @@ python3 scripts/test_update_json.py
 They use temporary directories to check valid imports, archive path and link
 rejection, content validation, and preservation of existing files on invalid input.
 
+After building the debug server, run the Linux shutdown regression checks with:
+
+```sh
+python3 scripts/test_shutdown.py
+```
+
+These start isolated servers on automatically selected localhost ports, without
+SMTP credentials. They check complete downloads during SIGINT and SIGTERM and the
+25-second shutdown deadline with a stalled download. The deadline check takes about
+25 seconds. Python's standard library is sufficient.
+
 Check formatting and lint both compilation targets:
 
 ```sh
@@ -162,6 +173,8 @@ Stop the test server with Ctrl+C when finished.
 Tests cover the homepage, keyboard and dialog focus behavior, photo navigation,
 portrait sizing, thumbnail loading, audio event synchronization, rejected playback,
 mocked contact success/failure, new-tab isolation, video errors, and show rows at
-high zoom. External pages and email responses are mocked; no email is sent.
+high zoom, gallery filename collisions, accessible icon names, and background
+positions across history and reloads. External pages and email responses are
+mocked; no email is sent.
 The light-dismiss fallback is tested with native light dismiss disabled, and audio
 checks guard against reintroducing the old 10 ms polling interval.

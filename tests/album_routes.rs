@@ -15,6 +15,7 @@ use tower::ServiceExt;
 async fn album_routes_return_not_found_only_for_unknown_albums() {
     let options = LeptosOptions::builder()
         .output_name("leptos-website-maj")
+        .site_root("tests/fixtures/site")
         .build();
     let app = Router::new()
         .leptos_routes(&options, leptos_axum::generate_route_list(App), {
@@ -31,17 +32,24 @@ async fn album_routes_return_not_found_only_for_unknown_albums() {
         ("/discography/minorflaw", StatusCode::OK, "Minor Flaw"),
         ("/discography/galaterna", StatusCode::OK, "Galaterna"),
         ("/discography", StatusCode::OK, "Discography"),
+        ("/media", StatusCode::OK, "configured-root-test"),
+        ("/shows/past", StatusCode::OK, "Configured site root"),
+        ("/shows/future", StatusCode::OK, "no events"),
+        ("/about_me", StatusCode::OK, "gallery-test.svg.webp"),
         (
             "/discography/another-missing-album",
             StatusCode::NOT_FOUND,
             "404 Not Found",
         ),
     ] {
-        let response = app
-            .clone()
-            .oneshot(Request::get(path).body(Body::empty()).unwrap())
-            .await
-            .unwrap();
+        // Match Axum's separate request tasks so SSR reactive state cannot leak between requests.
+        let response = tokio::spawn(
+            app.clone()
+                .oneshot(Request::get(path).body(Body::empty()).unwrap()),
+        )
+        .await
+        .unwrap()
+        .unwrap();
         assert_eq!(response.status(), status, "{path}");
         let body = to_bytes(response.into_body(), 100_000).await.unwrap();
         let html = std::str::from_utf8(&body).unwrap();

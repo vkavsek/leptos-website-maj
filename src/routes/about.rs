@@ -159,12 +159,13 @@ pub fn About() -> impl IntoView {
                     {text_content}
                     <button
                         class="change-color-button"
+                        aria-label="Change biography text color"
                         on:click=change_color
                         style=init_color.clone()
                         node_ref=button_ref
                     >
                         <div class="color-box" style=init_bg_color node_ref=curr_col_ref></div>
-                        <img src="/img/icon/back.svg" class="button-next-arrow" />
+                        <img src="/img/icon/back.svg" class="button-next-arrow" alt="" />
                         <div class="color-box" style=init_next_bg_color node_ref=next_col_ref></div>
                     </button>
                 </div>
@@ -175,7 +176,7 @@ pub fn About() -> impl IntoView {
 
 #[component]
 pub fn ImagesAbout() -> impl IntoView {
-    let files = OnceResource::new(read_image_files());
+    let files = OnceResource::new_blocking(read_image_files());
 
     // Click on image to make it fullscreen.
     let (current_img, set_current_img) = signal(None);
@@ -193,7 +194,7 @@ pub fn ImagesAbout() -> impl IntoView {
             if let Some(Ok(files)) = files.get() {
                 let pos = files
                     .iter()
-                    .position(|file_path| file_path.contains(&img))
+                    .position(|file_path| file_path == &img)
                     .unwrap_or_default();
 
                 let next_file = if let Some(file) = files.get(pos + 1) {
@@ -213,7 +214,7 @@ pub fn ImagesAbout() -> impl IntoView {
             if let Some(Ok(files)) = files.get() {
                 let pos = files
                     .iter()
-                    .position(|file_path| file_path.contains(&img))
+                    .position(|file_path| file_path == &img)
                     .unwrap_or_default();
 
                 let next_file = if pos > 0 && files.get(pos - 1).is_some() {
@@ -327,24 +328,39 @@ async fn load_image_files(site_root: &str) -> Result<Vec<String>, MajServerError
     let mut files = tokio::fs::read_dir(path).await?;
     let mut res = Vec::new();
     while let Some(file) = files.next_entry().await? {
-        tracing::debug!("path to file: {}", file.path().display());
-        res.push(extract_name(file.path().to_str()));
+        if !file.file_type().await?.is_file() {
+            continue;
+        }
+        let name = file.file_name();
+        let Some(name) = name.to_str() else { continue };
+        let extension = std::path::Path::new(name)
+            .extension()
+            .and_then(|ext| ext.to_str());
+        if extension.is_some_and(|ext| {
+            matches!(
+                ext.to_ascii_lowercase().as_str(),
+                "avif" | "gif" | "jpg" | "jpeg" | "png" | "svg" | "webp"
+            )
+        }) {
+            res.push(gallery_image_url(name));
+        }
     }
     Ok(res)
 }
 
-/// Returns a string in the format: "/img/about_pics/{filename}",
-/// if it can't split by '/' or input is `None `it just returns an empty string: ""
 #[cfg(feature = "ssr")]
-fn extract_name(path: Option<&str>) -> String {
-    if let Some(path) = path {
-        match path.split('/').next_back().map(|res| res.to_owned()) {
-            Some(path) => format!("/img/about_pics/{}", path),
-            None => "".to_owned(),
+fn gallery_image_url(name: &str) -> String {
+    use std::fmt::Write;
+
+    let mut url = String::from("/img/about_pics/");
+    for byte in name.bytes() {
+        if byte.is_ascii_alphanumeric() || b"-._~".contains(&byte) {
+            url.push(char::from(byte));
+        } else {
+            write!(url, "%{byte:02X}").expect("writing to a String cannot fail");
         }
-    } else {
-        "".to_owned()
     }
+    url
 }
 
 #[cfg(all(test, feature = "ssr"))]
@@ -354,18 +370,59 @@ mod tests {
     #[tokio::test]
     async fn every_gallery_original_has_a_smaller_webp_thumbnail() {
         let root = concat!(env!("CARGO_MANIFEST_DIR"), "/public");
-        for original in load_image_files(root).await.unwrap() {
-            let thumbnail = format!(
-                "{}.webp",
-                original.replace("/about_pics/", "/about_thumbnails/")
-            );
-            let thumbnail = std::fs::read(format!("{root}{thumbnail}")).unwrap();
-            let original_size = std::fs::metadata(format!("{root}{original}"))
-                .unwrap()
-                .len();
+        let images = load_image_files(root).await.unwrap();
+        for original in std::fs::read_dir(format!("{root}/img/about_pics")).unwrap() {
+            let original = original.unwrap();
+            let name = original.file_name();
+            let Some(name) = name.to_str() else { continue };
+            if !images.contains(&gallery_image_url(name)) {
+                continue;
+            }
+            let thumbnail =
+                std::fs::read(format!("{root}/img/about_thumbnails/{name}.webp")).unwrap();
+            let original_size = original.metadata().unwrap().len();
             assert!(thumbnail.starts_with(b"RIFF") && thumbnail.get(8..12) == Some(b"WEBP"));
-            assert!((thumbnail.len() as u64) < original_size, "{original}");
+            assert!((thumbnail.len() as u64) < original_size, "{name}");
         }
+    }
+
+    #[tokio::test]
+    async fn gallery_ignores_non_images_and_encodes_filename_segments() {
+        let root = std::env::temp_dir().join(format!(
+            "maj-gallery-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let directory = root.join("img/about_pics");
+        std::fs::create_dir_all(directory.join("directory.jpg")).unwrap();
+        for name in ["portrait.JPG", "photo#1? 100%é.png", "notes.txt"] {
+            std::fs::write(directory.join(name), b"fixture").unwrap();
+        }
+        #[cfg(unix)]
+        {
+            use std::os::unix::ffi::OsStringExt;
+            std::os::unix::fs::symlink(
+                directory.join("portrait.JPG"),
+                directory.join("linked.jpg"),
+            )
+            .unwrap();
+            let invalid_name = std::ffi::OsString::from_vec(b"invalid-\xff.jpg".to_vec());
+            std::fs::write(directory.join(invalid_name), b"fixture").unwrap();
+        }
+        let result = load_image_files(root.to_str().unwrap()).await;
+        std::fs::remove_dir_all(root).unwrap();
+        let mut images = result.unwrap();
+        images.sort();
+        assert_eq!(
+            images,
+            [
+                "/img/about_pics/photo%231%3F%20100%25%C3%A9.png",
+                "/img/about_pics/portrait.JPG"
+            ]
+        );
     }
 
     #[tokio::test]

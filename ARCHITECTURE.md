@@ -38,6 +38,11 @@ the static-file handler as its fallback. Middleware attaches and propagates
 Cache-Control headers. Docker packages the release binary and generated site
 directory together; Fly forwards HTTP traffic to the server's port 8080.
 
+SIGINT and SIGTERM initiate Axum's graceful shutdown. Active connections get up to
+25 seconds to drain; remaining connections close when that deadline expires. Fly's
+30-second shutdown allowance leaves time for this bounded drain. Contact SMTP work
+has a separate 20-second overall timeout.
+
 ### Static file responses
 
 Static requests pass their original headers to `ServeDir`, which handles byte
@@ -67,8 +72,13 @@ not keyed by site root: the process uses one configured root. See
 [content maintenance](README.md#content-maintenance) for reload requirements.
 
 Show dates are validated before sorting or caching any records. An invalid date
-rejects the whole file, and both show lists display the load error. Gallery load
-failures also render the shared error display instead of panicking.
+rejects the whole file. Shows, Media, and the gallery use blocking resources so
+their error boundaries can set HTTP `500` before the response headers are sent.
+Successful pages keep HTTP `200`.
+
+The gallery lists supported regular image files and percent-encodes each UTF-8
+filename as a URL path segment. It ignores links, directories, and unsupported
+files. Viewer navigation uses exact URL equality.
 
 The gallery initially requests 480×270 WebP thumbnails. The first four load eagerly;
 the rest use native lazy loading. An original photo is requested only when the
@@ -95,7 +105,9 @@ Each server process permits **10 validated send attempts per rolling hour**, sha
 by all visitors. A short `parking_lot::Mutex` update reserves an attempt atomically;
 no lock is held during SMTP or other async work. The mutex does not poison on panic:
 recorded attempts stay in effect after the lock is released. Invalid submissions
-use no slot; SMTP failures do. A full allowance returns HTTP `429` until an attempt
+use no slot; missing or empty SMTP credentials also use no slot and return HTTP
+`500` with a static configuration log. SMTP failures and timeouts use a slot.
+A full allowance with configured SMTP credentials returns HTTP `429` until an attempt
 is at least one hour old.
 
 The allowance resets on restart, each replica has its own allowance, and one visitor
@@ -121,3 +133,7 @@ handling. The shared light-dismiss helper supplies outside-click dismissal when
 the browser lacks `closedby` support, ignoring padding clicks and selection drags
 that start inside. Listeners use `leptos-use-event-listener` with its SSR feature.
 Visitor-facing controls are described in [README.md](README.md#keyboard-controls-and-dialogs).
+
+The shared page layout reads the router location to set the background position.
+Navigation links have no background-changing click handlers, so direct loads,
+nested routes, and browser history use the same framing.

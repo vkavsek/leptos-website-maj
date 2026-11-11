@@ -14,7 +14,7 @@ Built with Rust, Leptos, and Axum.
 
 | Variable | Purpose |
 | --- | --- |
-| `PORKMAIL_PWD` | SMTP password for contact email; supply through the environment or hosting secrets |
+| `PORKMAIL_PWD` | Nonempty SMTP password for contact email; supply through the environment or hosting secrets |
 | `LEPTOS_SITE_ROOT` | Directory containing built assets and content; defaults to `target/site` for local builds |
 | `LEPTOS_SITE_ADDR` | Server bind address; defaults to `0.0.0.0:8080` |
 | `RUST_LOG` | Required logging filter for release binaries; use `info` for normal operation |
@@ -29,6 +29,8 @@ env RUST_LOG=info ./target/release/leptos-website-maj
 ```
 
 Set `PORKMAIL_PWD` in the process environment when real contact delivery is needed.
+If it is absent or empty, contact submissions return HTTP `500` without contacting
+SMTP or consuming an hourly sending slot. The rest of the site remains available.
 To serve a different content directory with an existing binary:
 
 ```sh
@@ -69,6 +71,11 @@ Docker. The app and service settings are in `fly.toml`; the service forwards tra
 to port 8080 and redirects HTTP to HTTPS. Supply `PORKMAIL_PWD` through Fly secrets,
 never through tracked configuration.
 
+The server handles Ctrl+C (`SIGINT`) and `SIGTERM` by stopping new connections and
+allowing active requests up to 25 seconds to finish. SMTP delivery has a 20-second
+overall timeout. `fly.toml` gives the process 30 seconds before forced shutdown;
+requests still unfinished after the server deadline are closed.
+
 ## Content maintenance
 
 Edit source assets in `public/` and styles in `style/`. Rebuild to copy source
@@ -82,7 +89,9 @@ The configured site root must contain:
   day.month.year format, such as `29.02.2024`. Missing, null, empty, malformed, or
   impossible dates reject the whole file.
 - `data_json/yt_videos.json`: video records.
-- `img/about_pics/`: original gallery photos.
+- `img/about_pics/`: original gallery photos. Regular AVIF, GIF, JPEG (`.jpg` or
+  `.jpeg`), PNG, SVG, and WebP files are listed, regardless of extension case.
+  Links, subdirectories, other files, and filenames that are not valid UTF-8 are ignored.
 - `img/about_thumbnails/`: generated WebP thumbnails for the gallery.
 
 Correct a failed content file and restart or redeploy to clear its cached error.
@@ -116,6 +125,8 @@ The script applies EXIF orientation, crops to 480×270, and strips thumbnail met
 Originals stay unchanged. Commit thumbnails alongside their source photos. When
 deleting an original, delete its matching `<original filename>.webp` thumbnail.
 A Rust test checks that every original has a smaller WebP thumbnail.
+Gallery URLs encode filenames, so spaces, Unicode, `#`, `?`, and `%` are supported.
+Next and Previous compare complete filenames and wrap at either end.
 
 ## Keyboard controls and dialogs
 
@@ -136,6 +147,8 @@ background inert, and restore focus when closed. Escape, close buttons, and clic
 outside dismiss them. Clicking dialog padding or dragging a text selection outside
 does not dismiss them.
 External sites opened in a new tab cannot access the original tab through `window.opener`.
+The biography color button is named "Change biography text color". Background
+framing follows the current route, including nested pages, Back/Forward, and reloads.
 
 Contact drafts survive dismissal and failed submissions. Errors are brought into
 view. A successful send resets the form and closes the dialog. See
@@ -148,6 +161,8 @@ Contact delivery logs contain only `delivery=sent` or `delivery=failed` within t
 request span (`req`, with its `id` from `x-request-id`). Use that ID to correlate
 delivery results with HTTP request logs. The handler does not log names, email
 addresses, subjects, message bodies, or raw SMTP replies.
+Missing or empty mail credentials produce a separate static configuration error;
+the credential value is never logged.
 
 Earlier private data already present in hosting logs is not removed by code changes.
 Manage log access and retention through the hosting provider.

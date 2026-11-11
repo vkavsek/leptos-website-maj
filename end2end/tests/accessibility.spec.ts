@@ -21,6 +21,64 @@ async function focusStaysInside(page: Page, dialog: Locator, steps: number) {
   await expect.poll(() => dialog.evaluate(element => element.contains(document.activeElement))).toBe(true);
 }
 
+test("navigation and biography color controls have distinct accessible names", async ({ page }) => {
+  await ready(page);
+  await expect(page.getByRole("link", { name: "Shows", exact: true })).toHaveCount(1);
+  await expect(page.getByRole("link", { name: "Discography", exact: true })).toHaveCount(1);
+  await page.getByRole("link", { name: "About Me", exact: true }).click();
+  const color = page.getByRole("button", { name: "Change biography text color", exact: true });
+  await expect(color).toBeVisible();
+  await expect(color.locator("img")).toHaveAttribute("alt", "");
+  const before = await page.locator(".about-text").evaluate(element => getComputedStyle(element).color);
+  await color.press("Enter");
+  await expect.poll(() => page.locator(".about-text").evaluate(element => getComputedStyle(element).color)).not.toBe(before);
+});
+
+test("gallery navigation matches complete filenames and wraps both ways", async ({ page }) => {
+  await ready(page);
+  const files = ["/img/about_pics/portrait.jpg.webp", "/img/about_pics/portrait.jpg", "/img/about_pics/photo%231.jpg"];
+  await page.route("**/api/get_image_files*", route => route.fulfill({
+    contentType: "application/json", body: JSON.stringify(files),
+  }));
+  await page.route("**/img/about_*/*", route => route.fulfill({
+    contentType: "image/png",
+    body: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jD1sAAAAASUVORK5CYII=", "base64"),
+  }));
+  await page.getByRole("link", { name: "About Me", exact: true }).click();
+  await page.getByRole("button", { name: "Open gallery photo 2", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Photo viewer" });
+  const image = dialog.getByRole("img", { name: "Enlarged gallery photo" });
+  await expect(image).toHaveAttribute("src", files[1]);
+  for (const index of [2, 0]) {
+    await dialog.getByRole("button", { name: "Next photo" }).click();
+    await expect(image).toHaveAttribute("src", files[index]);
+  }
+  for (const index of [2, 1, 0]) {
+    await dialog.getByRole("button", { name: "Previous photo" }).click();
+    await expect(image).toHaveAttribute("src", files[index]);
+  }
+});
+
+test("route background positions survive history, reloads, and nested URLs", async ({ page }) => {
+  await page.route(/youtube(?:-nocookie)?\.com/, route => route.abort());
+  await ready(page, "/about_me");
+  const background = page.locator(".bg-wrapper");
+  await expect(background).toHaveCSS("background-position", "35% 60%");
+  await page.getByRole("link", { name: "Media", exact: true }).click();
+  await expect(background).toHaveCSS("background-position", "100% 90%");
+  await page.goBack();
+  await expect(page).toHaveURL(/\/about_me$/);
+  await expect(background).toHaveCSS("background-position", "35% 60%");
+  await page.goForward();
+  await expect(background).toHaveCSS("background-position", "100% 90%");
+  await page.reload();
+  await expect(background).toHaveCSS("background-position", "100% 90%");
+  await ready(page, "/shows/past");
+  await expect(background).toHaveCSS("background-position", /^0(?:px|%) 100%$/);
+  await ready(page, "/discography/minorflaw");
+  await expect(background).toHaveCSS("background-position", /^0(?:px|%) 0%$/);
+});
+
 test("audio sliders work with arrows, Home and End", async ({ page }) => {
   await ready(page);
   const play = page.getByRole("button", { name: "Play", exact: true });

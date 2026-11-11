@@ -8,7 +8,6 @@ pub mod audio;
 pub mod error;
 #[cfg(feature = "ssr")]
 pub mod fallback;
-pub mod head;
 pub mod routes;
 #[cfg(feature = "ssr")]
 pub mod serve;

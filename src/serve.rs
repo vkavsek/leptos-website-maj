@@ -8,7 +8,7 @@ use axum::{body::Body, middleware, routing::get, Router};
 use http::{HeaderName, Request, Response};
 use leptos::config::LeptosOptions;
 use leptos_axum::{AxumRouteListing, LeptosRoutes};
-use std::time::Duration;
+use std::{future::IntoFuture, time::Duration};
 use tokio::net::TcpListener;
 use tower::ServiceBuilder;
 use tower_http::{
@@ -85,9 +85,51 @@ pub async fn serve(
         .layer(middleware::map_response(midware::response_mapper_midware))
         .with_state(state);
 
-    axum::serve(listener, app).await?;
+    // Notify select! when shutdown starts; normal server uptime must have no timeout.
+    let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel();
+    let server = axum::serve(listener, app)
+        .with_graceful_shutdown(async move {
+            shutdown_signal().await;
+            let _ = shutdown_tx.send(());
+        })
+        .into_future();
+    // Reuse the same server future while waiting for a signal and while draining requests.
+    tokio::pin!(server);
+    tokio::select! {
+        result = &mut server => result?,
+        _ = shutdown_rx => {
+            // Cover SMTP's 20-second limit while staying within Fly's 30-second shutdown allowance.
+            match tokio::time::timeout(Duration::from_secs(25), server).await {
+                Ok(result) => result?,
+                // Returning lets main drop the runtime and close unfinished connections.
+                Err(_) => tracing::warn!("Shutdown deadline reached; closing remaining connections"),
+            }
+        }
+    }
 
     Ok(())
+}
+
+/// Waits for Ctrl+C (SIGINT on Unix) or Unix SIGTERM so Axum can begin graceful shutdown.
+///
+/// Panics if a signal handler cannot be registered, rather than silently losing shutdown support.
+async fn shutdown_signal() {
+    #[cfg(unix)]
+    let terminate = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("could not register SIGTERM handler")
+            .recv()
+            .await;
+    };
+    // Keep the SIGTERM branch inactive on platforms where only Ctrl+C is supported here.
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        result = tokio::signal::ctrl_c() => result.expect("could not register interrupt handler"),
+        _ = terminate => {},
+    }
+    tracing::info!("Shutdown requested; draining active requests for up to 25 seconds");
 }
 
 async fn health() -> axum::http::StatusCode {
