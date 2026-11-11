@@ -1,222 +1,157 @@
-# Building Instructions
+# Build and test instructions
 
-Notes on building for development and publishing to production.
+Run commands from the repository root unless another directory is specified.
+For runtime configuration, content maintenance, and deployment, see [README.md](README.md).
+For application design, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
-1. You need rust installed, including the WASM target (`rustup target add wasm32-unknown-unknown`)
-2. Install:
+## Dependencies
 
-- mold
-- cargo-leptos
-- flyctl
-- docker
+For native Linux builds, install:
 
-3. Make sure docker is running or `sudo systemctl start docker`
+- Rust and Cargo through rustup.
+- The `wasm32-unknown-unknown` Rust target.
+- `cargo-leptos`, which builds the server, browser WASM, and SCSS assets.
+- A C/C++ build toolchain, Clang, and LLD. The x86_64 Linux linker configuration
+  in `.cargo/config.toml` uses Clang with LLD.
+- OpenSSL development headers and `pkg-config` for Lettre's native TLS support.
+- CA certificates for dependency downloads and SMTP TLS certificate verification.
 
-## Local Dev
+On Debian or Ubuntu, install the system dependencies with:
 
-1. Build the docker image with: `docker build -t maj-web .`
-2. Run the docker image with: `docker run -p 8080:8080 maj-web`
+```sh
+sudo apt-get update
+sudo apt-get install build-essential clang lld pkg-config libssl-dev ca-certificates
+```
+
+With Rust and Cargo installed:
+
+```sh
+rustup target add wasm32-unknown-unknown
+cargo install cargo-leptos --locked
+```
+
+Docker builds require a running Docker daemon; the builder image installs Rust
+build tools itself. Browser tests additionally require Node.js 20 or newer and npm.
+
+## Development build
+
+Build and serve the complete site with automatic reload:
+
+```sh
+env RUSTFLAGS="--cfg erase_components" cargo leptos watch
+```
+
+Open `http://localhost:8080`. Automatic reload uses port 8081.
+
+To build without starting a server:
+
+```sh
+env RUSTFLAGS="--cfg erase_components" cargo leptos build --cargo-locked
+```
+
+The server binary is `target/debug/leptos-website-maj`; browser assets and copied
+public files are in `target/site/`. The component-erasure flag matches the Docker
+build and is also used by the checks below.
+
+## Release build
+
+```sh
+env RUSTFLAGS="--cfg erase_components" cargo leptos build --release --cargo-locked
+```
+
+The server binary is `target/release/leptos-website-maj`. Keep `target/site/` with
+it when preparing a runtime environment. Generated `target/site/` and `pkg/`
+output must not be edited or committed.
+
+## Docker build
+
+```sh
+docker build -t maj-web .
+```
+
+The multi-stage Dockerfile builds release server and browser assets and packages
+these with runtime OpenSSL libraries and CA certificates. The build context excludes
+`target/`, so local build output is rebuilt inside the container.
 
 The builder selects the x86_64 or aarch64 `cargo-binstall` archive using its own
-architecture (`uname -m`). Both downloads use the local filename `cargo-binstall.tgz`.
-For `--platform` builds, configure a native builder or emulation for the requested
-platform.
+architecture (`uname -m`), saving it as `cargo-binstall.tgz`. For `--platform`
+builds, configure a native builder or emulation for the requested platform.
 
-The Docker context excludes `/target`, so local Rust output and staged site files
-are rebuilt inside the builder instead of being copied into it. Source assets remain
-in `public/`.
+## Rust tests and checks
 
-## Publishing to Fly.io
+Run the full Rust test suite without SMTP credentials:
 
-1. `fly deploy` to build on a Fly machinge or add `--local-only` to build locally
+```sh
+env -u PORKMAIL_PWD RUSTFLAGS="--cfg erase_components" cargo test --locked --features ssr
+```
 
-## Contact form protections
+The tests do not send email. They cover contact validation and rate limiting,
+content loading, show dates, gallery thumbnails, static file responses, and album
+route HTTP status codes. For a focused group, append one of these filters to
+`cargo test --locked --lib --features ssr`, keeping the same environment settings:
 
-The server trims surrounding whitespace and validates each submission before reserving
-a sending slot or contacting SMTP:
-
-| Field | Requirement |
+| Filter | Coverage |
 | --- | --- |
-| Name | Optional; at most 100 characters |
-| Email | Required; valid address syntax and at most 254 UTF-8 bytes |
-| Subject | Required; 1–200 characters on a single line |
-| Message | Required; 1–10,000 characters; line breaks and tabs allowed |
+| `routes::home::tests` | Validation, rolling expiry, concurrent attempts, rejected HTTP requests |
+| `serve::tests` | File responses and content APIs using the configured site root |
+| `routes::shows::tests` | Calendar dates, sorting, and content loading |
+| `routes::about::tests` | Gallery loading, error rendering, and thumbnail assets |
+| `routes::media::tests` | Video content loading |
 
-Text lengths use UTF-16 code units to match browser `maxlength` behavior. Single-line
-fields reject control characters. Messages reject control characters other than line
-breaks and tabs. Email validation checks syntax without DNS lookups or verification mail.
-
-Each server process permits **10 validated send attempts per rolling hour**, shared by
-all visitors. Invalid submissions do not use a slot; SMTP failures do. Once full,
-the form returns HTTP `429` until an attempt is at least one hour old. Validation
-errors return HTTP `400`. The form brings errors into view and retains the entered text.
-
-The allowance lives in memory and resets on restart. Each replica has its own allowance,
-and one visitor can use the entire shared allowance. The policy is implemented beside
-`send_mail` in `src/routes/home.rs`; no new environment settings or services are needed.
-Continue supplying `PORKMAIL_PWD` through the environment.
-
-The limiter uses a server-only `parking_lot::Mutex` for its short counter update;
-no lock is held during SMTP or other async work. This mutex does not poison on panic:
-the lock is released and recorded attempts remain in effect. The loaders retain
-Tokio's async `OnceCell` because initialization awaits file I/O. The concurrent test
-retains `std::sync::Barrier`, which has no `parking_lot` equivalent.
-
-Contact delivery logs contain only `delivery=sent` or `delivery=failed` within the
-existing request span (`req`, with its `id` from `x-request-id`). Names, email addresses,
-subjects, message bodies, and raw SMTP replies are not logged by the contact handler.
-Use the request ID to correlate delivery results with HTTP request logs. This change
-does not remove private data already present in hosting logs; manage those logs using
-the hosting provider's access and retention controls.
-
-On Linux, run the focused tests with the same component-erasure flag used by the
-Dockerfile, without SMTP credentials:
+Run the album HTTP regression test separately with:
 
 ```sh
-env -u PORKMAIL_PWD RUSTFLAGS="--cfg erase_components" cargo test --locked --offline --lib --features ssr routes::home::tests
+env -u PORKMAIL_PWD RUSTFLAGS="--cfg erase_components" cargo test --locked --features ssr --test album_routes
 ```
 
-The tests cover validation, rolling expiry, simultaneous requests, and rejected HTTP
-requests. They do not send email.
-
-## Static file responses
-
-Static requests pass their original headers to `ServeDir`, which handles byte ranges
-and cache preconditions. Audio range requests return `206` with the requested bytes;
-an `If-Modified-Since` value matching `Last-Modified` returns an empty `304` response.
-Only missing files render the app's HTML `404` page. Other file-service responses,
-including redirects, failed preconditions, and unsatisfiable ranges, pass through.
-
-The existing cache policy remains: development sends
-`no-store, no-cache, must-revalidate, proxy-revalidate`; release sends
-`max-age=3600, must-revalidate`.
-
-Run the file-response regression tests on Linux with:
+Check formatting and lint both compilation targets:
 
 ```sh
-env -u PORKMAIL_PWD RUSTFLAGS="--cfg erase_components" cargo test --locked --offline --lib --features ssr serve::tests
+cargo fmt --all -- --check
+env -u PORKMAIL_PWD RUSTFLAGS="--cfg erase_components" cargo clippy --locked --features ssr --all-targets -- -D warnings
+env -u PORKMAIL_PWD RUSTFLAGS="--cfg erase_components" cargo clippy --locked --lib --no-default-features --features hydrate --target wasm32-unknown-unknown --target-dir target/front -- -D warnings
 ```
 
-## Show dates
-
-Every record in `public/data_json/shows.json` must include a real calendar date in
-day.month.year format, for example `29.02.2024`. Missing, null, empty, malformed, or
-impossible dates reject the entire file before sorting or caching any show records.
-Both show lists use the existing error display when loading fails.
-
-The loader caches its result, including errors, for the life of the server process.
-After correcting the content file, restart or redeploy the server to reload it.
-
-Run the date-validation regression tests on Linux with:
-
-```sh
-env -u PORKMAIL_PWD RUSTFLAGS="--cfg erase_components" cargo test --locked --offline --lib --features ssr routes::shows::tests
-```
-
-## Content directory
-
-Shows, videos, and gallery filenames load from the same `LeptosOptions.site_root`
-used for static files, in both development and release builds. The configured root
-must contain `data_json/shows.json`, `data_json/yt_videos.json`, and `img/about_pics/`.
-Gallery URLs remain `/img/about_pics/<filename>`.
-
-The project defaults to `target/site`, populated by `cargo leptos watch` or
-`cargo leptos build`. To run the server directly against source assets on Linux:
-
-```sh
-env LEPTOS_SITE_ROOT=public RUSTFLAGS="--cfg erase_components" cargo run --features ssr
-```
-
-For a built server, use `LEPTOS_SITE_ROOT` to select a different site directory:
-
-```sh
-env LEPTOS_SITE_ROOT=/path/to/site ./target/release/leptos-website-maj
-```
-
-Content results, including load errors, are cached per server process. Restart after
-changing the root or correcting a failed load. Gallery loading failures use the
-existing error display instead of panicking.
-
-## Gallery thumbnails
-
-The gallery displays 480×270 WebP thumbnails from `public/img/about_thumbnails/`.
-The first four load eagerly; the remaining thumbnails use native lazy loading.
-Original photos in `public/img/about_pics/` are requested only when the viewer opens.
-The twelve thumbnails total about 149 KB, compared with 17.8 MB of originals.
-
-After adding or replacing originals, generate thumbnails from the repository root
-with ImageMagick (`convert` with WebP support):
-
-```sh
-sh scripts/generate-gallery-thumbnails.sh
-```
-
-The script applies EXIF orientation, crops thumbnails to the gallery's 16:9 frame,
-and strips thumbnail metadata. Originals stay unchanged. Commit the generated
-thumbnails alongside content changes; when deleting an original, also delete its
-matching `<original filename>.webp` thumbnail. A Rust test checks that every original
-has a smaller WebP thumbnail.
-
-## Album URLs
-
-Known album URLs (`/discography/minorflaw` and `/discography/galaterna`) return HTTP
-`200`. Unknown album names return HTTP `404` with the shared not-found error display
-and a link to the home page. The discography index remains available at `/discography`.
-
-Run the HTTP regression check with:
-
-```sh
-env -u PORKMAIL_PWD RUSTFLAGS="--cfg erase_components" cargo test --locked --offline --features ssr --test album_routes
-```
-
-## Keyboard controls and dialogs
-
-Gallery thumbnails are labeled buttons. Activate them with Enter or Space; the photo
-viewer has named previous, next, and close buttons. Audio seeking and volume use native
-range inputs with arrow-key, Home, and End support. Seeking stays disabled until the
-audio duration is known. Volume changes and mute/unmute keep the slider synchronized.
-
-Audio time, duration, playback state, and volume follow native media events rather
-than a polling timer. Metadata already loaded before hydration is read on mount;
-unknown/non-finite durations disable seeking, and rejected play requests leave the
-control paused. The active player uses the Minor Flaw promo; retired playlist state
-and promotion code have been removed. Dialog listeners now use the
-`leptos-use-event-listener` micro crate with its SSR feature, replacing deprecated
-umbrella-crate imports.
-
-Contact, external-link confirmation, and photo viewers use native modal dialogs.
-Opening moves focus inside, background controls become inert, and Escape or the close
-button dismisses the dialog and restores focus. Clicking outside also dismisses it,
-with a fallback for browsers without `closedby` support. Clicking dialog padding or
-dragging a text selection outside does not dismiss it.
-
-Contact drafts survive dismissal and failed submissions. A successful send resets the
-form and closes it. Browser tests mock the email responses and never send mail.
+After dependencies are cached, add `--offline` to Cargo test/check commands or
+`--cargo-offline` to `cargo leptos build` to avoid network access.
 
 ## Browser checks
 
-Browser tests require Node.js 20 or newer.
-
-Playwright uses port 8080 by default and does not start a server. Reuse a development
-server or build and start an isolated one on another port, for example on Linux:
+Playwright does not start a server. Build the complete application and start a
+separate test server without SMTP credentials:
 
 ```sh
-env RUSTFLAGS="--cfg erase_components" cargo leptos build
+env RUSTFLAGS="--cfg erase_components" cargo leptos build --cargo-locked
 env -u PORKMAIL_PWD LEPTOS_SITE_ADDR=127.0.0.1:8082 ./target/debug/leptos-website-maj
 ```
 
-In a separate terminal, from `end2end/`:
+Leave that process running. In a separate terminal, install browser test
+dependencies from `end2end/`:
 
 ```sh
+cd end2end
 npm ci
-npx playwright install chromium firefox
+npx playwright install --with-deps chromium firefox webkit
+```
+
+Installing browser system libraries may require administrator privileges. Run all
+three browser projects with:
+
+```sh
+env PLAYWRIGHT_BASE_URL=http://127.0.0.1:8082 npx playwright test
+```
+
+To run only installed Chromium and Firefox browsers:
+
+```sh
 env PLAYWRIGHT_BASE_URL=http://127.0.0.1:8082 npx playwright test --project=chromium --project=firefox
 ```
 
-The WebKit project is also configured; install its browser and required system
-libraries to include it. Tests cover the real homepage, audio controls, dialog focus,
-Escape and button dismissal, photo navigation, portrait sizing, and mocked email
-success/failure. The dismissal fallback is tested with native light dismiss disabled.
-Additional checks verify thumbnail-only initial gallery requests, loading the
-original after opening, media-event synchronization, rejected playback, and the
-absence of the old 10 ms polling interval.
+The default base URL is `http://127.0.0.1:8080` if `PLAYWRIGHT_BASE_URL` is unset.
+Stop the test server with Ctrl+C when finished.
+
+Tests cover the homepage, keyboard and dialog focus behavior, photo navigation,
+portrait sizing, thumbnail loading, audio event synchronization, rejected playback,
+and mocked contact success/failure. Email responses are mocked; no email is sent.
+The light-dismiss fallback is tested with native light dismiss disabled, and audio
+checks guard against reintroducing the old 10 ms polling interval.

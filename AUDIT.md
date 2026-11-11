@@ -13,7 +13,7 @@ What this repo does: A public portfolio for Maj Kavšek, built with Rust, Leptos
    - **Status:** Resolved on 2026-11-09. The server trims and validates fields before reserving
      one of 10 send attempts per rolling hour; validation errors return HTTP `400` and
      exhausted allowance returns HTTP `429`. The form retains input on failure and
-     brings error messages into view; see [the documented policy](BUILD.md#contact-form-protections).
+     brings error messages into view; see [the documented policy](ARCHITECTURE.md#contact-form-protections).
    - **Verified:** Seven Rust tests passed, including concurrent admissions, rolling expiry,
      and real-handler rejection checks. Formatting, Clippy, the server/WASM build, and
      mocked browser checks passed; no SMTP delivery was attempted.
@@ -30,7 +30,7 @@ What this repo does: A public portfolio for Maj Kavšek, built with Rust, Leptos
    - **Status:** Resolved on 2026-11-10. Contact delivery logs now record only
      `delivery=sent` or `delivery=failed` in the existing request ID span. Personal
      fields, message contents, and raw SMTP success/error replies are omitted;
-     see [the documented logging policy](BUILD.md#contact-form-protections).
+     see [the documented logging policy](ARCHITECTURE.md#contact-form-protections).
    - **Verified:** All seven Rust tests, formatting, Clippy, and a source allowlist check
      passed; the handler's only log events contain static delivery outcomes, and the
      request ID span is retained. No SMTP delivery was attempted.
@@ -46,7 +46,7 @@ What this repo does: A public portfolio for Maj Kavšek, built with Rust, Leptos
    - **Status:** Resolved on 2026-11-10. Original request headers reach `ServeDir`,
      and only its `404` responses render the app's error page. The custom date
      middleware/parser and direct `lazy-regex` dependency were removed. Existing
-     compression and Cache-Control policy remain; see [file-response behavior](BUILD.md#static-file-responses).
+     compression and Cache-Control policy remain; see [file-response behavior](ARCHITECTURE.md#static-file-responses).
    - **Verified:** Four regression tests cover two-byte audio ranges, matching and
      older/newer/invalid cache dates, HEAD responses, unsatisfiable ranges, unsupported
      methods, failed preconditions, directory redirects, and the HTML `404` fallback.
@@ -62,7 +62,7 @@ What this repo does: A public portfolio for Maj Kavšek, built with Rust, Leptos
    - **Status:** Resolved on 2026-11-10. The shared loader validates every show date
      before sorting and caching show records. A missing or invalid date returns the
      existing data error with the record number instead of reaching the list filters.
-     See [show date requirements and reload instructions](BUILD.md#show-dates).
+     See [show date requirements and reload instructions](README.md#content-maintenance).
    - **Verified:** Three new tests cover missing/null/empty/impossible/malformed dates,
      leap days, chronological ordering, empty lists, and the current show file. All
      fourteen Rust tests, formatting, and Clippy passed.
@@ -78,7 +78,7 @@ What this repo does: A public portfolio for Maj Kavšek, built with Rust, Leptos
    - **Status:** Resolved on 2026-11-11. All three loaders build paths from the
      configured `LeptosOptions.site_root` in both development and release builds.
      Gallery load failures reach the existing error display; the resource no longer
-     unwraps them. See [content directory configuration](BUILD.md#content-directory).
+     unwraps them. See [content directory configuration](README.md#runtime-configuration).
    - **Verified:** Five new tests cover relative/absolute roots, missing files, public
      gallery URLs, configuration supplied through the JSON API router, and a rendered
      gallery load error. All nineteen Rust tests, formatting, Clippy, and native
@@ -97,7 +97,7 @@ What this repo does: A public portfolio for Maj Kavšek, built with Rust, Leptos
      focus indicators. Pixel-based seeking/volume handlers and their unused styles
      were removed. Metadata already loaded before hydration is read when mounting.
    - **Verified:** Keyboard seeking, volume, photo opening/navigation, and pointer
-     photo navigation passed in Chromium and Firefox. See [keyboard behavior](BUILD.md#keyboard-controls-and-dialogs).
+     photo navigation passed in Chromium and Firefox. See [keyboard behavior](README.md#keyboard-controls-and-dialogs).
 
 7. **Dialogs leave keyboard focus behind the overlay** — [home.rs:387](/home/vkav/PROJECTS/rust/leptos-website-maj/src/routes/home.rs:387), [about.rs:294](/home/vkav/PROJECTS/rust/leptos-website-maj/src/routes/about.rs:294)
 
@@ -126,7 +126,7 @@ What this repo does: A public portfolio for Maj Kavšek, built with Rust, Leptos
    - **If we skip it:** The documented local Docker build fails on ARM machines.
    - **Status:** Resolved on 2026-11-11. The bootstrap uses the builder's `uname -m`
      in the download URL and a fixed local archive name for extraction.
-     See [Docker build notes](BUILD.md#local-dev).
+     See [Docker build notes](BUILD.md#docker-build).
    - **Verified:** POSIX-shell checks passed for x86_64 and aarch64 download URLs,
      extraction, installation, and stopping after a failed download. Both upstream
      release assets were verified through GitHub's release API.
@@ -141,7 +141,7 @@ What this repo does: A public portfolio for Maj Kavšek, built with Rust, Leptos
    - **If we skip it:** Crawlers and monitoring treat nonexistent album pages as successful pages.
    - **Status:** Resolved on 2026-11-11. Failed album lookups use the shared
      `MajServerError::NotFound` error display, setting HTTP `404` during server rendering.
-     See [album URL behavior and its regression check](BUILD.md#album-urls).
+     See [album URL behavior](ARCHITECTURE.md#album-urls).
    - **Verified:** The HTTP regression test reproduced `200` before the fix and now
      checks two unknown names return `404`, both releases return `200`, and the index
      returns `200`. All twenty Rust tests passed. The HTTP test uses a separate test
@@ -180,7 +180,7 @@ What this repo does: A public portfolio for Maj Kavšek, built with Rust, Leptos
     - **Status:** Resolved on 2026-11-11. The gallery uses committed 480×270 WebP
       thumbnails (149,330 bytes total versus 17,845,650 bytes of originals). The first
       four load eagerly and later thumbnails load lazily; originals load only after
-      opening a photo. [Regeneration instructions](BUILD.md#gallery-thumbnails) keep
+      opening a photo. [Regeneration instructions](README.md#gallery-thumbnails) keep
       future content updates reproducible without modifying originals.
     - **Verified:** All twelve thumbnails have the expected dimensions and smaller
       payloads. A Rust asset check and Chromium/Firefox checks verify matching files,

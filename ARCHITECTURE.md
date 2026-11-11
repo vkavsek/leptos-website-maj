@@ -1,0 +1,123 @@
+# Application architecture
+
+The application uses Leptos for server rendering and browser hydration, Axum on
+Tokio for HTTP, and Lettre for SMTP delivery. Public content comes from files;
+there is no database. Build and test commands are in [BUILD.md](BUILD.md), and
+runtime configuration and maintenance are in [README.md](README.md).
+
+## Source organization
+
+| Location | Responsibility |
+| --- | --- |
+| `src/main.rs` | Logging initialization, Leptos configuration, route generation, and TCP listener |
+| `src/app.rs` | HTML shell, shared navigation/audio layout, routes, and dialog dismissal helper |
+| `src/lib.rs` | Browser hydration entry point and shared library exports |
+| `src/serve.rs` | Axum router, server functions, request tracing, compression, and response headers |
+| `src/fallback.rs` | Static file service and missing-file HTML fallback |
+| `src/routes/` | Pages, content loaders, and contact server function |
+| `src/audio/` | Audio player and browser media event handling |
+| `style/` | SCSS entry point and partials |
+| `public/` | Source images, fonts, music, and JSON content |
+| `tests/`, `end2end/tests/` | Rust integration fixtures/tests and Playwright browser tests |
+
+## Rendering and request flow
+
+`cargo-leptos` builds the server binary with `ssr` and the browser library with
+`hydrate`. Server-only dependencies, including Lettre, `parking_lot`, and `secrecy`,
+are enabled only by `ssr`. The browser entry point hydrates the server-rendered
+`App` so controls and navigation become interactive.
+
+The shared layout keeps navigation and the audio player outside the page routes.
+Routes cover `/`, `/about_me`, `/shows` (including `/past` and `/future`),
+`/discography`, `/discography/:name`, and `/media`. Leptos server functions connect
+the page components to content loading and contact delivery.
+
+Axum registers the Leptos routes, server functions, and `/health-check`, then uses
+the static-file handler as its fallback. Middleware attaches and propagates
+`x-request-id`, records request/response events, compresses responses, and applies
+Cache-Control headers. Docker packages the release binary and generated site
+directory together; Fly forwards HTTP traffic to the server's port 8080.
+
+### Static file responses
+
+Static requests pass their original headers to `ServeDir`, which handles byte
+ranges and cache preconditions. Audio range requests return `206` with the requested
+bytes. A matching `If-Modified-Since` condition returns an empty `304` response.
+Only missing files render the app's HTML `404` page. Redirects, failed preconditions,
+unsatisfiable ranges, and other file-service responses pass through.
+
+Development responses use `no-store, no-cache, must-revalidate, proxy-revalidate`;
+release responses use `max-age=3600, must-revalidate`.
+
+### Album URLs
+
+`/discography/minorflaw` and `/discography/galaterna` return HTTP `200`. Unknown
+album names return HTTP `404` with the shared error display and a home link.
+The discography index remains available at `/discography`.
+
+## Content loading and state
+
+Shows, videos, and gallery filenames load from `LeptosOptions.site_root`, the same
+directory used for static files. Gallery URLs remain `/img/about_pics/<filename>`.
+The default local root is `target/site`, populated from `public/` by cargo-leptos.
+
+Each loader uses Tokio's async `OnceCell` to cache its result, including errors,
+for the life of the server process. Initialization awaits file I/O. The cache is
+not keyed by site root: the process uses one configured root. See
+[content maintenance](README.md#content-maintenance) for reload requirements.
+
+Show dates are validated before sorting or caching any records. An invalid date
+rejects the whole file, and both show lists display the load error. Gallery load
+failures also render the shared error display instead of panicking.
+
+The gallery initially requests 480×270 WebP thumbnails. The first four load eagerly;
+the rest use native lazy loading. An original photo is requested only when the
+viewer opens.
+
+## Contact form protections
+
+The `SendMail` server function in `src/routes/home.rs` trims surrounding whitespace,
+then validates the submission before reserving a sending slot or contacting SMTP.
+
+| Field | Requirement |
+| --- | --- |
+| Name | Optional; at most 100 characters |
+| Email | Required; valid address syntax and at most 254 UTF-8 bytes |
+| Subject | Required; 1–200 characters on a single line |
+| Message | Required; 1–10,000 characters; line breaks and tabs allowed |
+
+Text lengths use UTF-16 code units to match browser `maxlength` behavior.
+Single-line fields reject control characters. Messages reject control characters
+other than line breaks and tabs. Email validation checks syntax without DNS lookups
+or verification mail. Invalid submissions return HTTP `400`.
+
+Each server process permits **10 validated send attempts per rolling hour**, shared
+by all visitors. A short `parking_lot::Mutex` update reserves an attempt atomically;
+no lock is held during SMTP or other async work. The mutex does not poison on panic:
+recorded attempts stay in effect after the lock is released. Invalid submissions
+use no slot; SMTP failures do. A full allowance returns HTTP `429` until an attempt
+is at least one hour old.
+
+The allowance resets on restart, each replica has its own allowance, and one visitor
+can exhaust the shared allowance. A durable cap across replicas would require shared
+storage. Concurrent tests use `std::sync::Barrier`, which has no `parking_lot`
+equivalent.
+
+Delivery uses Lettre with TLS through `smtp.porkbun.com`. `PORKMAIL_PWD` is read
+from the environment and wrapped in `SecretString`. Explicit exposure creates the
+owned string required by Lettre's credentials API. The wrapper wipes its own buffer
+on drop; it does not wipe Lettre's internal password copies or the process
+environment. Delivery logging omits private fields; see [logs and privacy](README.md#logs-and-privacy).
+
+## Browser interaction
+
+Audio time, duration, playback state, and volume follow native media events instead
+of a polling timer. Metadata already loaded before hydration is read on mount.
+Unknown or non-finite durations disable seeking; rejected play requests leave the
+control paused.
+
+Dialogs use native modal behavior for focus, background inertness, and Escape
+handling. The shared light-dismiss helper supplies outside-click dismissal when
+the browser lacks `closedby` support, ignoring padding clicks and selection drags
+that start inside. Listeners use `leptos-use-event-listener` with its SSR feature.
+Visitor-facing controls are described in [README.md](README.md#keyboard-controls-and-dialogs).
