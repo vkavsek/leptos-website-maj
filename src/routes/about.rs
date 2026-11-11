@@ -175,7 +175,7 @@ pub fn About() -> impl IntoView {
 
 #[component]
 pub fn ImagesAbout() -> impl IntoView {
-    let files = Resource::new(move || (), |_| async move { read_image_files().await });
+    let files = OnceResource::new(read_image_files());
 
     // Click on image to make it fullscreen.
     let (current_img, set_current_img) = signal(None);
