@@ -5,6 +5,8 @@ use leptos_meta::{Link, Title};
 #[cfg(feature = "ssr")]
 use parking_lot::Mutex;
 #[cfg(feature = "ssr")]
+use secrecy::{ExposeSecret, SecretString};
+#[cfg(feature = "ssr")]
 use std::time::{Duration, Instant};
 
 enum LinkLocation {
@@ -443,9 +445,11 @@ async fn send_mail(
         ))
         .map_err(<lettre::error::Error as Into<ServerFnError>>::into)?;
 
-    // TODO: add secrecy
-    let porkmail_pwd = std::env::var("PORKMAIL_PWD").unwrap_or_default();
-    let creds = Credentials::new("info@majkavsek.com".to_owned(), porkmail_pwd.to_string());
+    let porkmail_pwd = SecretString::from(std::env::var("PORKMAIL_PWD").unwrap_or_default());
+    let creds = Credentials::new(
+        "info@majkavsek.com".to_owned(),
+        porkmail_pwd.expose_secret().to_owned(),
+    );
 
     // Open a remote connection to porkbun
     let mailer: AsyncSmtpTransport<Tokio1Executor> =
