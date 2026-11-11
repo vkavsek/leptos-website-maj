@@ -92,6 +92,12 @@ What this repo does: A public portfolio for Maj Kavšek, built with Rust, Leptos
    - **Problem:** Gallery anchors have no `href`; the sliders are plain `div` elements. Browser checks confirmed that gallery thumbnails cannot receive focus.
    - **Fix:** Use labeled buttons for thumbnails and native range inputs for seeking and volume.
    - **If we skip it:** Keyboard users cannot use these controls.
+   - **Status:** Resolved on 2026-11-11. Gallery thumbnails are labeled native buttons;
+     seeking and volume use labeled range inputs with keyboard controls and visible
+     focus indicators. Pixel-based seeking/volume handlers and their unused styles
+     were removed. Metadata already loaded before hydration is read when mounting.
+   - **Verified:** Keyboard seeking, volume, photo opening/navigation, and pointer
+     photo navigation passed in Chromium and Firefox. See [keyboard behavior](BUILD.md#keyboard-controls-and-dialogs).
 
 7. **Dialogs leave keyboard focus behind the overlay** — [home.rs:387](/home/vkav/PROJECTS/rust/leptos-website-maj/src/routes/home.rs:387), [about.rs:294](/home/vkav/PROJECTS/rust/leptos-website-maj/src/routes/about.rs:294)
 
@@ -99,6 +105,18 @@ What this repo does: A public portfolio for Maj Kavšek, built with Rust, Leptos
    - **Problem:** Focus is neither moved inside nor contained there. Browser checks also confirmed that Escape leaves the mail and photo dialogs open.
    - **Fix:** Use labeled native dialogs opened with `showModal()`, with close handling and focus restoration. See the [W3C dialog keyboard requirements](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/).
    - **If we skip it:** Keyboard and screen-reader users can navigate hidden background controls.
+   - **Status:** Resolved on 2026-11-11. All three overlays are labeled native dialogs
+     opened with `showModal()`, with deliberate initial focus, native Escape handling,
+     close buttons, and focus restoration. `::backdrop` replaces overlay divs; a
+     guarded pointer fallback preserves outside dismissal without closing on padding
+     or text-selection drags. Contact failures retain input; success resets and closes.
+   - **Verified:** All sixteen Playwright checks passed in Chromium and Firefox,
+     including Tab/Shift+Tab, background focus rejection, Escape, explicit close,
+     reopening, fallback dismissal, portrait sizing, and mocked email responses.
+     Server/WASM builds, all nineteen Rust tests, formatting, and Clippy passed;
+     landscape and portrait screenshots were inspected.
+   - **Not checked:** WebKit needs system libraries requiring interactive sudo;
+     assistive-technology testing, live SMTP, and deployment were not performed.
 
 8. **The Docker bootstrap selects the wrong executable on ARM** — [Dockerfile:5](/home/vkav/PROJECTS/rust/leptos-website-maj/Dockerfile:5)
 
@@ -120,6 +138,9 @@ What this repo does: A public portfolio for Maj Kavšek, built with Rust, Leptos
     - **Problem:** Muting sets the bar to zero, but the next loop overwrites it with `audio.volume()`. The browser showed a 100% bar while `muted` was true.
     - **Fix:** Display zero while muted, and synchronize the indicator on `volumechange`.
     - **If we skip it:** The controls give conflicting feedback about sound output.
+    - **Status:** Resolved on 2026-11-11 while replacing the volume control for item 6.
+      The native slider displays zero when muted and synchronizes on `volumechange`.
+      Browser tests verify mute/unmute preserves and restores the actual volume.
 
 **Should fix**
 
@@ -129,6 +150,10 @@ What this repo does: A public portfolio for Maj Kavšek, built with Rust, Leptos
     - **Problem:** `cargo test --locked --offline --features ssr` fails with a recursion-depth error in the library. The only browser test targets port `3000` and starter-template text, while this site uses `8080`.
     - **Fix:** Add the recursion limit to the library crate and replace the starter test with a real site check. Add focused checks for invalid dates and file-response headers.
     - **If we skip it:** These regressions have no useful automated warning.
+    - **Status:** Resolved across items 1, 3, 4, 6, and 7. The library recursion limit,
+      date/file-response tests, real homepage check, and keyboard/dialog tests now run.
+      Playwright defaults to port 8080, supports a test URL override, and its existing
+      dependency lock was updated for current browsers. See [browser checks](BUILD.md#browser-checks).
 
 12. **The gallery downloads full-size originals for thumbnails** — [about.rs:317](/home/vkav/PROJECTS/rust/leptos-website-maj/src/routes/about.rs:317)
 
@@ -162,7 +187,7 @@ What this repo does: A public portfolio for Maj Kavšek, built with Rust, Leptos
 
 Original audit verification (2026-11-08): Checked all application source, styles, content files, build/deploy configuration, and existing tests. Main routes and read-only APIs responded locally; all 78 show dates parsed. The WebAssembly compilation check passed. Browser checks used the existing build artifacts. No source files changed during the audit, and the audit server was stopped.
 
-Verdict: Contact validation, sending limits, private-message logging, file serving, show date validation, and configured content paths are fixed. Fix keyboard controls next; replace the obsolete browser test.
+Verdict: Items 1–7, 10, and 11 are fixed. Fix the Docker architecture bootstrap and missing-album status next.
 
 Lean: -300 lines, -1 dependency possible, plus over 61 MB of unused backgrounds.  
 Not checked: Live email delivery, Fly production behavior, a full Docker/release build, dependency advisories, or load testing.

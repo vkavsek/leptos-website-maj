@@ -1,3 +1,4 @@
+use crate::app::use_dialog_light_dismiss;
 use leptos::{ev::MouseEvent, form::ActionForm, html::Div, prelude::*};
 use leptos_meta::{Link, Title};
 use leptos_use::use_element_hover;
@@ -227,8 +228,8 @@ fn LinkWithModal(
     #[prop(optional)] opt_text: Option<String>,
 ) -> impl IntoView {
     let (href_target, src_target, width, height) = loc.process();
-    let (visible, set_visible) = signal(false);
-    let modal_ref = NodeRef::new();
+    let modal_ref = NodeRef::<leptos::html::Dialog>::new();
+    use_dialog_light_dismiss(modal_ref);
 
     let alt = match loc {
         LinkLocation::Fb => "A link to Facebook",
@@ -246,30 +247,32 @@ fn LinkWithModal(
 
     let click_on_link = move |ev: MouseEvent| {
         ev.prevent_default();
-        set_visible.set(true);
+        if let Some(dialog) = modal_ref.get() {
+            let _ = dialog.show_modal();
+        }
     };
 
     let open_link = move |_| {
         // Open in new tab
         let _ = window().open_with_url(href_target);
-        set_visible.set(false);
+        if let Some(dialog) = modal_ref.get() {
+            dialog.close();
+        }
     };
 
     let take_me_to_link = move |_| {
         // Navigate in the same tab
         let _ = window().location().set_href(href_target);
-        set_visible.set(false);
+        if let Some(dialog) = modal_ref.get() {
+            dialog.close();
+        }
     };
 
     let take_me_back = move |_| {
-        set_visible.set(false);
+        if let Some(dialog) = modal_ref.get() {
+            dialog.close();
+        }
     };
-
-    Effect::new(move |_| {
-        leptos_use::on_click_outside(modal_ref, move |_| {
-            set_visible.set(false);
-        })
-    });
 
     view! {
         <a href=href_target title=alt on:click=click_on_link>
@@ -289,9 +292,7 @@ fn LinkWithModal(
                 )}
 
         </a>
-        <Show when=move || visible.get() fallback=|| {}>
-            <div class="modal-overlay"></div>
-            <div class="link-modal" node_ref=modal_ref>
+            <dialog class="link-modal" node_ref=modal_ref aria-label="Open external website" closedby="any">
                 <p>"You are now leaving the site!"</p>
                 <div>
                     <p style:font-size="0.7rem">" Going to: "</p>
@@ -304,12 +305,11 @@ fn LinkWithModal(
                     <button class="yes-link-button" on:click=open_link>
                         "Open in new tab"
                     </button>
-                    <button class="no-link-button" on:click=take_me_back>
+                    <button class="no-link-button" on:click=take_me_back autofocus=true>
                         "Back"
                     </button>
                 </div>
-            </div>
-        </Show>
+            </dialog>
     }
 }
 
@@ -322,23 +322,22 @@ const MAIL_RATE_LIMIT_MESSAGE: &str =
 
 #[component]
 fn Mail() -> impl IntoView {
-    let (show_mail, set_show_mail) = signal(false);
-    let mail_ref = NodeRef::new();
+    let mail_ref = NodeRef::<leptos::html::Dialog>::new();
+    let form_ref = NodeRef::<leptos::html::Form>::new();
+    use_dialog_light_dismiss(mail_ref);
 
     let mail_click = move |ev: MouseEvent| {
         ev.prevent_default();
-        set_show_mail.set(true);
+        if let Some(dialog) = mail_ref.get() {
+            let _ = dialog.show_modal();
+        }
     };
 
     let close_popup = move |_| {
-        set_show_mail.set(false);
+        if let Some(dialog) = mail_ref.get() {
+            dialog.close();
+        }
     };
-
-    Effect::new(move |_| {
-        leptos_use::on_click_outside(mail_ref, move |_| {
-            set_show_mail.set(false);
-        })
-    });
 
     let mail_action = ServerAction::<SendMail>::new();
     let mail_error_ref = NodeRef::<leptos::html::P>::new();
@@ -356,25 +355,24 @@ fn Mail() -> impl IntoView {
         }
     });
 
-    // TODO: Improve this, does it have to be this complicated?
     let (control_input, set_control_input) = signal(0);
-    let mail_visibility = move || {
+    Effect::new(move |_| {
         let version = mail_action.version().get();
         let mail_is_some_and_ok = mail_action
             .value()
             .get()
-            .unwrap_or(Err(ServerFnError::ServerError(
-                "No previous return Values".to_string(),
-            )))
-            .map(|_| true)
-            .unwrap_or_else(|_| false);
+            .is_some_and(|result| result.is_ok());
 
         if version > control_input.get() && mail_is_some_and_ok {
-            set_show_mail.set(false);
+            if let Some(dialog) = mail_ref.get() {
+                dialog.close();
+            }
+            if let Some(form) = form_ref.get() {
+                form.reset();
+            }
             set_control_input.set(version);
         }
-        show_mail.get()
-    };
+    });
 
     let display_mail_status = move || {
         if mail_action.pending().get() {
@@ -417,13 +415,11 @@ fn Mail() -> impl IntoView {
                 height="38"
             />
         </button>
-        <Show when=mail_visibility fallback=|| {}>
-            <div class="modal-overlay"></div>
-            <div class="modal" node_ref=mail_ref>
-                <button class="close-button" on:click=close_popup title="Close Button">
+            <dialog class="modal" node_ref=mail_ref aria-label="Contact Maj Kavšek" closedby="any">
+                <button class="close-button" on:click=close_popup aria-label="Close contact form">
                     <img
                         src="/img/icon/cross.svg"
-                        alt="close"
+                        alt=""
                         style:width="1rem"
                         style:opacity="70%"
                     />
@@ -431,7 +427,7 @@ fn Mail() -> impl IntoView {
                 <span style:color="var(--maj-yel)">
                     "Contact for booking, teaching and collaborations."
                 </span>
-                <ActionForm action=mail_action attr:class="email-form">
+                <ActionForm action=mail_action node_ref=form_ref attr:class="email-form">
                     <div class="form-div">
                         <label for="name" class="name-label">
                             "Enter your name: "
@@ -442,6 +438,8 @@ fn Mail() -> impl IntoView {
                             type="text"
                             class="name-input"
                             placeholder="Your Name"
+                            autocomplete="name"
+                            autofocus=true
                             maxlength=MAX_NAME_LENGTH
                         />
                     </div>
@@ -456,6 +454,7 @@ fn Mail() -> impl IntoView {
                             type="email"
                             maxlength=MAX_EMAIL_LENGTH
                             placeholder="email@example.com"
+                            autocomplete="email"
                             required
                         />
                     </div>
@@ -476,6 +475,7 @@ fn Mail() -> impl IntoView {
                     <textarea
                         class="email-content"
                         name="email_content"
+                        aria-label="Your message"
                         placeholder="Your message"
                         maxlength=MAX_MESSAGE_LENGTH
                         required
@@ -488,8 +488,7 @@ fn Mail() -> impl IntoView {
                     />
                     {display_mail_status}
                 </ActionForm>
-            </div>
-        </Show>
+            </dialog>
     }
 }
 

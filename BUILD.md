@@ -121,3 +121,44 @@ env LEPTOS_SITE_ROOT=/path/to/site ./target/release/leptos-website-maj
 Content results, including load errors, are cached per server process. Restart after
 changing the root or correcting a failed load. Gallery loading failures use the
 existing error display instead of panicking.
+
+## Keyboard controls and dialogs
+
+Gallery thumbnails are labeled buttons. Activate them with Enter or Space; the photo
+viewer has named previous, next, and close buttons. Audio seeking and volume use native
+range inputs with arrow-key, Home, and End support. Seeking stays disabled until the
+audio duration is known. Volume changes and mute/unmute keep the slider synchronized.
+
+Contact, external-link confirmation, and photo viewers use native modal dialogs.
+Opening moves focus inside, background controls become inert, and Escape or the close
+button dismisses the dialog and restores focus. Clicking outside also dismisses it,
+with a fallback for browsers without `closedby` support. Clicking dialog padding or
+dragging a text selection outside does not dismiss it.
+
+Contact drafts survive dismissal and failed submissions. A successful send resets the
+form and closes it. Browser tests mock the email responses and never send mail.
+
+## Browser checks
+
+Browser tests require Node.js 20 or newer.
+
+Playwright uses port 8080 by default and does not start a server. Reuse a development
+server or build and start an isolated one on another port, for example on Linux:
+
+```sh
+env RUSTFLAGS="--cfg erase_components" cargo leptos build
+env -u PORKMAIL_PWD LEPTOS_SITE_ADDR=127.0.0.1:8082 ./target/debug/leptos-website-maj
+```
+
+In a separate terminal, from `end2end/`:
+
+```sh
+npm ci
+npx playwright install chromium firefox
+env PLAYWRIGHT_BASE_URL=http://127.0.0.1:8082 npx playwright test --project=chromium --project=firefox
+```
+
+The WebKit project is also configured; install its browser and required system
+libraries to include it. Tests cover the real homepage, audio controls, dialog focus,
+Escape and button dismissal, photo navigation, portrait sizing, and mocked email
+success/failure. The dismissal fallback is tested with native light dismiss disabled.

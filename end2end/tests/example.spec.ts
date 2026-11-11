@@ -1,9 +1,10 @@
 import { test, expect } from "@playwright/test";
 
-test("homepage has title and links to intro page", async ({ page }) => {
-  await page.goto("http://localhost:3000/");
+test("homepage has the musician's title and navigation", async ({ page }) => {
+  await page.goto("/");
 
-  await expect(page).toHaveTitle("Welcome to Leptos");
+  await expect(page).toHaveTitle("Home - Maj Kavšek");
 
-  await expect(page.locator("h1")).toHaveText("Welcome to Leptos!");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Maj Kavšek");
+  await expect(page.getByRole("link", { name: "About Me", exact: true })).toHaveAttribute("href", "/about_me");
 });

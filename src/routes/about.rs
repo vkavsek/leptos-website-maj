@@ -1,3 +1,4 @@
+use crate::app::use_dialog_light_dismiss;
 use crate::{routes::error::ErrorTemplate, MajServerError};
 use leptos::{
     html::{Button, Div},
@@ -205,12 +206,14 @@ pub fn ImagesAbout() -> impl IntoView {
     let _gallery_ref = NodeRef::<Div>::new();
 
     // Click on image to make it fullscreen.
-    let (show_img, set_show_img) = signal(false);
     let (current_img, set_current_img) = signal(None);
-    let fullscreen_ref = NodeRef::<Div>::new();
+    let fullscreen_ref = NodeRef::<leptos::html::Dialog>::new();
+    use_dialog_light_dismiss(fullscreen_ref);
 
     let close_fullscreen = move |_| {
-        set_show_img.set(false);
+        if let Some(dialog) = fullscreen_ref.get() {
+            dialog.close();
+        }
     };
 
     let next = move || {
@@ -254,44 +257,32 @@ pub fn ImagesAbout() -> impl IntoView {
         back();
     };
 
-    let fullscreen_img = move || {
-        if let Some(path) = current_img.get() {
-            view! {
-                <div style:display="flex" node_ref=fullscreen_ref class="fullscreen-img-buttons">
-                    <img src=path class="fullscreen-img" />
-                    <button on:click=close_fullscreen class="fullscreen-close">
+    view! {
+            <dialog
+                node_ref=fullscreen_ref
+                class="fullscreen-container"
+                aria-label="Photo viewer"
+                closedby="any"
+                on:close=move |_| set_current_img.set(None)
+            >
+                <div class="fullscreen-img-buttons">
+                    <img src=move || current_img.get() class="fullscreen-img" alt="Enlarged gallery photo" />
+                    <button on:click=close_fullscreen class="fullscreen-close" aria-label="Close photo" autofocus=true>
                         <img
                             src="/img/icon/cross.svg"
-                            alt="close"
+                            alt=""
                             style:width="1rem"
                             style:opacity="70%"
                         />
                     </button>
-                    <button on:click=fullscreen_back class="fullscreen-nav-button back-button">
-                        <img class="nav-button-img back-img" src="/img/icon/back.svg" alt="back" />
+                    <button on:click=fullscreen_back class="fullscreen-nav-button back-button" aria-label="Previous photo">
+                        <img class="nav-button-img back-img" src="/img/icon/back.svg" alt="" />
                     </button>
-                    <button on:click=fullscreen_next class="fullscreen-nav-button next-button">
-                        <img class="nav-button-img next-img" src="/img/icon/back.svg" alt="back" />
+                    <button on:click=fullscreen_next class="fullscreen-nav-button next-button" aria-label="Next photo">
+                        <img class="nav-button-img next-img" src="/img/icon/back.svg" alt="" />
                     </button>
                 </div>
-            }
-            .into_any()
-        } else {
-            view! { <p>"Sorry we couldn't load the image!"</p> }.into_any()
-        }
-    };
-
-    // Close img on click outside
-    Effect::new(move |_| {
-        leptos_use::on_click_outside(fullscreen_ref, move |_| {
-            set_show_img.set(false);
-        })
-    });
-
-    view! {
-        <Show when=move || { show_img.get() }>
-            <div class="fullscreen-container">{fullscreen_img}</div>
-        </Show>
+            </dialog>
         <div class="about-gallery">
             <div node_ref=_gallery_ref class="about-images-scroller snaps-inline">
                 <Suspense fallback=move || {
@@ -304,17 +295,25 @@ pub fn ImagesAbout() -> impl IntoView {
                             files.get().map(|result| {
                                 result.map(|files| {
                                     files.into_iter()
-                                        .map(|file| {
+                                        .enumerate()
+                                        .map(|(index, file)| {
                                             let file_c = file.clone();
                                             let click_image = move |ev: leptos::ev::MouseEvent| {
                                                 ev.prevent_default();
                                                 set_current_img.set(Some(file_c.clone()));
-                                                set_show_img.set(true);
+                                                if let Some(dialog) = fullscreen_ref.get() {
+                                                    let _ = dialog.show_modal();
+                                                }
                                             };
                                             view! {
-                                                <a on:click=click_image>
-                                                    <img src=file class="image-about" />
-                                                </a>
+                                                <button
+                                                    type="button"
+                                                    class="gallery-thumbnail"
+                                                    aria-label=format!("Open gallery photo {}", index + 1)
+                                                    on:click=click_image
+                                                >
+                                                    <img src=file class="image-about" alt="" />
+                                                </button>
                                             }
                                         })
                                         .collect_view()

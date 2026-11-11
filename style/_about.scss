@@ -43,18 +43,29 @@
   position: fixed;
   inset: 0;
   box-sizing: border-box;
-  padding: 1rem;
-  display: flex;
+  margin: auto;
+  padding: 0;
+  border: 0;
+  max-width: calc(100vw - 2rem);
+  max-height: calc(100vh - 2rem);
+  overflow: visible;
   justify-content: center;
   align-items: center;
+  background: transparent;
+}
 
-  background-color: rgba(theme.$background, 0.7);
-  z-index: 10;
+.fullscreen-container[open] {
+  display: flex;
+}
+
+.fullscreen-container::backdrop {
+  background: rgba(theme.$background, 0.7);
 }
 
 .fullscreen-img-buttons {
+  display: flex;
   justify-content: center;
-  max-width: 80%;
+  max-width: 100%;
   max-height: 100%;
 }
 
@@ -68,7 +79,7 @@
   background-color: rgba(theme.$background, 0.7);
   color: theme.$pink;
   cursor: pointer;
-  position: absolute;
+  position: fixed;
   right: 5%;
   top: 4vw;
 
@@ -88,13 +99,13 @@
 
 @media screen and (min-height: 500px) {
   .fullscreen-img {
-    max-width: 80%;
+    max-width: 80vw;
   }
 }
 
 @media screen and (max-height: 500px) {
   .fullscreen-img {
-    max-width: 65%;
+    max-width: 65vw;
   }
 }
 
@@ -112,12 +123,12 @@
 }
 
 .fullscreen-nav-button.next-button {
-  position: absolute;
+  position: fixed;
   top: 40%;
 }
 
 .fullscreen-nav-button.back-button {
-  position: absolute;
+  position: fixed;
   top: 40%;
 }
 
@@ -275,6 +286,15 @@
   aspect-ratio: 16/9;
   object-fit: cover;
   cursor: pointer;
+}
+
+.gallery-thumbnail {
+  all: unset;
+  display: block;
+  cursor: pointer;
+  min-width: 24px;
+  min-height: 24px;
+  border-radius: 10px;
 }
 
 .about-text {

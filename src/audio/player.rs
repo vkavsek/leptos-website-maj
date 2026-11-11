@@ -1,10 +1,7 @@
 use super::Song;
 use crate::app::use_interval;
 use leptos::ev::MouseEvent;
-use leptos::{
-    html::{Audio, Div},
-    prelude::*,
-};
+use leptos::{html::Audio, prelude::*};
 
 // ------> AUDIO PLAYER
 #[component]
@@ -12,6 +9,7 @@ pub fn AudioPlayer() -> impl IntoView {
     // Signals
     let (time, set_time) = signal(0u64);
     let (duration, set_duration) = signal(0u64);
+    let (volume, set_volume) = signal(0.5f64);
     let (name, set_name) = signal::<Option<String>>(None);
     let (play_btn_class, set_play_btn_class) = signal("pause");
     let (vol_btn_class, set_vol_btn_class) = signal("ico-vol-med");
@@ -24,16 +22,10 @@ pub fn AudioPlayer() -> impl IntoView {
     let duration_fmt = move || fmt_sec_to_mmss(duration.get());
     // NodeRefs
     let audio_ref = NodeRef::<Audio>::new();
-    let vol_percent_ref = NodeRef::<Div>::new();
-    let timeline_ref = NodeRef::<Div>::new();
-    let volume_slider_ref = NodeRef::<Div>::new();
-    let progress_ref = NodeRef::<Div>::new();
 
     // Import the selector and the List of songs
     let _names = use_context::<RwSignal<Vec<String>>>().expect("the names to be provided");
     let selector = use_context::<RwSignal<usize>>().expect("the selector to be provided");
-
-    let f64_to_u64 = |f: f64| (f * 100.0) as u64;
 
     // Set Song Source
     let song_src = move || {
@@ -50,21 +42,9 @@ pub fn AudioPlayer() -> impl IntoView {
     // Check audio percentage and update time accordingly
     let audio_loop = move || {
         if let Some(audio) = audio_ref.get_untracked() {
-            let progress_bar = progress_ref.get_untracked().unwrap();
-            let _ = progress_bar.style((
-                "width",
-                format!("{}%", audio.current_time() / audio.duration() * 100.0),
-            ));
             set_time.set(audio.current_time() as u64);
             if audio.ended() {
                 set_play_btn_class.set("play");
-            }
-            if let Some(_slider) = volume_slider_ref.get_untracked() {
-                if let Some(vol_percent) = vol_percent_ref.get_untracked() {
-                    let new_volume = audio.volume();
-                    let _ =
-                        vol_percent.style(("width", format!("{}%", (new_volume * 100.0) as u32)));
-                }
             }
         }
     };
@@ -81,17 +61,16 @@ pub fn AudioPlayer() -> impl IntoView {
         }
     });
 
-    // When content loads
-    let audio_load = move |_| {
-        let vol_percent = vol_percent_ref.get().unwrap();
+    let sync_metadata = move || {
         let audio = audio_ref.get().unwrap();
-        let init_volume = 0.50;
-
-        audio.set_volume(init_volume);
         set_duration.set(audio.duration() as u64);
         set_name.set(extract_name(audio.src()));
-        let _ = vol_percent.style(("width", format!("{}%", (init_volume * 100.0) as u32)));
     };
+    // Metadata may already have loaded before hydration attaches event handlers.
+    audio_ref.on_load(move |audio| {
+        audio.set_volume(0.5);
+        sync_metadata();
+    });
 
     // Play
     let play_click = move |_: MouseEvent| {
@@ -107,69 +86,65 @@ pub fn AudioPlayer() -> impl IntoView {
         }
     };
 
-    // Click timeline to skip around
-    let timeline_click = move |ev: MouseEvent| {
-        let timeline = timeline_ref.get().unwrap();
+    let seek = move |ev| {
         let audio = audio_ref.get().unwrap();
-
-        let t_width = window()
-            .get_computed_style(&timeline)
-            .unwrap_or(None)
-            .expect("style should be initialized")
-            .get_property_value("width")
-            .expect("width should be initialized");
-        let time_to_seek = ev.offset_x() as f64 / px_to_f64(&t_width) * audio.duration();
+        let time_to_seek = event_target::<web_sys::HtmlInputElement>(&ev).value_as_number();
         audio.set_current_time(time_to_seek);
+        set_time.set(time_to_seek as u64);
     };
 
-    // Volume slider
-    let volume_slide_click = move |ev: MouseEvent| {
-        let slider = volume_slider_ref.get().unwrap();
+    let change_volume = move |ev| {
         let audio = audio_ref.get().unwrap();
-        let vol_percent = vol_percent_ref.get().unwrap();
-
-        if let Ok(Some(slider_width)) = window().get_computed_style(&slider) {
-            let slider_width = slider_width
-                .get_property_value("width")
-                .expect("widht should be initialized");
-            let new_volume = ev.offset_x() as f64 / px_to_f64(&slider_width);
-            if new_volume > 0.0 {
-                audio.set_muted(false)
-            }
-            audio.set_volume(new_volume);
-            let _ = vol_percent.style(("width", format!("{}%", (new_volume * 100.0) as u32)));
+        let new_volume = event_target::<web_sys::HtmlInputElement>(&ev).value_as_number();
+        if new_volume > 0.0 {
+            audio.set_muted(false);
         }
+        audio.set_volume(new_volume);
+        set_volume.set(new_volume);
     };
 
-    // Volume Button
-    let vol_button_click = move |_| {
+    let sync_volume = move |_| {
         let audio = audio_ref.get().unwrap();
-        let vol_percent = vol_percent_ref.get().unwrap();
-
-        audio.set_muted(!audio.muted());
-
         if audio.muted() {
-            let _ = vol_percent.style(("width", "0%"));
+            set_volume.set(0.0);
             set_vol_btn_class.set("ico-vol-mute");
         } else {
-            let volume = f64_to_u64(audio.volume());
-            let _ = vol_percent.style(("width", format!("{}%", volume)));
+            set_volume.set(audio.volume());
             set_vol_btn_class.set("ico-vol-med");
         }
     };
 
+    let vol_button_click = move |_| {
+        let audio = audio_ref.get().unwrap();
+        audio.set_muted(!audio.muted());
+    };
+
     view! {
         <div class="audio-player">
-            <audio node_ref=audio_ref on:loadeddata=audio_load src=song_src>
+            <audio node_ref=audio_ref on:loadeddata=move |_| sync_metadata() on:volumechange=sync_volume src=song_src>
                 "Audio Player"
             </audio>
             <div class="play-container">
-                <button class=play_btn_class on:click=play_click title="Play / Pause"></button>
+                <button
+                    class=play_btn_class
+                    on:click=play_click
+                    title="Play / Pause"
+                    aria-label=move || if play_btn_class.get() == "play" { "Play" } else { "Pause" }
+                ></button>
             </div>
             <div class="time-container">
-                <div class="timeline" node_ref=timeline_ref on:click=timeline_click>
-                    <div class="progress" node_ref=progress_ref></div>
-                </div>
+                <input
+                    class="timeline"
+                    type="range"
+                    min="0"
+                    max=move || duration.get()
+                    step="1"
+                    prop:value=move || time.get()
+                    disabled=move || duration.get() == 0
+                    aria-label="Playback position"
+                    aria-valuetext=move || format!("{} of {}", time_fmt(), duration_fmt())
+                    on:input=seek
+                />
                 <div class="time">
                     <div class="current-time">{time_fmt}</div>
                     <div class="duration-time">{duration_fmt}</div>
@@ -182,14 +157,19 @@ pub fn AudioPlayer() -> impl IntoView {
                         class=vol_btn_class
                         on:click=vol_button_click
                         title="Volume / Mute"
+                        aria-label=move || if vol_btn_class.get() == "ico-vol-mute" { "Unmute" } else { "Mute" }
                     ></button>
-                    <div
+                    <input
                         class="volume-slider"
-                        on:click=volume_slide_click
-                        node_ref=volume_slider_ref
-                    >
-                        <div class="volume-percentage" node_ref=vol_percent_ref></div>
-                    </div>
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        prop:value=move || volume.get()
+                        aria-label="Volume"
+                        aria-valuetext=move || format!("{}%", (volume.get() * 100.0).round() as u32)
+                        on:input=change_volume
+                    />
                 </div>
             </div>
         </div>
@@ -208,13 +188,6 @@ fn extract_name(path: String) -> Option<String> {
         Some(Some(name)) => Some(name.to_string()),
         _ => None,
     }
-}
-
-fn px_to_f64(px: &str) -> f64 {
-    px.split_at(px.len() - 2)
-        .0
-        .parse::<f64>()
-        .expect("to_be_parsable")
 }
 
 /// Seconds to MM:SS
