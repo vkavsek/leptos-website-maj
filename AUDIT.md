@@ -4,28 +4,34 @@ What this repo does: A public portfolio built with Leptos and Axum, serving phot
 
 ## **Must fix**
 
+All four items below are resolved. The original findings are retained for reference.
+
 1. **ZIP imports can publish files outside the public directory** — [update_json.sh:23](/home/vkav/Work/RUST/leptos-website-maj/scripts/update_json.sh:23).
    - **What this is:** The maintenance script extracts a ZIP and copies everything into publicly served content.
    - **Problem:** A ZIP containing a symbolic link—a file pointing elsewhere—exposed a dummy private file over HTTP in my test. Malformed JSON also replaced valid content while the script reported success.
    - **Fix:** Accept only expected, regular JSON files; reject links and validate their contents before replacing existing files.
+   - **Resolution:** Imports now allow only top-level `shows.json` and `yt_videos.json`, reject links and unexpected or duplicate entries, validate record fields and show dates, and stage the entire archive before replacing files. Python regression checks cover safe and unsafe imports.
    - **If we skip it:** Importing an unsafe or incorrect archive can expose readable files or break content pages. This requires an operator to import the archive; there is no public upload endpoint.
 
 2. **External tabs can redirect the original tab** — [home.rs:112](/home/vkav/Work/RUST/leptos-website-maj/src/routes/home.rs:112).
    - **What this is:** The external-link dialog opens another website with `window.open()`.
    - **Problem:** The new page retains `window.opener`. A controlled external-page fixture successfully navigated the original portfolio tab.
    - **Fix:** Open with `_blank` and the `noopener` feature. [MDN documentation](https://developer.mozilla.org/en-US/docs/Web/API/Window/open#noopener)
+   - **Resolution:** The shared link dialog uses `_blank` with `noopener`. A browser regression checks that the opened page has no `window.opener`.
    - **If we skip it:** A hostile external page can replace the original tab with another destination.
 
 3. **Video loading errors leave Media blank** — [media.rs:19](/home/vkav/Work/RUST/leptos-website-maj/src/routes/media.rs:19).
    - **What this is:** Media renders the result of its video loader inside `Suspense`.
    - **Problem:** It has no `ErrorBoundary`. With malformed video JSON, the page displayed only “Media,” without videos or an error message.
    - **Fix:** Wrap the result in the existing `ErrorBoundary`/`ErrorTemplate` pattern used by Shows and About.
+   - **Resolution:** Media uses the shared error boundary and template. Rust and browser regressions cover missing content and invalid video responses.
    - **If we skip it:** Missing or invalid video content silently removes the page’s main content.
 
 4. **The show list becomes unreadable at high zoom** — [\_shows.scss:9](/home/vkav/Work/RUST/leptos-website-maj/style/_shows.scss:9).
    - **What this is:** Shows divides a fixed-height page between its heading, navigation, and scrolling event list.
    - **Problem:** At a 320×180 CSS viewport, equivalent to 400% zoom on 1280×720, the event list gets only about six pixels of visible height. Scrolling cannot reveal a readable row.
    - **Fix:** Allow the Shows page to scroll when its heading and controls no longer fit, rather than clipping the list into the remaining strip.
+   - **Resolution:** Shows allows page overflow to scroll and gives its content a minimum height in rem units. Browser checks cover first and last event cells at small viewports and doubled text size.
    - **If we skip it:** Visitors using high magnification cannot read the concert listings.
 
 ## **Should fix**
@@ -86,10 +92,15 @@ What this repo does: A public portfolio built with Leptos and Axum, serving phot
    - **Fix:** Remove those four tracks from the shipped directory, or archive them outside `public/`.
    - **If we skip it:** Builds and deployment images continue carrying unnecessary audio.
 
-Validation passed: **21 Rust tests, 50 Chromium/Firefox checks, formatting, strict SSR/hydration Clippy, and the server/WASM build**. The lockfile advisory check returned only an informational notice for transitive `paste` being unmaintained. [RustSec notice](https://rustsec.org/advisories/RUSTSEC-2024-0436.html)
+Original audit validation passed: **21 Rust tests, 50 Chromium/Firefox checks, formatting, strict SSR/hydration Clippy, and the server/WASM build**. The lockfile advisory check returned only an informational notice for transitive `paste` being unmaintained. [RustSec notice](https://rustsec.org/advisories/RUSTSEC-2024-0436.html)
 
-I also checked Modern Web Guidance’s icon and accessibility guides. No repository files changed, and all temporary audit servers were stopped.
+The original audit also checked Modern Web Guidance’s icon and accessibility guides. It changed no repository files, and all temporary audit servers were stopped.
 
-**Verdict:** Fix 1 and 2 first, then the content-error and high-zoom failures.  
+Must fix resolution validation passed: **22 Rust tests, 3 Python import tests,
+56 Chromium/Firefox checks, formatting, strict SSR/hydration Clippy, and the
+server/WASM build**. Import checks also accepted the current source JSON files in
+an isolated temporary directory. No email was sent.
+
+**Verdict:** The four Must fix items are resolved; the Should fix and Nice to have findings remain open.
 **Lean:** At least 6 dead lines and 47.7 MB of shipped assets removable.  
 **Not checked:** Live SMTP, Fly/Docker deployment, WebKit, physical screen-reader testing, or Git history.

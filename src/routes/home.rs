@@ -109,7 +109,7 @@ fn LinkWithModal(loc: LinkLocation) -> impl IntoView {
 
     let open_link = move |_| {
         // Open in new tab
-        let _ = window().open_with_url(href_target);
+        let _ = window().open_with_url_and_target_and_features(href_target, "_blank", "noopener");
         if let Some(dialog) = modal_ref.get() {
             dialog.close();
         }

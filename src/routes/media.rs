@@ -2,6 +2,8 @@ use leptos::prelude::*;
 use leptos_meta::{Link, Title};
 use serde::{Deserialize, Serialize};
 
+use crate::routes::error::ErrorTemplate;
+
 #[component]
 pub fn Media() -> impl IntoView {
     let videos_res = Resource::new(|| (), |_| async move { get_youtube_videos().await });
@@ -19,16 +21,18 @@ pub fn Media() -> impl IntoView {
                 <Suspense fallback=|| {
                     view! { <p>"Loading..."</p> }
                 }>
-                    {move || Suspend::new(async move {
-                        videos_res
-                            .await
-                            .map(|videos| {
-                                videos
-                                    .into_iter()
-                                    .map(|video| view! { <CreateVideo video /> })
-                                    .collect_view()
-                            })
-                    })}
+                    <ErrorBoundary fallback=move |errors| view! { <ErrorTemplate errors /> }>
+                        {move || Suspend::new(async move {
+                            videos_res
+                                .await
+                                .map(|videos| {
+                                    videos
+                                        .into_iter()
+                                        .map(|video| view! { <CreateVideo video /> })
+                                        .collect_view()
+                                })
+                        })}
+                    </ErrorBoundary>
                 </Suspense>
             </div>
         </div>

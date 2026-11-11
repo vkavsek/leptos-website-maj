@@ -92,6 +92,38 @@ test("external-link dialog supports keyboard cancellation and reopening", async 
   await expect(trigger).toBeFocused();
 });
 
+test("external tabs cannot access the original tab", async ({ page, context }) => {
+  await context.route("https://www.facebook.com/**", route => route.fulfill({
+    contentType: "text/html", body: "<title>External fixture</title>",
+  }));
+  await ready(page);
+  await page.getByRole("link", { name: "A link to Facebook" }).click();
+  const opened = context.waitForEvent("page");
+  await page.getByRole("button", { name: "Open in new tab", exact: true }).click();
+  const external = await opened;
+  try {
+    await external.waitForLoadState();
+    await expect(external).toHaveURL("https://www.facebook.com/majkavsek");
+    expect(await external.evaluate(() => window.opener)).toBeNull();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole("dialog", { name: "Open external website" })).toBeHidden();
+  } finally {
+    await external.close();
+  }
+});
+
+test("Media displays video loading errors after navigation", async ({ page }) => {
+  await ready(page);
+  await page.route("**/api/get_media_videos*", route => route.fulfill({
+    status: 500, contentType: "application/json",
+    headers: { serverfnerror: "/api/get_media_videos" },
+    body: JSON.stringify({ SerdeJson: "Invalid video content fixture" }),
+  }));
+  await page.locator('.nav-links a[href="/media"]').click();
+  await expect(page.locator("#media-contents .error-wrap")).toContainText("Invalid video content fixture");
+  await expect(page.locator("#media-contents .yt-video")).toHaveCount(0);
+});
+
 test("gallery buttons open a modal, navigate photos and restore focus", async ({ page }) => {
   await ready(page, "/about_me");
   const trigger = page.getByRole("button", { name: "Open gallery photo 1", exact: true });

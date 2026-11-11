@@ -88,6 +88,21 @@ The configured site root must contain:
 Correct a failed content file and restart or redeploy to clear its cached error.
 Changing `LEPTOS_SITE_ROOT` also requires a restart.
 
+### Importing show and video content
+
+With Python 3 installed, run from the repository root:
+
+```sh
+bash scripts/update_json.sh /path/to/content.zip
+```
+
+The ZIP must contain `shows.json`, `yt_videos.json`, or both at its top level.
+Only regular files are accepted; links, directories, unexpected paths, and duplicate
+names are rejected. Every file is validated before existing content is replaced:
+shows need valid dates and string-or-null fields; videos need URL strings.
+Invalid archives leave existing content unchanged. Each accepted file is replaced
+atomically. Rebuild and restart or redeploy after importing.
+
 ### Gallery thumbnails
 
 After adding or replacing original photos, install ImageMagick with WebP support
@@ -111,13 +126,16 @@ the duration is known; volume and mute controls stay synchronized. The player us
 the Minor Flaw promo. Volume uses a vertical slider: Up increases volume and Down
 decreases it. It sits to the right of the mute button, inside the player in both
 orientations, and stays fixed when hovered. Media videos use responsive 4:3 frames
-with fullscreen support. Album detail pages scroll to reveal all notes, artwork,
+with fullscreen support and display an error if video content cannot be loaded.
+Shows keeps a readable list area and allows the page to scroll at high magnification.
+Album detail pages scroll to reveal all notes, artwork,
 service links, and the return link.
 
 Contact, external-link confirmation, and photo dialogs move focus inside, make the
 background inert, and restore focus when closed. Escape, close buttons, and clicking
 outside dismiss them. Clicking dialog padding or dragging a text selection outside
 does not dismiss them.
+External sites opened in a new tab cannot access the original tab through `window.opener`.
 
 Contact drafts survive dismissal and failed submissions. Errors are brought into
 view. A successful send resets the form and closes the dialog. See

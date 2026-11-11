@@ -74,6 +74,32 @@ test("larger text does not shrink gallery photos or hide album captions", async 
   }
 });
 
+test("show rows remain readable at high zoom and with larger text", async ({ page }) => {
+  for (const viewport of [
+    { width: 1280, height: 720 }, { width: 640, height: 360 },
+    { width: 320, height: 180 }, { width: 390, height: 700 },
+  ]) {
+    await page.setViewportSize(viewport);
+    for (const fontSize of ["16px", "32px"]) {
+      await ready(page, "/shows/past");
+      await page.evaluate(size => { document.documentElement.style.fontSize = size; }, fontSize);
+      const rows = page.locator(".show-container:not(#show-container-id)");
+      expect(await rows.count()).toBeGreaterThan(0);
+      for (const row of [rows.first(), rows.last()]) {
+        for (const cell of await row.locator("p").all()) {
+          await cell.scrollIntoViewIfNeeded();
+          // Allow subpixel rounding at the end of a scroll region.
+          await expect(cell).toBeInViewport({ ratio: 0.99 });
+        }
+      }
+      for (const link of await page.locator(".shows-nav a").all()) {
+        await link.scrollIntoViewIfNeeded();
+        await expect(link).toBeInViewport({ ratio: 0.99 });
+      }
+    }
+  }
+});
+
 test("vertical volume slider stays beside mute and inside the hovered player", async ({ page }) => {
   for (const viewport of [
     { width: 1280, height: 720 }, { width: 1920, height: 1080 },

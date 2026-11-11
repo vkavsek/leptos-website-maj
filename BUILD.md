@@ -104,6 +104,15 @@ Run the album HTTP regression test separately with:
 env -u PORKMAIL_PWD RUSTFLAGS="--cfg erase_components" cargo test --locked --features ssr --test album_routes
 ```
 
+The content import regression checks require Python 3 with its standard library:
+
+```sh
+python3 scripts/test_update_json.py
+```
+
+They use temporary directories to check valid imports, archive path and link
+rejection, content validation, and preservation of existing files on invalid input.
+
 Check formatting and lint both compilation targets:
 
 ```sh
@@ -152,6 +161,7 @@ Stop the test server with Ctrl+C when finished.
 
 Tests cover the homepage, keyboard and dialog focus behavior, photo navigation,
 portrait sizing, thumbnail loading, audio event synchronization, rejected playback,
-and mocked contact success/failure. Email responses are mocked; no email is sent.
+mocked contact success/failure, new-tab isolation, video errors, and show rows at
+high zoom. External pages and email responses are mocked; no email is sent.
 The light-dismiss fallback is tested with native light dismiss disabled, and audio
 checks guard against reintroducing the old 10 ms polling interval.

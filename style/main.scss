@@ -126,7 +126,10 @@ iframe {
 
   .nav-links {
     width: 12%;
-    --nav-top: calc(var(--player-top) + var(--player-height) + 2 * var(--player-padding) + 16px);
+    --nav-top: calc(
+      var(--player-top) + var(--player-height) + 2 * var(--player-padding) +
+        16px
+    );
     top: var(--nav-top);
     height: min(75vh, calc(100dvh - var(--nav-top) - 16px));
 
@@ -199,6 +202,10 @@ iframe {
 
   .nav-icon-4 {
     translate: 30%;
+  }
+
+  .nav-icon-5 {
+    translate: -10%;
   }
 }
 
