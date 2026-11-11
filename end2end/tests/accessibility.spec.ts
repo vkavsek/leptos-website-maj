@@ -45,7 +45,7 @@ test("audio sliders work with arrows, Home and End", async ({ page }) => {
   await expect(volume).toBeFocused();
   await volume.press("Home");
   await expect.poll(() => page.locator("audio").evaluate(audio => (audio as HTMLAudioElement).volume)).toBe(0);
-  await volume.press("ArrowRight");
+  await volume.press("ArrowUp");
   await expect.poll(() => page.locator("audio").evaluate(audio => (audio as HTMLAudioElement).volume)).toBeCloseTo(0.01, 2);
   await volume.press("End");
   await expect.poll(() => page.locator("audio").evaluate(audio => (audio as HTMLAudioElement).volume)).toBe(1);

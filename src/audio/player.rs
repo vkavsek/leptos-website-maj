@@ -152,6 +152,7 @@ pub fn AudioPlayer() -> impl IntoView {
                         step="0.01"
                         prop:value=move || volume.get()
                         aria-label="Volume"
+                        aria-orientation="vertical"
                         aria-valuetext=move || format!("{}%", (volume.get() * 100.0).round() as u32)
                         on:input=change_volume
                     />

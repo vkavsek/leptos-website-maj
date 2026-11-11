@@ -12,6 +12,9 @@
 
 :root {
   --maj-yel: #{theme.$yellow};
+  --player-top: 4vh;
+  --player-height: 8vh;
+  --player-padding: 23px;
 }
 
 // Scrollbars
@@ -123,26 +126,22 @@ iframe {
 
   .nav-links {
     width: 12%;
-    height: 75vh;
+    --nav-top: calc(var(--player-top) + var(--player-height) + 2 * var(--player-padding) + 16px);
+    top: var(--nav-top);
+    height: min(75vh, calc(100dvh - var(--nav-top) - 16px));
 
-    margin-top: 10%;
-    margin-bottom: 3%;
+    margin-block: 0;
     margin-inline: 10px;
 
     position: fixed;
 
     display: grid;
-    grid-template-rows: repeat(5, 1fr);
+    grid-template-rows: repeat(5, max-content);
+    align-content: space-between;
     justify-items: center;
-    gap: 2%;
-  }
-}
-
-@media screen and (orientation: landscape) and (max-height: 600px) {
-  .nav-links {
-    height: 65%;
-    margin-top: 5%;
-    bottom: 0;
+    gap: 8px;
+    padding-block: 8px;
+    overflow-y: auto;
   }
 }
 

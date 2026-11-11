@@ -17,31 +17,20 @@
   padding: 1rem;
   overflow: auto;
 
-  width: 75%;
-}
-
-@media screen and (orientation: portrait) {
-  .yt-vid-container {
-    width: 80%;
-  }
-}
-
-@media screen and (orientation: landscape) {
-  .yt-vid-container {
-    width: 70%;
-  }
+  box-sizing: border-box;
+  width: 85%;
 }
 
 .yt-vid-container {
-  padding: 1rem;
-  margin-left: auto;
-  margin-right: auto;
+  width: 100%;
+  max-width: min(800px, 80dvh);
+  margin: 0 auto 24px;
 }
 
-.yt-vid {
+.yt-video {
   display: block;
   width: 100%;
   height: auto;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 4 / 3;
   border: 0;
 }

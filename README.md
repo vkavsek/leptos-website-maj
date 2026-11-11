@@ -108,7 +108,9 @@ Gallery thumbnails are labeled buttons: activate them with Enter or Space. The
 photo viewer has named previous, next, and close buttons. Audio seeking and volume
 use range inputs with arrow-key, Home, and End support. Seeking stays disabled until
 the duration is known; volume and mute controls stay synchronized. The player uses
-the Minor Flaw promo.
+the Minor Flaw promo. Volume uses a vertical slider: Up increases volume and Down
+decreases it. Its position stays fixed when hovered. Media videos use responsive
+4:3 frames with fullscreen support.
 
 Contact, external-link confirmation, and photo dialogs move focus inside, make the
 background inert, and restore focus when closed. Escape, close buttons, and clicking
