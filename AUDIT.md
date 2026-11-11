@@ -1,246 +1,95 @@
-## AUDIT
+# Audit
 
-What this repo does: A public portfolio for Maj Kavšek, built with Rust, Leptos, and Axum. It serves music, photos, concert dates, and videos, and sends contact emails. I assumed modest public traffic, several simultaneous visitors, and occasional automated form abuse.
+What this repo does: A public portfolio built with Leptos and Axum, serving photos, music, videos, show dates, and contact email. I assumed modest public traffic, several simultaneous visitors, and occasional automated abuse. I treated the documented per-process mail limit and content caching as intentional decisions.
 
-**Must fix**
+## **Must fix**
 
-1. **The contact endpoint has no sending limit** — [home.rs:563](/home/vkav/PROJECTS/rust/leptos-website-maj/src/routes/home.rs:563)
+1. **ZIP imports can publish files outside the public directory** — [update_json.sh:23](/home/vkav/Work/RUST/leptos-website-maj/scripts/update_json.sh:23).
+   - **What this is:** The maintenance script extracts a ZIP and copies everything into publicly served content.
+   - **Problem:** A ZIP containing a symbolic link—a file pointing elsewhere—exposed a dummy private file over HTTP in my test. Malformed JSON also replaced valid content while the script reported success.
+   - **Fix:** Accept only expected, regular JSON files; reject links and validate their contents before replacing existing files.
+   - **If we skip it:** Importing an unsafe or incorrect archive can expose readable files or break content pages. This requires an operator to import the archive; there is no public upload endpoint.
 
-   - **What this is:** The public contact form sends email through your account.
-   - **Problem:** Direct requests bypass browser validation. Every accepted request attempts delivery, without a sending limit or server-side checks on the fields.
-   - **Fix:** Validate required fields, email format, and lengths before sending. Add a server-side sending limit.
-   - **If we skip it:** Bots can flood both recipient inboxes and consume the account’s mail allowance.
-   - **Status:** Resolved on 2026-11-09. The server trims and validates fields before reserving
-     one of 10 send attempts per rolling hour; validation errors return HTTP `400` and
-     exhausted allowance returns HTTP `429`. The form retains input on failure and
-     brings error messages into view; see [the documented policy](ARCHITECTURE.md#contact-form-protections).
-   - **Verified:** Seven Rust tests passed, including concurrent admissions, rolling expiry,
-     and real-handler rejection checks. Formatting, Clippy, the server/WASM build, and
-     mocked browser checks passed; no SMTP delivery was attempted.
-   - **Known limit:** The allowance resets per process on restart, each replica has its own
-     allowance, and one visitor can consume all 10 attempts. Invalid inputs do not use
-     a slot; SMTP failures do.
+2. **External tabs can redirect the original tab** — [home.rs:112](/home/vkav/Work/RUST/leptos-website-maj/src/routes/home.rs:112).
+   - **What this is:** The external-link dialog opens another website with `window.open()`.
+   - **Problem:** The new page retains `window.opener`. A controlled external-page fixture successfully navigated the original portfolio tab.
+   - **Fix:** Open with `_blank` and the `noopener` feature. [MDN documentation](https://developer.mozilla.org/en-US/docs/Web/API/Window/open#noopener)
+   - **If we skip it:** A hostile external page can replace the original tab with another destination.
 
-2. **Private messages are copied into production logs** — [home.rs:473](/home/vkav/PROJECTS/rust/leptos-website-maj/src/routes/home.rs:473)
+3. **Video loading errors leave Media blank** — [media.rs:19](/home/vkav/Work/RUST/leptos-website-maj/src/routes/media.rs:19).
+   - **What this is:** Media renders the result of its video loader inside `Suspense`.
+   - **Problem:** It has no `ErrorBoundary`. With malformed video JSON, the page displayed only “Media,” without videos or an error message.
+   - **Fix:** Wrap the result in the existing `ErrorBoundary`/`ErrorTemplate` pattern used by Shows and About.
+   - **If we skip it:** Missing or invalid video content silently removes the page’s main content.
 
-   - **What this is:** Contact submissions are logged before delivery.
-   - **Problem:** The log includes the sender’s name, address, subject, and complete message—even when sending fails.
-   - **Fix:** Log the request ID and delivery result; remove message contents and personal fields. This follows [OWASP logging guidance](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html).
-   - **If we skip it:** Private correspondence also lives in the hosting logs, with separate access and retention.
-   - **Status:** Resolved on 2026-11-10. Contact delivery logs now record only
-     `delivery=sent` or `delivery=failed` in the existing request ID span. Personal
-     fields, message contents, and raw SMTP success/error replies are omitted;
-     see [the documented logging policy](ARCHITECTURE.md#contact-form-protections).
-   - **Verified:** All seven Rust tests, formatting, Clippy, and a source allowlist check
-     passed; the handler's only log events contain static delivery outcomes, and the
-     request ID span is retained. No SMTP delivery was attempted.
-   - **Known limit:** Previously recorded private data remains subject to the hosting
-     provider's log access and retention controls; this code change does not delete it.
+4. **The show list becomes unreadable at high zoom** — [\_shows.scss:9](/home/vkav/Work/RUST/leptos-website-maj/style/_shows.scss:9).
+   - **What this is:** Shows divides a fixed-height page between its heading, navigation, and scrolling event list.
+   - **Problem:** At a 320×180 CSS viewport, equivalent to 400% zoom on 1280×720, the event list gets only about six pixels of visible height. Scrolling cannot reveal a readable row.
+   - **Fix:** Allow the Shows page to scroll when its heading and controls no longer fit, rather than clipping the list into the remaining strip.
+   - **If we skip it:** Visitors using high magnification cannot read the concert listings.
 
-3. **Audio ranges and cache checks are discarded** — [fallback.rs:20](/home/vkav/PROJECTS/rust/leptos-website-maj/src/fallback.rs:20), [serve.rs:158](/home/vkav/PROJECTS/rust/leptos-website-maj/src/serve.rs:158)
+## **Should fix**
 
-   - **What this is:** This serves assets, including requests for only part of an audio file.
-   - **Problem:** A request for two audio bytes returned a full-file response of 6.9 MB. Matching cache checks also returned `200`, because headers are removed and the replacement date comparison excludes equality.
-   - **Fix:** Pass the original headers to `ServeDir`, preserve its responses except genuine missing-file responses, and delete the custom date handling.
-   - **If we skip it:** Seeking and repeat visits transfer unnecessary data.
-   - **Status:** Resolved on 2026-11-10. Original request headers reach `ServeDir`,
-     and only its `404` responses render the app's error page. The custom date
-     middleware/parser and direct `lazy-regex` dependency were removed. Existing
-     compression and Cache-Control policy remain; see [file-response behavior](ARCHITECTURE.md#static-file-responses).
-   - **Verified:** Four regression tests cover two-byte audio ranges, matching and
-     older/newer/invalid cache dates, HEAD responses, unsatisfiable ranges, unsupported
-     methods, failed preconditions, directory redirects, and the HTML `404` fallback.
-     All eleven Rust tests, formatting, and Clippy passed. Production/browser playback
-     and a full Docker/release build were not checked.
+1. **Content error pages still return HTTP `200`** — [shows.rs:117](/home/vkav/Work/RUST/leptos-website-maj/src/routes/shows.rs:117), [error.rs:39](/home/vkav/Work/RUST/leptos-website-maj/src/routes/error.rs:39).
+   - **What this is:** `ErrorTemplate` sets an error status after asynchronous content loading.
+   - **Problem:** The response has already started streaming. With malformed show data, `/shows/past` displayed “500 Internal Server Error” but returned `200`; its JSON endpoint correctly returned `500`.
+   - **Fix:** Use blocking resources for content whose failure determines the page status, and test the actual HTTP status. [Leptos rendering guidance](https://book.leptos.dev/ssr/23_ssr_modes.html#blocking-resources)
+   - **If we skip it:** Monitoring and crawlers can treat broken pages as successful responses.
 
-4. **One invalid show date can crash both show lists** — [shows.rs:146](/home/vkav/PROJECTS/rust/leptos-website-maj/src/routes/shows.rs:146)
+2. **The gallery treats every directory entry as a usable image URL** — [about.rs:329](/home/vkav/Work/RUST/leptos-website-maj/src/routes/about.rs:329).
+   - **What this is:** The loader lists directory entries and places their names directly into URLs.
+   - **Problem:** A text file and subdirectory appeared as gallery entries. A valid `photo#1.jpg` failed because the browser interpreted `#1.jpg` as a URL fragment; the encoded URL worked.
+   - **Fix:** Filter supported regular image files and encode filenames as URL path segments.
+   - **If we skip it:** Ordinary content updates can create broken images and unusable gallery buttons.
 
-   - **What this is:** Events are filtered into past and future shows.
-   - **Problem:** JSON accepts missing or invalid dates, but rendering calls `expect()`. A record containing `"date": "31.02.2026"` reaches a panic.
-   - **Fix:** Validate dates when loading the file and return a normal error before caching invalid records.
-   - **If we skip it:** A content typo can break both show pages.
-   - **Status:** Resolved on 2026-11-10. The shared loader validates every show date
-     before sorting and caching show records. A missing or invalid date returns the
-     existing data error with the record number instead of reaching the list filters.
-     See [show date requirements and reload instructions](README.md#content-maintenance).
-   - **Verified:** Three new tests cover missing/null/empty/impossible/malformed dates,
-     leap days, chronological ordering, empty lists, and the current show file. All
-     fourteen Rust tests, formatting, and Clippy passed.
-   - **Known limit:** The existing per-process cache also retains load errors. Correct
-     the file and restart or redeploy the server to reload it.
+3. **Similar filenames can trap gallery navigation** — [about.rs:196](/home/vkav/Work/RUST/leptos-website-maj/src/routes/about.rs:196).
+   - **What this is:** Next and Previous find the current image using substring matching.
+   - **Problem:** For a valid list ordered as `portrait.jpg.webp`, then `portrait.jpg`, Next from the second image selects that same image again.
+   - **Fix:** Use exact equality in both searches.
+   - **If we skip it:** Some filename combinations make navigation repeat or skip photos.
 
-5. **Release content loading ignores the configured site directory** — [shows.rs:234](/home/vkav/PROJECTS/rust/leptos-website-maj/src/routes/shows.rs:234), [media.rs:72](/home/vkav/PROJECTS/rust/leptos-website-maj/src/routes/media.rs:72), [about.rs:338](/home/vkav/PROJECTS/rust/leptos-website-maj/src/routes/about.rs:338)
+4. **Two icon controls have incorrect or missing names** — [head.rs:65](/home/vkav/Work/RUST/leptos-website-maj/src/head.rs:65), [about.rs:160](/home/vkav/Work/RUST/leptos-website-maj/src/routes/about.rs:160).
+   - **What this is:** These are the Discography navigation icon and biography text-color button.
+   - **Problem:** The accessibility tree exposes two links named “Shows” and none named “Discography.” The color-change control is an unnamed button.
+   - **Fix:** Correct the navigation image’s alternative text and label the color-change button; mark its decorative arrow with `alt=""`.
+   - **If we skip it:** Screen-reader and voice-control users cannot reliably identify these actions.
 
-   - **What this is:** Three loaders read show data, video data, and gallery filenames.
-   - **Problem:** Release builds always read `/app/site`, even when `LEPTOS_SITE_ROOT` points elsewhere. The gallery additionally unwraps the resulting error.
-   - **Fix:** Build these paths from `LeptosOptions.site_root`, and display gallery loading errors without panicking.
-   - **If we skip it:** Release runs outside the exact Docker directory layout lose these sections.
-   - **Status:** Resolved on 2026-11-11. All three loaders build paths from the
-     configured `LeptosOptions.site_root` in both development and release builds.
-     Gallery load failures reach the existing error display; the resource no longer
-     unwraps them. See [content directory configuration](README.md#runtime-configuration).
-   - **Verified:** Five new tests cover relative/absolute roots, missing files, public
-     gallery URLs, configuration supplied through the JSON API router, and a rendered
-     gallery load error. All nineteen Rust tests, formatting, Clippy, and native
-     `hydrate` feature compilation passed.
-   - **Known limit:** Content results and errors remain cached per process; restart
-     after changing configuration or correcting a failed load.
+5. **Missing SMTP configuration becomes an empty password** — [home.rs:448](/home/vkav/Work/RUST/leptos-website-maj/src/routes/home.rs:448).
+   - **What this is:** Password loading uses `unwrap_or_default()` after reserving a mail attempt.
+   - **Problem:** An absent password becomes an empty credential and reaches SMTP. Each submission consumes an allowance slot, while logs provide only a generic delivery failure.
+   - **Fix:** Reject absent or empty credentials before reserving an attempt, and log a static configuration error without the credential value.
+   - **If we skip it:** A missing deployment secret causes repeated delivery failures and misleading rate-limit errors.
 
-6. **Gallery and audio controls cannot be operated with a keyboard** — [about.rs:316](/home/vkav/PROJECTS/rust/leptos-website-maj/src/routes/about.rs:316), [player.rs:170](/home/vkav/PROJECTS/rust/leptos-website-maj/src/audio/player.rs:170)
+6. **Deployment shutdown interrupts active requests immediately** — [serve.rs:88](/home/vkav/Work/RUST/leptos-website-maj/src/serve.rs:88), [fly.toml:8](/home/vkav/Work/RUST/leptos-website-maj/fly.toml:8).
+   - **What this is:** Fly sends `SIGINT`, but the server has no graceful shutdown handler.
+   - **Problem:** A temporary server exited in roughly one millisecond during an active image transfer, truncating it. An in-progress SMTP request can also be interrupted.
+   - **Fix:** Handle the configured signal with Axum’s graceful shutdown and allow bounded in-flight work to finish within the deployment timeout. [Axum documentation](https://docs.rs/axum/latest/axum/serve/struct.Serve.html#method.with_graceful_shutdown)
+   - **If we skip it:** Deployments can interrupt downloads and contact submissions.
 
-   - **What this is:** Photos, seeking, and volume use custom click targets.
-   - **Problem:** Gallery anchors have no `href`; the sliders are plain `div` elements. Browser checks confirmed that gallery thumbnails cannot receive focus.
-   - **Fix:** Use labeled buttons for thumbnails and native range inputs for seeking and volume.
-   - **If we skip it:** Keyboard users cannot use these controls.
-   - **Status:** Resolved on 2026-11-11. Gallery thumbnails are labeled native buttons;
-     seeking and volume use labeled range inputs with keyboard controls and visible
-     focus indicators. Pixel-based seeking/volume handlers and their unused styles
-     were removed. Metadata already loaded before hydration is read when mounting.
-   - **Verified:** Keyboard seeking, volume, photo opening/navigation, and pointer
-     photo navigation passed in Chromium and Firefox. See [keyboard behavior](README.md#keyboard-controls-and-dialogs).
+## **Nice to have**
 
-7. **Dialogs leave keyboard focus behind the overlay** — [home.rs:387](/home/vkav/PROJECTS/rust/leptos-website-maj/src/routes/home.rs:387), [about.rs:294](/home/vkav/PROJECTS/rust/leptos-website-maj/src/routes/about.rs:294)
+1. **Background framing does not follow browser history** — [head.rs:16](/home/vkav/Work/RUST/leptos-website-maj/src/head.rs:16).
+   - **What this is:** Navigation click handlers manually change the background position.
+   - **Problem:** About → Media → browser Back returns to About while retaining Media’s background position. Reloading produces another position.
+   - **Fix:** Derive the background position from the current route and remove the individual click handlers.
+   - **If we skip it:** The same page looks different depending on how visitors reach it.
 
-   - **What this is:** Mail, external-link, and photo overlays act as modal dialogs.
-   - **Problem:** Focus is neither moved inside nor contained there. Browser checks also confirmed that Escape leaves the mail and photo dialogs open.
-   - **Fix:** Use labeled native dialogs opened with `showModal()`, with close handling and focus restoration. See the [W3C dialog keyboard requirements](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/).
-   - **If we skip it:** Keyboard and screen-reader users can navigate hidden background controls.
-   - **Status:** Resolved on 2026-11-11. All three overlays are labeled native dialogs
-     opened with `showModal()`, with deliberate initial focus, native Escape handling,
-     close buttons, and focus restoration. `::backdrop` replaces overlay divs; a
-     guarded pointer fallback preserves outside dismissal without closing on padding
-     or text-selection drags. Contact failures retain input; success resets and closes.
-   - **Verified:** All sixteen Playwright checks passed in Chromium and Firefox,
-     including Tab/Shift+Tab, background focus rejection, Escape, explicit close,
-     reopening, fallback dismissal, portrait sizing, and mocked email responses.
-     Server/WASM builds, all nineteen Rust tests, formatting, and Clippy passed;
-     landscape and portrait screenshots were inspected.
-   - **Not checked:** WebKit needs system libraries requiring interactive sudo;
-     assistive-technology testing, live SMTP, and deployment were not performed.
+2. **Unused event mutators include an incorrect getter** — [shows.rs:68](/home/vkav/Work/RUST/leptos-website-maj/src/routes/shows.rs:68).
+   - **What this is:** Two public methods expose mutable event lists.
+   - **Problem:** Neither has callers in the repository, and `get_desc_mut()` incorrectly returns the ascending list.
+   - **Fix:** Delete both unused mutators.
+   - **If we skip it:** Maintainers retain an unnecessary API containing misleading behavior.
 
-8. **The Docker bootstrap selects the wrong executable on ARM** — [Dockerfile:5](/home/vkav/PROJECTS/rust/leptos-website-maj/Dockerfile:5)
+3. **Retired music adds 47.7 MB to deployments** — [public/music](/home/vkav/Work/RUST/leptos-website-maj/public/music).
+   - **What this is:** Every file under `public/` is copied into the built site and Docker image.
+   - **Problem:** Four tracks have no application, content, or test references. Together they occupy 47,656,089 bytes; only the Minor Flaw promo and `audio-promo_small.mp3` test fixture are referenced.
+   - **Fix:** Remove those four tracks from the shipped directory, or archive them outside `public/`.
+   - **If we skip it:** Builds and deployment images continue carrying unnecessary audio.
 
-   - **What this is:** The builder downloads `cargo-binstall`.
-   - **Problem:** The download is always for `x86_64`, while this workspace runs on `aarch64`. A native ARM builder cannot execute that binary without architecture emulation.
-   - **Fix:** Select the download for the builder’s architecture.
-   - **If we skip it:** The documented local Docker build fails on ARM machines.
-   - **Status:** Resolved on 2026-11-11. The bootstrap uses the builder's `uname -m`
-     in the download URL and a fixed local archive name for extraction.
-     See [Docker build notes](BUILD.md#docker-build).
-   - **Verified:** POSIX-shell checks passed for x86_64 and aarch64 download URLs,
-     extraction, installation, and stopping after a failed download. Both upstream
-     release assets were verified through GitHub's release API.
-   - **Not checked:** A full Docker build or native ARM execution; Docker socket
-     access was denied even outside the agent sandbox.
+Validation passed: **21 Rust tests, 50 Chromium/Firefox checks, formatting, strict SSR/hydration Clippy, and the server/WASM build**. The lockfile advisory check returned only an informational notice for transitive `paste` being unmaintained. [RustSec notice](https://rustsec.org/advisories/RUSTSEC-2024-0436.html)
 
-9. **Missing albums return a success status** — [discography.rs:137](/home/vkav/PROJECTS/rust/leptos-website-maj/src/routes/discography.rs:137)
+I also checked Modern Web Guidance’s icon and accessibility guides. No repository files changed, and all temporary audit servers were stopped.
 
-   - **What this is:** Album URLs select a known release.
-   - **Problem:** `/discography/missing-album` displays a missing-album message but returns HTTP `200`; this was reproduced locally.
-   - **Fix:** Use the existing not-found error response when the album lookup fails.
-   - **If we skip it:** Crawlers and monitoring treat nonexistent album pages as successful pages.
-   - **Status:** Resolved on 2026-11-11. Failed album lookups use the shared
-     `MajServerError::NotFound` error display, setting HTTP `404` during server rendering.
-     See [album URL behavior](ARCHITECTURE.md#album-urls).
-   - **Verified:** The HTTP regression test reproduced `200` before the fix and now
-     checks two unknown names return `404`, both releases return `200`, and the index
-     returns `200`. All twenty Rust tests passed. The HTTP test uses a separate test
-     binary to avoid Leptos route discovery suppressing parallel resource tests.
-     Formatting, Clippy, and the server/WASM build also passed.
-
-10. **The volume bar contradicts the mute state** — [player.rs:62](/home/vkav/PROJECTS/rust/leptos-website-maj/src/audio/player.rs:62)
-
-    - **What this is:** The audio loop updates the volume indicator.
-    - **Problem:** Muting sets the bar to zero, but the next loop overwrites it with `audio.volume()`. The browser showed a 100% bar while `muted` was true.
-    - **Fix:** Display zero while muted, and synchronize the indicator on `volumechange`.
-    - **If we skip it:** The controls give conflicting feedback about sound output.
-    - **Status:** Resolved on 2026-11-11 while replacing the volume control for item 6.
-      The native slider displays zero when muted and synchronizes on `volumechange`.
-      Browser tests verify mute/unmute preserves and restores the actual volume.
-
-**Should fix**
-
-11. **The automated checks do not currently provide a working safety net** — [lib.rs:1](/home/vkav/PROJECTS/rust/leptos-website-maj/src/lib.rs:1), [example.spec.ts:4](/home/vkav/PROJECTS/rust/leptos-website-maj/end2end/tests/example.spec.ts:4)
-
-    - **What this is:** Rust compilation checks and a browser test.
-    - **Problem:** `cargo test --locked --offline --features ssr` fails with a recursion-depth error in the library. The only browser test targets port `3000` and starter-template text, while this site uses `8080`.
-    - **Fix:** Add the recursion limit to the library crate and replace the starter test with a real site check. Add focused checks for invalid dates and file-response headers.
-    - **If we skip it:** These regressions have no useful automated warning.
-    - **Status:** Resolved across items 1, 3, 4, 6, and 7. The library recursion limit,
-      date/file-response tests, real homepage check, and keyboard/dialog tests now run.
-      Playwright defaults to port 8080, supports a test URL override, and its existing
-      dependency lock was updated for current browsers. See [browser checks](BUILD.md#browser-checks).
-
-12. **The gallery downloads full-size originals for thumbnails** — [about.rs:317](/home/vkav/PROJECTS/rust/leptos-website-maj/src/routes/about.rs:317)
-
-    - **What this is:** The About page renders twelve photos.
-    - **Problem:** Their originals total 17.8 MB. One thumbnail points to a 6000×4000 image weighing 14.5 MB, and none use lazy loading.
-    - **Fix:** Serve smaller thumbnails and load originals when expanded; lazy-load offscreen images.
-    - **If we skip it:** Mobile visitors pay a large download cost just to browse the biography.
-    - **Status:** Resolved on 2026-11-11. The gallery uses committed 480×270 WebP
-      thumbnails (149,330 bytes total versus 17,845,650 bytes of originals). The first
-      four load eagerly and later thumbnails load lazily; originals load only after
-      opening a photo. [Regeneration instructions](README.md#gallery-thumbnails) keep
-      future content updates reproducible without modifying originals.
-    - **Verified:** All twelve thumbnails have the expected dimensions and smaller
-      payloads. A Rust asset check and Chromium/Firefox checks verify matching files,
-      layout proportions, and no original-photo requests before opening the viewer.
-
-13. **Docker builds include local build output** — [.dockerignore:7](/home/vkav/PROJECTS/rust/leptos-website-maj/.dockerignore:7), [Dockerfile:22](/home/vkav/PROJECTS/rust/leptos-website-maj/Dockerfile:22)
-
-    - **What this is:** Docker copies the repository into its builder.
-    - **Problem:** `.dockerignore` does not exclude `target`, so `COPY . .` includes compiled artifacts. That directory measured about 6 GB during this audit.
-    - **Fix:** Add `/target` to `.dockerignore`.
-    - **If we skip it:** Local deployments send and copy gigabytes of unnecessary files.
-    - **Status:** Resolved on 2026-11-11. `.dockerignore` now excludes `/target`.
-      The root exclusion was checked; a Docker context transfer/full image build
-      was not run.
-
-14. **Retired features and unused assets remain in the shipped tree** — [home.rs:109](/home/vkav/PROJECTS/rust/leptos-website-maj/src/routes/home.rs:109), [audio/mod.rs:32](/home/vkav/PROJECTS/rust/leptos-website-maj/src/audio/mod.rs:32), [about.rs:9](/home/vkav/PROJECTS/rust/leptos-website-maj/src/routes/about.rs:9)
-
-    - **What this is:** An inactive album promotion, unused playlist machinery, an unused orientation helper, and obsolete backgrounds.
-    - **Problem:** Repository-wide searches found no active consumers for these paths. Three unused background files alone total 61.7 MB.
-    - **Fix:** Delete the unused components, bindings, matching styles, and backgrounds. Removing custom cache parsing also removes the direct `lazy-regex` dependency.
-    - **If we skip it:** Releases carry unnecessary assets, and maintainers keep reading abandoned code.
-    - **Status:** Resolved on 2026-11-11. Removed the retired album promotion and its
-      styles/link variants, playlist component/state/metadata/wrapper, orientation
-      helper, unused gallery reference, and three obsolete backgrounds (61,731,059
-      bytes). The active background, player source, discography artwork, and original
-      gallery photos remain. The custom cache parser and `lazy-regex` were removed
-      with item 3.
-    - **Verified:** Repository searches found no remaining references to the removed
-      code or backgrounds. The built site contains only the active background.
-
-**Nice to have**
-
-15. **The audio player polls every 10 milliseconds while paused** — [player.rs:72](/home/vkav/PROJECTS/rust/leptos-website-maj/src/audio/player.rs:72)
-
-    - **What this is:** A timer repeatedly updates playback and volume displays.
-    - **Problem:** The browser confirmed a permanent 10 ms interval, including while playback is paused.
-    - **Fix:** Use media events for time, duration, playback state, and volume; remove the custom interval helper.
-    - **If we skip it:** Every open tab keeps doing unnecessary browser work.
-    - **Status:** Resolved on 2026-11-11. Native metadata, duration, time, play/pause,
-      ended, error, and volume events synchronize the audio UI. Removed the 10 ms
-      loop and interval helper. Initial metadata still synchronizes on mount;
-      unknown durations disable seeking and rejected play promises are handled.
-    - **Verified:** Chromium and Firefox checks cover seeking via media events,
-      programmatic pause, playback completion, non-finite duration recovery,
-      rejected playback, and absence of the old polling interval.
-
-Additional changes (2026-11-11): The mail limiter now uses server-only
-`parking_lot::Mutex`. Its short critical section never spans async work; concurrent
-admission, expiry, HTTP rejection, and panic-unwind tests pass with the existing cap.
-Tokio's async `OnceCell` loaders and the test-only standard `Barrier` remain because
-they have no appropriate parking_lot replacement. Deprecated `leptos-use` imports
-were replaced with `leptos-use-event-listener` and its SSR feature; the retired hover
-calls were deleted. Strict Clippy (`-D warnings`) passes without deprecation allowances.
-
-Original audit verification (2026-11-08): Checked all application source, styles, content files, build/deploy configuration, and existing tests. Main routes and read-only APIs responded locally; all 78 show dates parsed. The WebAssembly compilation check passed. Browser checks used the existing build artifacts. No source files changed during the audit, and the audit server was stopped.
-
-Verdict: All fifteen findings are fixed in source. Latest validation: 21 Rust tests,
-22 Chromium/Firefox checks, formatting, strict Clippy, server/WASM builds, thumbnail
-asset checks, and visual inspection passed.
-
-Lean: Retired code and over 61 MB of unused backgrounds removed; gallery previews now total about 149 KB.
-
-Not checked: Live email delivery, Fly production behavior, a full Docker/release build, dependency advisories, or load testing.
+**Verdict:** Fix 1 and 2 first, then the content-error and high-zoom failures.  
+**Lean:** At least 6 dead lines and 47.7 MB of shipped assets removable.  
+**Not checked:** Live SMTP, Fly/Docker deployment, WebKit, physical screen-reader testing, or Git history.
