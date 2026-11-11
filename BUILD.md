@@ -127,6 +127,18 @@ Content results, including load errors, are cached per server process. Restart a
 changing the root or correcting a failed load. Gallery loading failures use the
 existing error display instead of panicking.
 
+## Album URLs
+
+Known album URLs (`/discography/minorflaw` and `/discography/galaterna`) return HTTP
+`200`. Unknown album names return HTTP `404` with the shared not-found error display
+and a link to the home page. The discography index remains available at `/discography`.
+
+Run the HTTP regression check with:
+
+```sh
+env -u PORKMAIL_PWD RUSTFLAGS="--cfg erase_components" cargo test --locked --offline --features ssr --test album_routes
+```
+
 ## Keyboard controls and dialogs
 
 Gallery thumbnails are labeled buttons. Activate them with Enter or Space; the photo

@@ -139,6 +139,14 @@ What this repo does: A public portfolio for Maj Kavšek, built with Rust, Leptos
    - **Problem:** `/discography/missing-album` displays a missing-album message but returns HTTP `200`; this was reproduced locally.
    - **Fix:** Use the existing not-found error response when the album lookup fails.
    - **If we skip it:** Crawlers and monitoring treat nonexistent album pages as successful pages.
+   - **Status:** Resolved on 2026-11-11. Failed album lookups use the shared
+     `MajServerError::NotFound` error display, setting HTTP `404` during server rendering.
+     See [album URL behavior and its regression check](BUILD.md#album-urls).
+   - **Verified:** The HTTP regression test reproduced `200` before the fix and now
+     checks two unknown names return `404`, both releases return `200`, and the index
+     returns `200`. All twenty Rust tests passed. The HTTP test uses a separate test
+     binary to avoid Leptos route discovery suppressing parallel resource tests.
+     Formatting, Clippy, and the server/WASM build also passed.
 
 10. **The volume bar contradicts the mute state** — [player.rs:62](/home/vkav/PROJECTS/rust/leptos-website-maj/src/audio/player.rs:62)
 
@@ -195,7 +203,7 @@ What this repo does: A public portfolio for Maj Kavšek, built with Rust, Leptos
 
 Original audit verification (2026-11-08): Checked all application source, styles, content files, build/deploy configuration, and existing tests. Main routes and read-only APIs responded locally; all 78 show dates parsed. The WebAssembly compilation check passed. Browser checks used the existing build artifacts. No source files changed during the audit, and the audit server was stopped.
 
-Verdict: Items 1–8, 10, and 11 are fixed. Fix the missing-album status next.
+Verdict: Items 1–11 are fixed. Continue with gallery thumbnails and the Docker build context.
 
 Lean: -300 lines, -1 dependency possible, plus over 61 MB of unused backgrounds.  
 Not checked: Live email delivery, Fly production behavior, a full Docker/release build, dependency advisories, or load testing.

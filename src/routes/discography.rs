@@ -1,3 +1,4 @@
+use crate::{routes::error::ErrorTemplate, MajServerError};
 use leptos::prelude::*;
 
 use leptos_meta::{Link, Title};
@@ -135,8 +136,9 @@ pub fn DiscographyDisplayAlbum() -> impl IntoView {
             }
             .into_any()
         } else {
-            view! { <p>"Sorry but the album you are looking for doesn't seem to exist."</p> }
-                .into_any()
+            let mut outside_errors = Errors::default();
+            outside_errors.insert_with_default_key(MajServerError::NotFound);
+            view! { <ErrorTemplate outside_errors /> }.into_any()
         }
     };
     view! {
