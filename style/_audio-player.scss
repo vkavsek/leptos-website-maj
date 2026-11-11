@@ -81,6 +81,7 @@ $box-shadow: 0 4px 9px 2px rgba(40, 40, 40, 0.9);
       background: $background-pink;
       height: var(--player-height);
       padding-left: 30px;
+      min-width: min(260px, calc(100vw - var(--player-padding) - 30px));
 
       > * {
         transition: 0.2s;
@@ -161,27 +162,29 @@ $box-shadow: 0 4px 9px 2px rgba(40, 40, 40, 0.9);
   }
 }
 
+.time-container {
+  min-width: 0;
+}
+
 .controls {
-  flex: 0 0 40px;
+  flex: 0 0 auto;
 }
 
 .volume-container {
-  position: relative;
   display: none;
+  grid-template-columns: auto 24px;
+  align-items: center;
+  gap: 8px;
   z-index: 2;
   justify-items: center;
 }
 
 .volume-slider {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
   writing-mode: vertical-lr;
   direction: rtl;
-  width: 32px;
+  width: 24px;
   min-width: 24px;
-  height: 96px;
+  height: clamp(24px, calc(var(--player-height) + 16px), 80px);
   background: $background-dark;
   border-radius: 8px;
 }
@@ -229,8 +232,7 @@ $box-shadow: 0 4px 9px 2px rgba(40, 40, 40, 0.9);
   }
 
   .volume-slider {
-    top: auto;
-    bottom: calc(100% + 8px);
+    height: calc(4rem - 16px);
   }
 }
 

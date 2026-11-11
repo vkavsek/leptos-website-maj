@@ -7,8 +7,8 @@
     width: 100%;
 
     > * {
-      width: 3vh;
-      padding: 1rem;
+      width: clamp(24px, 4vh, 40px);
+      padding: clamp(8px, 2vw, 16px);
       border-radius: 10px;
     }
   }
@@ -19,11 +19,11 @@
     border-radius: 1rem;
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
-    width: 60%;
+    width: min(100%, max(60%, 280px));
 
     > * {
-      padding: 1rem;
-      width: 3vw;
+      padding: clamp(8px, 2vw, 16px);
+      width: clamp(24px, 3vw, 48px);
       height: auto;
     }
   }
@@ -73,7 +73,7 @@
 
 .contacts-img {
   cursor: pointer;
-  width: 60%;
+  width: 100%;
   height: auto;
   transition:
     filter 0.2s ease-in-out,

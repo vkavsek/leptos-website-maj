@@ -2,6 +2,13 @@
 
 #disco-display-components {
   background-color: rgba(theme.$background, 1);
+  overflow: auto;
+  grid-template-rows: auto 1fr;
+
+  .title {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
 }
 
 #disco-components {
@@ -110,9 +117,9 @@
 
 .album-desc-wrap {
   width: 35%;
-  max-height: 64vh;
+  min-width: 0;
+  overflow-wrap: anywhere;
   margin: 4rem;
-  overflow: auto;
 }
 
 .album-logo-wrap {
@@ -160,7 +167,6 @@
   }
   .album-desc-wrap {
     width: 50%;
-    height: 50%;
   }
 }
 
@@ -173,7 +179,6 @@
   }
   .album-desc-wrap {
     width: 50%;
-    max-height: 10%;
   }
 }
 

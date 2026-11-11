@@ -4,6 +4,7 @@
 }
 
 #home-components {
+  overflow: auto;
   align-items: center;
   grid-template-rows: 1fr 10fr 1fr;
   grid-template-columns: repeat(10, 1fr);

@@ -109,8 +109,10 @@ photo viewer has named previous, next, and close buttons. Audio seeking and volu
 use range inputs with arrow-key, Home, and End support. Seeking stays disabled until
 the duration is known; volume and mute controls stay synchronized. The player uses
 the Minor Flaw promo. Volume uses a vertical slider: Up increases volume and Down
-decreases it. Its position stays fixed when hovered. Media videos use responsive
-4:3 frames with fullscreen support.
+decreases it. It sits to the right of the mute button, inside the player in both
+orientations, and stays fixed when hovered. Media videos use responsive 4:3 frames
+with fullscreen support. Album detail pages scroll to reveal all notes, artwork,
+service links, and the return link.
 
 Contact, external-link confirmation, and photo dialogs move focus inside, make the
 background inert, and restore focus when closed. Escape, close buttons, and clicking
