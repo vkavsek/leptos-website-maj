@@ -1,5 +1,3 @@
-use super::Song;
-use crate::app::use_interval;
 use leptos::ev::MouseEvent;
 use leptos::{html::Audio, prelude::*};
 
@@ -10,78 +8,51 @@ pub fn AudioPlayer() -> impl IntoView {
     let (time, set_time) = signal(0u64);
     let (duration, set_duration) = signal(0u64);
     let (volume, set_volume) = signal(0.5f64);
-    let (name, set_name) = signal::<Option<String>>(None);
-    let (play_btn_class, set_play_btn_class) = signal("pause");
+    let (play_btn_class, set_play_btn_class) = signal("play");
     let (vol_btn_class, set_vol_btn_class) = signal("ico-vol-med");
     // Derived signals
-    let _song_title = move || Song::from_filenamename(&name.get().unwrap_or(String::new())).title();
-    let _song_artist =
-        move || Song::from_filenamename(&name.get().unwrap_or(String::new())).artist();
-    let _song_album = move || Song::from_filenamename(&name.get().unwrap_or(String::new())).album();
     let time_fmt = move || fmt_sec_to_mmss(time.get());
     let duration_fmt = move || fmt_sec_to_mmss(duration.get());
     // NodeRefs
     let audio_ref = NodeRef::<Audio>::new();
 
-    // Import the selector and the List of songs
-    let _names = use_context::<RwSignal<Vec<String>>>().expect("the names to be provided");
-    let selector = use_context::<RwSignal<usize>>().expect("the selector to be provided");
-
-    // Set Song Source
-    let song_src = move || {
-        // if let Some(name) = names.get().get(selector.get()) {
-        //     format!("/music/{}", name)
-        // } else {
-        // "/music/audio-promo_small.mp3".to_string()
-        // }
-        "/music/MINORFLAW_albumpromo.mp3"
-    };
-
-    // DOM should be built by the time we call the closures so we unwrap them all
-    //
-    // Check audio percentage and update time accordingly
-    let audio_loop = move || {
-        if let Some(audio) = audio_ref.get_untracked() {
-            set_time.set(audio.current_time() as u64);
-            if audio.ended() {
-                set_play_btn_class.set("play");
-            }
-        }
-    };
-    // NOTE: here the main audio loop gets initialized
-    use_interval(10, audio_loop);
-
-    // Reset play button when you change the song
-    Effect::new_isomorphic(move |_| {
-        // subscribe to selector
-        let _ = selector.get();
-        set_play_btn_class.set("play");
-        if let Some(audio) = audio_ref.get() {
-            let _ = audio.pause();
-        }
-    });
-
     let sync_metadata = move || {
         let audio = audio_ref.get().unwrap();
-        set_duration.set(audio.duration() as u64);
-        set_name.set(extract_name(audio.src()));
+        let duration = audio.duration();
+        set_duration.set(if duration.is_finite() {
+            duration.max(0.0) as u64
+        } else {
+            0
+        });
     };
     // Metadata may already have loaded before hydration attaches event handlers.
     audio_ref.on_load(move |audio| {
         audio.set_volume(0.5);
         sync_metadata();
+        set_time.set(audio.current_time() as u64);
+        set_play_btn_class.set(if audio.paused() || audio.ended() {
+            "play"
+        } else {
+            "pause"
+        });
     });
 
     // Play
     let play_click = move |_: MouseEvent| {
         let audio = audio_ref.get().unwrap();
 
-        set_duration.set(audio.duration() as u64);
         if audio.paused() {
-            set_play_btn_class.set("pause");
-            let _ = audio.play();
+            if let Ok(promise) = audio.play() {
+                leptos::task::spawn_local(async move {
+                    if web_sys::js_sys::futures::JsFuture::from(promise)
+                        .await
+                        .is_err()
+                    {
+                        set_play_btn_class.set("play");
+                    }
+                });
+            }
         } else {
-            set_play_btn_class.set("play");
             let _ = audio.pause();
         }
     };
@@ -121,7 +92,22 @@ pub fn AudioPlayer() -> impl IntoView {
 
     view! {
         <div class="audio-player">
-            <audio node_ref=audio_ref on:loadeddata=move |_| sync_metadata() on:volumechange=sync_volume src=song_src>
+            <audio
+                node_ref=audio_ref
+                src="/music/MINORFLAW_albumpromo.mp3"
+                on:loadedmetadata=move |_| sync_metadata()
+                on:durationchange=move |_| sync_metadata()
+                on:timeupdate=move |_| {
+                    if let Some(audio) = audio_ref.get() {
+                        set_time.set(audio.current_time() as u64);
+                    }
+                }
+                on:play=move |_| set_play_btn_class.set("pause")
+                on:pause=move |_| set_play_btn_class.set("play")
+                on:ended=move |_| set_play_btn_class.set("play")
+                on:error=move |_| set_play_btn_class.set("play")
+                on:volumechange=sync_volume
+            >
                 "Audio Player"
             </audio>
             <div class="play-container">
@@ -151,7 +137,6 @@ pub fn AudioPlayer() -> impl IntoView {
                 </div>
             </div>
             <div class="controls">
-                <div class="song-info"></div>
                 <div class="volume-container">
                     <button
                         class=vol_btn_class
@@ -179,17 +164,6 @@ pub fn AudioPlayer() -> impl IntoView {
 // ###################################
 // ->   UTILS
 // ###################################
-fn extract_name(path: String) -> Option<String> {
-    let res = path
-        .split('/')
-        .next_back()
-        .map(|name| name.split('.').next());
-    match res {
-        Some(Some(name)) => Some(name.to_string()),
-        _ => None,
-    }
-}
-
 /// Seconds to MM:SS
 /// 62 -> 01:02
 fn fmt_sec_to_mmss(time: u64) -> String {

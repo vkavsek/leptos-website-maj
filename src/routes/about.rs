@@ -3,34 +3,9 @@ use crate::{routes::error::ErrorTemplate, MajServerError};
 use leptos::{
     html::{Button, Div},
     prelude::*,
-    tachys::dom::window,
-    wasm_bindgen::JsValue,
 };
 use leptos_meta::{Link, Title};
 
-#[allow(unused)]
-enum Orient {
-    Portrait,
-    Landscape,
-}
-#[allow(unused)]
-impl Orient {
-    pub fn get() -> Result<Self, JsValue> {
-        let in_width = window()
-            .inner_width()?
-            .as_f64()
-            .expect("width should be a number");
-        let in_height = window()
-            .inner_height()?
-            .as_f64()
-            .expect("height should be a number");
-        if in_width > in_height {
-            Ok(Orient::Landscape)
-        } else {
-            Ok(Orient::Portrait)
-        }
-    }
-}
 enum Color {
     #[allow(dead_code)]
     Yellow,
@@ -202,9 +177,6 @@ pub fn About() -> impl IntoView {
 pub fn ImagesAbout() -> impl IntoView {
     let files = Resource::new(move || (), |_| async move { read_image_files().await });
 
-    // This is named like this because we get warnings because of macros.
-    let _gallery_ref = NodeRef::<Div>::new();
-
     // Click on image to make it fullscreen.
     let (current_img, set_current_img) = signal(None);
     let fullscreen_ref = NodeRef::<leptos::html::Dialog>::new();
@@ -284,7 +256,7 @@ pub fn ImagesAbout() -> impl IntoView {
                 </div>
             </dialog>
         <div class="about-gallery">
-            <div node_ref=_gallery_ref class="about-images-scroller snaps-inline">
+            <div class="about-images-scroller snaps-inline">
                 <Suspense fallback=move || {
                     view! { <p>"Loading"</p> }
                 }>
@@ -312,7 +284,15 @@ pub fn ImagesAbout() -> impl IntoView {
                                                     aria-label=format!("Open gallery photo {}", index + 1)
                                                     on:click=click_image
                                                 >
-                                                    <img src=file class="image-about" alt="" />
+                                                    <img
+                                                        src=format!("{}.webp", file.replace("/about_pics/", "/about_thumbnails/"))
+                                                        class="image-about"
+                                                        alt=""
+                                                        width="480"
+                                                        height="270"
+                                                        loading=if index < 4 { "eager" } else { "lazy" }
+                                                        decoding="async"
+                                                    />
                                                 </button>
                                             }
                                         })
@@ -370,6 +350,23 @@ fn extract_name(path: Option<&str>) -> String {
 #[cfg(all(test, feature = "ssr"))]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn every_gallery_original_has_a_smaller_webp_thumbnail() {
+        let root = concat!(env!("CARGO_MANIFEST_DIR"), "/public");
+        for original in load_image_files(root).await.unwrap() {
+            let thumbnail = format!(
+                "{}.webp",
+                original.replace("/about_pics/", "/about_thumbnails/")
+            );
+            let thumbnail = std::fs::read(format!("{root}{thumbnail}")).unwrap();
+            let original_size = std::fs::metadata(format!("{root}{original}"))
+                .unwrap()
+                .len();
+            assert!(thumbnail.starts_with(b"RIFF") && thumbnail.get(8..12) == Some(b"WEBP"));
+            assert!((thumbnail.len() as u64) < original_size, "{original}");
+        }
+    }
 
     #[tokio::test]
     async fn gallery_loader_uses_configured_roots_and_keeps_public_urls() {

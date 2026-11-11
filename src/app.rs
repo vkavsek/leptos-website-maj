@@ -1,10 +1,9 @@
 use crate::{
-    audio::AudioWrapper,
+    audio::AudioPlayer,
     head::*,
     routes::{about::*, discography::*, error::ErrorTemplate, home::*, media::*, shows::*},
     MajServerError,
 };
-use core::time::Duration;
 use leptos::prelude::*;
 use leptos_meta::*;
 use leptos_router::{components::*, path};
@@ -71,7 +70,7 @@ pub fn App() -> impl IntoView {
         <Router>
             <div class="bg-wrapper" node_ref=bg_div_ref>
                 <NavBar bg_div_ref />
-                <AudioWrapper />
+                <AudioPlayer />
                 <main>
                     <Routes fallback=|| {
                         let mut outside_errors = Errors::default();
@@ -95,35 +94,10 @@ pub fn App() -> impl IntoView {
     }
 }
 
-pub fn use_interval<T, F>(interval_millis: T, f: F)
-where
-    F: Fn() + Clone + 'static,
-    T: Into<Signal<u64>> + 'static,
-{
-    let interval_millis = interval_millis.into();
-    Effect::new(move |prev_handle: Option<IntervalHandle>| {
-        // effects get their previous return value as an argument
-        // each time the effect runs, it will return the interval handle
-        // so if we have a previous one, we cancel it
-        if let Some(prev_handle) = prev_handle {
-            prev_handle.clear();
-        };
-
-        // here, we return the handle
-        set_interval_with_handle(
-            f.clone(),
-            // this is the only reactive access, so this effect will only
-            // re-run when the interval changes
-            Duration::from_millis(interval_millis.get()),
-        )
-        .expect("could not create interval")
-    });
-}
-
 /// Light-dismiss fallback for browsers without `closedby` support.
 pub fn use_dialog_light_dismiss(dialog_ref: NodeRef<leptos::html::Dialog>) {
     use leptos::ev::{pointerdown, pointerup, PointerEvent};
-    use leptos_use::use_event_listener;
+    use leptos_use_event_listener::use_event_listener;
 
     let (pressed_outside, set_pressed_outside) = signal(false);
     let outside = move |event: &PointerEvent| {

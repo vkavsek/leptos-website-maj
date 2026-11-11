@@ -177,6 +177,14 @@ What this repo does: A public portfolio for Maj Kavšek, built with Rust, Leptos
     - **Problem:** Their originals total 17.8 MB. One thumbnail points to a 6000×4000 image weighing 14.5 MB, and none use lazy loading.
     - **Fix:** Serve smaller thumbnails and load originals when expanded; lazy-load offscreen images.
     - **If we skip it:** Mobile visitors pay a large download cost just to browse the biography.
+    - **Status:** Resolved on 2026-11-11. The gallery uses committed 480×270 WebP
+      thumbnails (149,330 bytes total versus 17,845,650 bytes of originals). The first
+      four load eagerly and later thumbnails load lazily; originals load only after
+      opening a photo. [Regeneration instructions](BUILD.md#gallery-thumbnails) keep
+      future content updates reproducible without modifying originals.
+    - **Verified:** All twelve thumbnails have the expected dimensions and smaller
+      payloads. A Rust asset check and Chromium/Firefox checks verify matching files,
+      layout proportions, and no original-photo requests before opening the viewer.
 
 13. **Docker builds include local build output** — [.dockerignore:7](/home/vkav/PROJECTS/rust/leptos-website-maj/.dockerignore:7), [Dockerfile:22](/home/vkav/PROJECTS/rust/leptos-website-maj/Dockerfile:22)
 
@@ -184,6 +192,9 @@ What this repo does: A public portfolio for Maj Kavšek, built with Rust, Leptos
     - **Problem:** `.dockerignore` does not exclude `target`, so `COPY . .` includes compiled artifacts. That directory measured about 6 GB during this audit.
     - **Fix:** Add `/target` to `.dockerignore`.
     - **If we skip it:** Local deployments send and copy gigabytes of unnecessary files.
+    - **Status:** Resolved on 2026-11-11. `.dockerignore` now excludes `/target`.
+      The root exclusion was checked; a Docker context transfer/full image build
+      was not run.
 
 14. **Retired features and unused assets remain in the shipped tree** — [home.rs:109](/home/vkav/PROJECTS/rust/leptos-website-maj/src/routes/home.rs:109), [audio/mod.rs:32](/home/vkav/PROJECTS/rust/leptos-website-maj/src/audio/mod.rs:32), [about.rs:9](/home/vkav/PROJECTS/rust/leptos-website-maj/src/routes/about.rs:9)
 
@@ -191,6 +202,14 @@ What this repo does: A public portfolio for Maj Kavšek, built with Rust, Leptos
     - **Problem:** Repository-wide searches found no active consumers for these paths. Three unused background files alone total 61.7 MB.
     - **Fix:** Delete the unused components, bindings, matching styles, and backgrounds. Removing custom cache parsing also removes the direct `lazy-regex` dependency.
     - **If we skip it:** Releases carry unnecessary assets, and maintainers keep reading abandoned code.
+    - **Status:** Resolved on 2026-11-11. Removed the retired album promotion and its
+      styles/link variants, playlist component/state/metadata/wrapper, orientation
+      helper, unused gallery reference, and three obsolete backgrounds (61,731,059
+      bytes). The active background, player source, discography artwork, and original
+      gallery photos remain. The custom cache parser and `lazy-regex` were removed
+      with item 3.
+    - **Verified:** Repository searches found no remaining references to the removed
+      code or backgrounds. The built site contains only the active background.
 
 **Nice to have**
 
@@ -200,10 +219,28 @@ What this repo does: A public portfolio for Maj Kavšek, built with Rust, Leptos
     - **Problem:** The browser confirmed a permanent 10 ms interval, including while playback is paused.
     - **Fix:** Use media events for time, duration, playback state, and volume; remove the custom interval helper.
     - **If we skip it:** Every open tab keeps doing unnecessary browser work.
+    - **Status:** Resolved on 2026-11-11. Native metadata, duration, time, play/pause,
+      ended, error, and volume events synchronize the audio UI. Removed the 10 ms
+      loop and interval helper. Initial metadata still synchronizes on mount;
+      unknown durations disable seeking and rejected play promises are handled.
+    - **Verified:** Chromium and Firefox checks cover seeking via media events,
+      programmatic pause, playback completion, non-finite duration recovery,
+      rejected playback, and absence of the old polling interval.
+
+Additional changes (2026-11-11): The mail limiter now uses server-only
+`parking_lot::Mutex`. Its short critical section never spans async work; concurrent
+admission, expiry, HTTP rejection, and panic-unwind tests pass with the existing cap.
+Tokio's async `OnceCell` loaders and the test-only standard `Barrier` remain because
+they have no appropriate parking_lot replacement. Deprecated `leptos-use` imports
+were replaced with `leptos-use-event-listener` and its SSR feature; the retired hover
+calls were deleted. Strict Clippy (`-D warnings`) passes without deprecation allowances.
 
 Original audit verification (2026-11-08): Checked all application source, styles, content files, build/deploy configuration, and existing tests. Main routes and read-only APIs responded locally; all 78 show dates parsed. The WebAssembly compilation check passed. Browser checks used the existing build artifacts. No source files changed during the audit, and the audit server was stopped.
 
-Verdict: Items 1–11 are fixed. Continue with gallery thumbnails and the Docker build context.
+Verdict: All fifteen findings are fixed in source. Latest validation: 21 Rust tests,
+22 Chromium/Firefox checks, formatting, strict Clippy, server/WASM builds, thumbnail
+asset checks, and visual inspection passed.
 
-Lean: -300 lines, -1 dependency possible, plus over 61 MB of unused backgrounds.  
+Lean: Retired code and over 61 MB of unused backgrounds removed; gallery previews now total about 149 KB.
+
 Not checked: Live email delivery, Fly production behavior, a full Docker/release build, dependency advisories, or load testing.

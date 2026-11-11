@@ -22,6 +22,10 @@ architecture (`uname -m`). Both downloads use the local filename `cargo-binstall
 For `--platform` builds, configure a native builder or emulation for the requested
 platform.
 
+The Docker context excludes `/target`, so local Rust output and staged site files
+are rebuilt inside the builder instead of being copied into it. Source assets remain
+in `public/`.
+
 ## Publishing to Fly.io
 
 1. `fly deploy` to build on a Fly machinge or add `--local-only` to build locally
@@ -51,6 +55,12 @@ The allowance lives in memory and resets on restart. Each replica has its own al
 and one visitor can use the entire shared allowance. The policy is implemented beside
 `send_mail` in `src/routes/home.rs`; no new environment settings or services are needed.
 Continue supplying `PORKMAIL_PWD` through the environment.
+
+The limiter uses a server-only `parking_lot::Mutex` for its short counter update;
+no lock is held during SMTP or other async work. This mutex does not poison on panic:
+the lock is released and recorded attempts remain in effect. The loaders retain
+Tokio's async `OnceCell` because initialization awaits file I/O. The concurrent test
+retains `std::sync::Barrier`, which has no `parking_lot` equivalent.
 
 Contact delivery logs contain only `delivery=sent` or `delivery=failed` within the
 existing request span (`req`, with its `id` from `x-request-id`). Names, email addresses,
@@ -127,6 +137,26 @@ Content results, including load errors, are cached per server process. Restart a
 changing the root or correcting a failed load. Gallery loading failures use the
 existing error display instead of panicking.
 
+## Gallery thumbnails
+
+The gallery displays 480×270 WebP thumbnails from `public/img/about_thumbnails/`.
+The first four load eagerly; the remaining thumbnails use native lazy loading.
+Original photos in `public/img/about_pics/` are requested only when the viewer opens.
+The twelve thumbnails total about 149 KB, compared with 17.8 MB of originals.
+
+After adding or replacing originals, generate thumbnails from the repository root
+with ImageMagick (`convert` with WebP support):
+
+```sh
+sh scripts/generate-gallery-thumbnails.sh
+```
+
+The script applies EXIF orientation, crops thumbnails to the gallery's 16:9 frame,
+and strips thumbnail metadata. Originals stay unchanged. Commit the generated
+thumbnails alongside content changes; when deleting an original, also delete its
+matching `<original filename>.webp` thumbnail. A Rust test checks that every original
+has a smaller WebP thumbnail.
+
 ## Album URLs
 
 Known album URLs (`/discography/minorflaw` and `/discography/galaterna`) return HTTP
@@ -145,6 +175,14 @@ Gallery thumbnails are labeled buttons. Activate them with Enter or Space; the p
 viewer has named previous, next, and close buttons. Audio seeking and volume use native
 range inputs with arrow-key, Home, and End support. Seeking stays disabled until the
 audio duration is known. Volume changes and mute/unmute keep the slider synchronized.
+
+Audio time, duration, playback state, and volume follow native media events rather
+than a polling timer. Metadata already loaded before hydration is read on mount;
+unknown/non-finite durations disable seeking, and rejected play requests leave the
+control paused. The active player uses the Minor Flaw promo; retired playlist state
+and promotion code have been removed. Dialog listeners now use the
+`leptos-use-event-listener` micro crate with its SSR feature, replacing deprecated
+umbrella-crate imports.
 
 Contact, external-link confirmation, and photo viewers use native modal dialogs.
 Opening moves focus inside, background controls become inert, and Escape or the close
@@ -179,3 +217,6 @@ The WebKit project is also configured; install its browser and required system
 libraries to include it. Tests cover the real homepage, audio controls, dialog focus,
 Escape and button dismissal, photo navigation, portrait sizing, and mocked email
 success/failure. The dismissal fallback is tested with native light dismiss disabled.
+Additional checks verify thumbnail-only initial gallery requests, loading the
+original after opening, media-event synchronization, rejected playback, and the
+absence of the old 10 ms polling interval.

@@ -1,26 +1,17 @@
 use crate::app::use_dialog_light_dismiss;
-use leptos::{ev::MouseEvent, form::ActionForm, html::Div, prelude::*};
+use leptos::{ev::MouseEvent, form::ActionForm, prelude::*};
 use leptos_meta::{Link, Title};
-use leptos_use::use_element_hover;
 
 #[cfg(feature = "ssr")]
-use std::{
-    sync::Mutex,
-    time::{Duration, Instant},
-};
+use parking_lot::Mutex;
+#[cfg(feature = "ssr")]
+use std::time::{Duration, Instant};
 
-#[allow(unused)]
-const EMAIL_ADDR: &str = "kavsekmaj@gmail.com";
-
-#[allow(dead_code)]
 enum LinkLocation {
     Fb,
     TikTok,
     Ig,
     Yt,
-    BandcampGala,
-    BandcampMinorFlaw,
-    AutRecords,
 }
 
 impl LinkLocation {
@@ -51,24 +42,6 @@ impl LinkLocation {
                 177,
                 128,
             ),
-            LinkLocation::BandcampGala => (
-                "https://autrecords.bandcamp.com/album/galaterna",
-                "/img/foreign-logos/bandcamp-fin.svg",
-                256,
-                256,
-            ),
-            LinkLocation::BandcampMinorFlaw => (
-                "https://jazzcerkno.bandcamp.com/album/minor-flaw",
-                "/img/foreign-logos/bandcamp-fin.svg",
-                256,
-                256,
-            ),
-            LinkLocation::AutRecords => (
-                "https://www.autrecords.com/",
-                "/img/foreign-logos/aut-fin.svg",
-                256,
-                256,
-            ),
         }
     }
 }
@@ -89,23 +62,22 @@ pub fn Home() -> impl IntoView {
             <div class="title">
                 <h1 id="home-title">"Maj Kavšek"</h1>
             </div>
-            // <AlbumPromo/>
             <div class="contents" id="home-bottom">
                 <div class="all-contacts">
                     <div class="contacts-wrap">
                         <Mail />
                     </div>
                     <div class="contacts-wrap">
-                        <LinkWithModal loc=FB if_add_image=true />
+                        <LinkWithModal loc=FB />
                     </div>
                     <div class="contacts-wrap">
-                        <LinkWithModal loc=IG if_add_image=true />
+                        <LinkWithModal loc=IG />
                     </div>
                     <div class="contacts-wrap">
-                        <LinkWithModal loc=TIKTOK if_add_image=true />
+                        <LinkWithModal loc=TIKTOK />
                     </div>
                     <div class="contacts-wrap">
-                        <LinkWithModal loc=YT if_add_image=true />
+                        <LinkWithModal loc=YT />
                     </div>
                 </div>
             </div>
@@ -114,119 +86,7 @@ pub fn Home() -> impl IntoView {
 }
 
 #[component]
-fn AlbumPromo() -> impl IntoView {
-    let minorflaw_ref: NodeRef<Div> = NodeRef::new();
-    let galaterna_ref: NodeRef<Div> = NodeRef::new();
-    let is_hovered_minorf = use_element_hover(minorflaw_ref);
-    let is_hovered_gala = use_element_hover(galaterna_ref);
-    let (get_id, set_id) = signal("home-animated");
-
-    let anim_id = move || {
-        if is_hovered_minorf.get() {
-            set_id.set("");
-        }
-        get_id.get()
-    };
-
-    let minorf_display = move || {
-        if is_hovered_gala.get() {
-            "none"
-        } else {
-            "grid"
-        }
-    };
-    let gala_display = move || {
-        if is_hovered_minorf.get() {
-            "none"
-        } else {
-            "grid"
-        }
-    };
-
-    view! {
-        <div class="home-container">
-            <div
-                class="home-center minorflaw-promo"
-                id=anim_id
-                node_ref=minorflaw_ref
-                style:display=minorf_display
-            >
-                <div id="album-img-title-wrap">
-                    // TODO:
-                    <img
-                        src="/img/MINORFLAW-01_600p.webp"
-                        width="600"
-                        height="600"
-                        id="home-album-img"
-                        alt="Album Artwork"
-                    />
-                    <h1 id="album-promo-title">"MINOR FLAW"</h1>
-                </div>
-                <div id="home-hide">
-                    <h3>"New Album Release!"</h3>
-                    <p id="home-album-text">
-                        "Listen to the album promo here, or find individual songs on YouTube. For more content, visit our "
-                        <a href="/media">"media page."</a>
-                    </p>
-                    <p id="home-album-text">
-                        "Buy a digital copy on "
-                        <LinkWithModal
-                            loc=LinkLocation::BandcampMinorFlaw
-                            if_add_image=false
-                            opt_text="Bandcamp".to_string()
-                        /> "."
-                    </p>
-                </div>
-                <div id="home-album-links">
-                    <LinkWithModal loc=LinkLocation::BandcampMinorFlaw if_add_image=true />
-                </div>
-            </div>
-            <div
-                class="home-center galaterna-promo"
-                node_ref=galaterna_ref
-                style:display=gala_display
-            >
-                <div id="album-img-title-wrap">
-                    <img
-                        src="/img/album_artwork_360p.webp"
-                        width="360"
-                        height="360"
-                        id="home-album-img"
-                        alt="Album Artwork"
-                    />
-                    <h1 id="album-promo-title">"GALATERNA"</h1>
-                </div>
-                <div id="home-hide">
-                    <h3>"Galaterna (2024)"</h3>
-                    <p id="home-album-text">
-                        "Buy a digital copy on "
-                        <LinkWithModal
-                            loc=LinkLocation::BandcampGala
-                            if_add_image=false
-                            opt_text="Bandcamp".to_string()
-                        /> " or a hard copy on the "
-                        <LinkWithModal
-                            loc=LinkLocation::AutRecords
-                            if_add_image=false
-                            opt_text="label's website!".to_string()
-                        />
-                    </p>
-                </div>
-                <div id="home-album-links">
-                    <LinkWithModal loc=LinkLocation::BandcampGala if_add_image=true />
-                    <LinkWithModal loc=LinkLocation::AutRecords if_add_image=true />
-                </div>
-            </div>
-        </div>
-    }
-}
-
-#[component]
-fn LinkWithModal(
-    loc: LinkLocation,
-    if_add_image: bool,
-    #[prop(optional)] opt_text: Option<String>,
-) -> impl IntoView {
+fn LinkWithModal(loc: LinkLocation) -> impl IntoView {
     let (href_target, src_target, width, height) = loc.process();
     let modal_ref = NodeRef::<leptos::html::Dialog>::new();
     use_dialog_light_dismiss(modal_ref);
@@ -236,13 +96,6 @@ fn LinkWithModal(
         LinkLocation::Ig => "A link to Instagram",
         LinkLocation::TikTok => "A link to TikTok",
         LinkLocation::Yt => "A link to YouTube",
-        LinkLocation::AutRecords => "A link to the label company",
-        LinkLocation::BandcampGala => {
-            "A link to the digital release of Galaterna, hosted on Bandcamp"
-        }
-        LinkLocation::BandcampMinorFlaw => {
-            "A link to the digital release of Minor Flaw, hosted on Bandcamp"
-        }
     };
 
     let click_on_link = move |ev: MouseEvent| {
@@ -276,20 +129,13 @@ fn LinkWithModal(
 
     view! {
         <a href=href_target title=alt on:click=click_on_link>
-            {opt_text}
-            // On each dispatch evaluates if it needs to display an icon, doesn't dynamically change!
-            {if_add_image
-                .then_some(
-                    view! {
-                        <img
-                            class="contacts-img"
-                            src=src_target
-                            alt=alt
-                            width=width
-                            height=height
-                        />
-                    },
-                )}
+            <img
+                class="contacts-img"
+                src=src_target
+                alt=alt
+                width=width
+                height=height
+            />
 
         </a>
             <dialog class="link-modal" node_ref=modal_ref aria-label="Open external website" closedby="any">
@@ -542,19 +388,14 @@ fn validate_mail(
 }
 
 #[cfg(feature = "ssr")]
-fn reserve_mail_attempt(
-    attempts: &Mutex<Vec<Instant>>,
-    now: Instant,
-) -> Result<bool, ServerFnError> {
-    let mut attempts = attempts
-        .lock()
-        .map_err(|_| ServerFnError::new("The email service is temporarily unavailable."))?;
+fn reserve_mail_attempt(attempts: &Mutex<Vec<Instant>>, now: Instant) -> bool {
+    let mut attempts = attempts.lock();
     attempts.retain(|attempt| now.saturating_duration_since(*attempt) < Duration::from_secs(3600));
     if attempts.len() >= 10 {
-        return Ok(false);
+        return false;
     }
     attempts.push(now);
-    Ok(true)
+    true
 }
 
 /// Validates a contact message and reserves one of ten send attempts per rolling hour.
@@ -583,7 +424,7 @@ async fn send_mail(
         }
         return Err(error);
     }
-    if !reserve_mail_attempt(&MAIL_ATTEMPTS, Instant::now())? {
+    if !reserve_mail_attempt(&MAIL_ATTEMPTS, Instant::now()) {
         if let Some(response) = response {
             response.set_status(http::StatusCode::TOO_MANY_REQUESTS);
         }
@@ -710,19 +551,37 @@ mod tests {
         let attempts = Mutex::new(Vec::new());
         let start = Instant::now();
         for _ in 0..9 {
-            assert!(reserve_mail_attempt(&attempts, start).unwrap());
+            assert!(reserve_mail_attempt(&attempts, start));
         }
-        assert!(reserve_mail_attempt(&attempts, start + Duration::from_secs(1)).unwrap());
-        assert!(!reserve_mail_attempt(&attempts, start + Duration::from_secs(3599)).unwrap());
-        assert_eq!(attempts.lock().unwrap().len(), 10);
+        assert!(reserve_mail_attempt(
+            &attempts,
+            start + Duration::from_secs(1)
+        ));
+        assert!(!reserve_mail_attempt(
+            &attempts,
+            start + Duration::from_secs(3599)
+        ));
+        assert_eq!(attempts.lock().len(), 10);
 
         for _ in 0..9 {
-            assert!(reserve_mail_attempt(&attempts, start + Duration::from_secs(3600)).unwrap());
+            assert!(reserve_mail_attempt(
+                &attempts,
+                start + Duration::from_secs(3600)
+            ));
         }
-        assert!(!reserve_mail_attempt(&attempts, start + Duration::from_secs(3600)).unwrap());
-        assert!(reserve_mail_attempt(&attempts, start + Duration::from_secs(3601)).unwrap());
-        assert!(!reserve_mail_attempt(&attempts, start + Duration::from_secs(3601)).unwrap());
-        assert_eq!(attempts.lock().unwrap().len(), 10);
+        assert!(!reserve_mail_attempt(
+            &attempts,
+            start + Duration::from_secs(3600)
+        ));
+        assert!(reserve_mail_attempt(
+            &attempts,
+            start + Duration::from_secs(3601)
+        ));
+        assert!(!reserve_mail_attempt(
+            &attempts,
+            start + Duration::from_secs(3601)
+        ));
+        assert_eq!(attempts.lock().len(), 10);
     }
 
     #[test]
@@ -735,7 +594,7 @@ mod tests {
                 .map(|_| {
                     scope.spawn(|| {
                         barrier.wait();
-                        reserve_mail_attempt(&attempts, now).unwrap()
+                        reserve_mail_attempt(&attempts, now)
                     })
                 })
                 .collect::<Vec<_>>();
@@ -745,17 +604,24 @@ mod tests {
                 .sum()
         });
         assert_eq!(admitted, 10);
-        assert_eq!(attempts.lock().unwrap().len(), 10);
+        assert_eq!(attempts.lock().len(), 10);
     }
 
     #[test]
-    fn mail_rate_limit_rejects_sending_if_the_mutex_is_poisoned() {
-        let attempts = Mutex::new(Vec::new());
-        let _ = std::panic::catch_unwind(|| {
-            let _guard = attempts.lock().unwrap();
+    fn mail_rate_limit_retains_its_cap_after_a_panicking_lock_holder() {
+        let now = Instant::now();
+        let attempts = Mutex::new(vec![now; 9]);
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let mut guard = attempts.lock();
+            guard.push(now);
             panic!("Simulate a failed limiter update");
-        });
-        assert!(reserve_mail_attempt(&attempts, Instant::now()).is_err());
+        }));
+        assert!(!reserve_mail_attempt(&attempts, now));
+        assert_eq!(attempts.lock().len(), 10);
+        assert!(reserve_mail_attempt(
+            &attempts,
+            now + Duration::from_secs(3600)
+        ));
     }
 
     #[tokio::test]
@@ -790,15 +656,15 @@ mod tests {
             let body = to_bytes(response.into_body(), 4096).await.unwrap();
             let error: ServerFnError = ServerFnError::de(body);
             assert!(matches!(error, ServerFnError::Args(_)));
-            assert!(MAIL_ATTEMPTS.lock().unwrap().is_empty());
+            assert!(MAIL_ATTEMPTS.lock().is_empty());
         }
 
-        *MAIL_ATTEMPTS.lock().unwrap() = vec![Instant::now(); 10];
+        *MAIL_ATTEMPTS.lock() = vec![Instant::now(); 10];
         let response = app.oneshot(request(
             "name=%20%20&email=%20booking%40example.com%20&email_subject=%20Booking%20&email_content=%20Hello%20"
         )).await.unwrap();
-        let attempts = MAIL_ATTEMPTS.lock().unwrap().len();
-        MAIL_ATTEMPTS.lock().unwrap().clear();
+        let attempts = MAIL_ATTEMPTS.lock().len();
+        MAIL_ATTEMPTS.lock().clear();
         assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS);
         assert_eq!(attempts, 10);
         let body = to_bytes(response.into_body(), 4096).await.unwrap();
