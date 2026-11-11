@@ -17,6 +17,11 @@ Notes on building for development and publishing to production.
 1. Build the docker image with: `docker build -t maj-web .`
 2. Run the docker image with: `docker run -p 8080:8080 maj-web`
 
+The builder selects the x86_64 or aarch64 `cargo-binstall` archive using its own
+architecture (`uname -m`). Both downloads use the local filename `cargo-binstall.tgz`.
+For `--platform` builds, configure a native builder or emulation for the requested
+platform.
+
 ## Publishing to Fly.io
 
 1. `fly deploy` to build on a Fly machinge or add `--local-only` to build locally

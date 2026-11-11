@@ -124,6 +124,14 @@ What this repo does: A public portfolio for Maj Kavšek, built with Rust, Leptos
    - **Problem:** The download is always for `x86_64`, while this workspace runs on `aarch64`. A native ARM builder cannot execute that binary without architecture emulation.
    - **Fix:** Select the download for the builder’s architecture.
    - **If we skip it:** The documented local Docker build fails on ARM machines.
+   - **Status:** Resolved on 2026-11-11. The bootstrap uses the builder's `uname -m`
+     in the download URL and a fixed local archive name for extraction.
+     See [Docker build notes](BUILD.md#local-dev).
+   - **Verified:** POSIX-shell checks passed for x86_64 and aarch64 download URLs,
+     extraction, installation, and stopping after a failed download. Both upstream
+     release assets were verified through GitHub's release API.
+   - **Not checked:** A full Docker build or native ARM execution; Docker socket
+     access was denied even outside the agent sandbox.
 
 9. **Missing albums return a success status** — [discography.rs:137](/home/vkav/PROJECTS/rust/leptos-website-maj/src/routes/discography.rs:137)
 
@@ -187,7 +195,7 @@ What this repo does: A public portfolio for Maj Kavšek, built with Rust, Leptos
 
 Original audit verification (2026-11-08): Checked all application source, styles, content files, build/deploy configuration, and existing tests. Main routes and read-only APIs responded locally; all 78 show dates parsed. The WebAssembly compilation check passed. Browser checks used the existing build artifacts. No source files changed during the audit, and the audit server was stopped.
 
-Verdict: Items 1–7, 10, and 11 are fixed. Fix the Docker architecture bootstrap and missing-album status next.
+Verdict: Items 1–8, 10, and 11 are fixed. Fix the missing-album status next.
 
 Lean: -300 lines, -1 dependency possible, plus over 61 MB of unused backgrounds.  
 Not checked: Live email delivery, Fly production behavior, a full Docker/release build, dependency advisories, or load testing.

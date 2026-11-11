@@ -2,8 +2,9 @@ FROM rust:1-bookworm AS builder
 
 # Install cargo-binstall, which makes it easier to install other
 # cargo extensions like cargo-leptos
-RUN wget --progress=dot:giga https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-unknown-linux-musl.tgz \
-  && tar -xvf cargo-binstall-x86_64-unknown-linux-musl.tgz \
+RUN wget --progress=dot:giga -O cargo-binstall.tgz \
+  "https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-$(uname -m)-unknown-linux-musl.tgz" \
+  && tar -xvf cargo-binstall.tgz \
   && cp cargo-binstall /usr/local/cargo/bin
 
 # Install required tools
