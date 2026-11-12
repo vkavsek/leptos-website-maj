@@ -12,7 +12,7 @@
 
 :root {
   --maj-yel: #{theme.$yellow};
-  --player-top: 4vh;
+  --player-top: calc(4vh - 2px);
   --player-height: 8vh;
   --player-padding: 23px;
 }
@@ -126,12 +126,13 @@ iframe {
 
   .nav-links {
     width: 12%;
+    --nav-padding: clamp(16px, 1.25vw, 40px);
     --nav-top: calc(
       var(--player-top) + var(--player-height) + 2 * var(--player-padding) +
-        16px
+        32px
     );
     top: var(--nav-top);
-    height: min(75vh, calc(100dvh - var(--nav-top) - 16px));
+    height: min(75vh, calc(100dvh - var(--nav-top) - 2 * var(--nav-padding)));
 
     margin-block: 0;
     margin-inline: 10px;
@@ -143,7 +144,8 @@ iframe {
     align-content: space-between;
     justify-items: center;
     gap: 8px;
-    padding-block: 8px;
+    // Reserve room for rotating icons without creating scrollable overflow.
+    padding-block: var(--nav-padding);
     overflow-y: auto;
   }
 }

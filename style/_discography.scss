@@ -28,7 +28,8 @@
 }
 
 #leader-wrap {
-  justify-content: center;
+  display: flex;
+  flex-direction: column;
   width: 100%;
 }
 
@@ -41,7 +42,9 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   width: 90%;
-  margin: 2rem auto;
+  margin: auto;
+  padding-block: 2rem;
+  flex-shrink: 0;
   justify-items: center;
   align-items: start;
 }

@@ -27,7 +27,7 @@ for (const viewport of [
     const player = (await page.locator(".audio-player").boundingBox())!;
     const nav = (await page.locator(".nav-links").boundingBox())!;
     if (viewport.width > viewport.height) {
-      expect(nav.y - player.y - player.height).toBeCloseTo(16, 0);
+      expect(nav.y - player.y - player.height).toBeCloseTo(32, 0);
       expect(nav.x + nav.width).toBeLessThan(viewport.width / 5);
     } else {
       // Preserve the original portrait navigation header and player footer.
@@ -56,6 +56,57 @@ for (const viewport of [
     }
   });
 }
+
+test("landscape navigation does not overflow while icons spin", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await ready(page, "/");
+  const nav = page.locator(".nav-links");
+  const player = (await page.locator(".audio-player").boundingBox())!;
+  expect(player.y).toBeCloseTo(1080 * 0.04 - 2, 0);
+  const sampleOverflow = () => nav.evaluate(async element => {
+    let overflow = false;
+    const start = performance.now();
+    while (performance.now() - start < 250) {
+      overflow ||= element.scrollHeight > element.clientHeight || element.scrollWidth > element.clientWidth;
+      await new Promise(requestAnimationFrame);
+    }
+    return overflow;
+  });
+  for (const link of await nav.locator("a").all()) {
+    await link.hover();
+    expect(await sampleOverflow()).toBe(false);
+    await page.mouse.move(960, 540);
+    expect(await sampleOverflow()).toBe(false);
+  }
+  await page.setViewportSize({ width: 320, height: 180 });
+  for (const link of await nav.locator("a").all()) {
+    await link.focus();
+    await expect(link).toBeInViewport({ ratio: 0.99 });
+  }
+});
+
+test("short album grids center vertically and longer grids remain reachable", async ({ page }) => {
+  for (const viewport of [{ width: 3840, height: 2160 }, { width: 1920, height: 1080 }]) {
+    await page.setViewportSize(viewport);
+    await ready(page, "/discography");
+    await page.locator(".discography-link img").evaluateAll(images => Promise.all(
+      images.map(image => (image as HTMLImageElement).decode())
+    ));
+    const area = (await page.locator("#disco-wrap").boundingBox())!;
+    const albums = (await page.locator("#album-wrap").boundingBox())!;
+    expect(albums.y + albums.height / 2).toBeCloseTo(area.y + area.height / 2, 0);
+    await page.locator("#album-wrap").evaluate(element => {
+      const album = element.firstElementChild!;
+      for (let index = 0; index < 8; index++) element.append(album.cloneNode(true));
+    });
+    const links = page.locator(".discography-link");
+    await expect(links).toHaveCount(10);
+    for (const link of [links.first(), links.last()]) {
+      await link.scrollIntoViewIfNeeded();
+      await expect(link).toBeInViewport({ ratio: 0.99 });
+    }
+  }
+});
 
 test("larger text does not shrink gallery photos or hide album captions", async ({ page }) => {
   await ready(page, "/about_me");
