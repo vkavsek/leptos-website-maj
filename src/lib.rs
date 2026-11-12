@@ -11,6 +11,8 @@ pub mod fallback;
 pub mod routes;
 #[cfg(feature = "ssr")]
 pub mod serve;
+#[cfg(feature = "ssr")]
+pub mod server_config;
 
 // Re-exports
 pub use error::MajServerError;

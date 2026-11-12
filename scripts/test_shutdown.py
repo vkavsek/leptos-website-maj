@@ -26,7 +26,12 @@ class ShutdownTests(unittest.TestCase):
     def server(self):
         environment = os.environ.copy()
         environment.pop("PORKMAIL_PWD", None)
+        environment.pop("GOOGLE_CLIENT_ID", None)
+        environment.pop("GOOGLE_CLIENT_SECRET", None)
         environment.update(
+            APP_ENVIRONMENT="development",
+            MAJ_APP_ORIGIN="http://localhost:8080",
+            MAJ_DATA_DIR=str(self.site / "admin"),
             LEPTOS_SITE_ADDR="127.0.0.1:0",
             LEPTOS_SITE_ROOT=str(self.site),
             RUST_LOG="info",

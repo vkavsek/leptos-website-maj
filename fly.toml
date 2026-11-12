@@ -10,6 +10,7 @@ kill_timeout = '30s'
 
 [env]
 PRIMARY_REGION = 'ams'
+GOOGLE_CLIENT_ID = '774712125801-lljgocauoic4un01lt1ml1hg27l10tep.apps.googleusercontent.com'
 
 [[services]]
 protocol = 'tcp'

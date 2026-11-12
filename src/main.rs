@@ -3,6 +3,7 @@
 use leptos::config::get_configuration;
 use leptos_axum::generate_route_list;
 use leptos_website_maj::app::App;
+use leptos_website_maj::server_config::ServerConfig;
 use tracing::info;
 
 #[tokio::main]
@@ -16,6 +17,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         leptos_website_maj::init_dbg_tracing();
     }
 
+    let server_config = ServerConfig::from_env()?;
+
     // `None` imports the default Cargo.toml configuration. ("./Cargo.toml")
     let conf = get_configuration(None)?;
     let leptos_options = conf.leptos_options;
@@ -25,7 +28,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     info!("Listening on http://{}", listener.local_addr()?);
 
-    leptos_website_maj::serve(listener, routes, leptos_options).await?;
+    leptos_website_maj::serve(listener, routes, leptos_options, server_config).await?;
 
     Ok(())
 }

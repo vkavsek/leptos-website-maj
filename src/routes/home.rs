@@ -5,7 +5,7 @@ use leptos_meta::{Link, Title};
 #[cfg(feature = "ssr")]
 use parking_lot::Mutex;
 #[cfg(feature = "ssr")]
-use secrecy::{ExposeSecret, SecretString};
+use secrecy::ExposeSecret;
 #[cfg(feature = "ssr")]
 use std::time::{Duration, Instant};
 
@@ -408,10 +408,13 @@ async fn send_mail(
     email_subject: String,
     email_content: String,
 ) -> Result<(), ServerFnError> {
+    use crate::server_config::ServerConfig;
+    use axum::Extension;
     use lettre::{
         message::header::ContentType, transport::smtp::authentication::Credentials,
         AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
     };
+    use std::sync::Arc;
     use tracing::{error, info};
 
     let name = name.trim();
@@ -426,9 +429,15 @@ async fn send_mail(
         }
         return Err(error);
     }
-    let porkmail_pwd = match std::env::var("PORKMAIL_PWD") {
-        Ok(password) if !password.is_empty() => SecretString::from(password),
-        _ => {
+    let config = leptos_axum::extract::<Extension<Arc<ServerConfig>>>()
+        .await
+        .ok();
+    let porkmail_pwd = match config
+        .as_ref()
+        .and_then(|config| config.porkmail_pwd.as_ref())
+    {
+        Some(password) => password,
+        None => {
             error!("Contact email configuration is missing or empty");
             if let Some(response) = response {
                 response.set_status(http::StatusCode::INTERNAL_SERVER_ERROR);
@@ -645,19 +654,30 @@ mod tests {
 
     #[tokio::test]
     async fn mail_handler_rejects_invalid_unconfigured_and_limited_requests_before_smtp() {
+        use crate::server_config::ServerConfig;
         use axum::{
             body::{to_bytes, Body},
             routing::post,
-            Router,
+            Extension, Router,
         };
         use http::{
             header::{ACCEPT, CONTENT_TYPE},
             Request, StatusCode,
         };
         use leptos::server_fn::{error::FromServerFnError, ServerFn};
+        use std::sync::Arc;
         use tower::ServiceExt;
 
         let app = Router::new().route(SendMail::PATH, post(leptos_axum::handle_server_fns));
+        let app_with_password = |password: Option<&str>| {
+            app.clone().layer(Extension(Arc::new(ServerConfig {
+                app_origin: "http://localhost:8080".into(),
+                data_dir: "/tmp/maj-mail-test".into(),
+                google: None,
+                porkmail_pwd: password
+                    .map(|password| secrecy::SecretString::from(password.to_owned())),
+            })))
+        };
         let request = |body: &str| {
             Request::post(SendMail::PATH)
                 .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
@@ -680,14 +700,8 @@ mod tests {
 
         let valid_body =
             "name=&email=booking%40example.com&email_subject=Booking&email_content=Hello";
-        // This is the only test that invokes SendMail; all configured requests below are rate-limited.
-        let original_password = std::env::var_os("PORKMAIL_PWD");
-        for password in [None, Some("")] {
-            match password {
-                Some(value) => std::env::set_var("PORKMAIL_PWD", value),
-                None => std::env::remove_var("PORKMAIL_PWD"),
-            }
-            let response = app.clone().oneshot(request(valid_body)).await.unwrap();
+        for app in [app.clone(), app_with_password(None)] {
+            let response = app.oneshot(request(valid_body)).await.unwrap();
             assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
             assert!(MAIL_ATTEMPTS.lock().is_empty());
             let body = to_bytes(response.into_body(), 4096).await.unwrap();
@@ -696,17 +710,13 @@ mod tests {
                 ServerFnError::new("The contact form is unavailable. Please try again later.")
             );
         }
-        std::env::set_var("PORKMAIL_PWD", "unused-test-password");
+        // The only configured request is rate-limited before it can contact SMTP.
         *MAIL_ATTEMPTS.lock() = vec![Instant::now(); 10];
-        let response = app.oneshot(request(
+        let response = app_with_password(Some("unused-test-password")).oneshot(request(
             "name=%20%20&email=%20booking%40example.com%20&email_subject=%20Booking%20&email_content=%20Hello%20"
         )).await.unwrap();
         let attempts = MAIL_ATTEMPTS.lock().len();
         MAIL_ATTEMPTS.lock().clear();
-        match original_password {
-            Some(value) => std::env::set_var("PORKMAIL_PWD", value),
-            None => std::env::remove_var("PORKMAIL_PWD"),
-        }
         assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS);
         assert_eq!(attempts, 10);
         let body = to_bytes(response.into_body(), 4096).await.unwrap();

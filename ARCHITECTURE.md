@@ -9,7 +9,9 @@ runtime configuration and maintenance are in [README.md](README.md).
 
 | Location | Responsibility |
 | --- | --- |
-| `src/main.rs` | Logging initialization, Leptos configuration, route generation, and TCP listener |
+| `justfile` | Shared build/run/test, deployment, and content-maintenance commands |
+| `src/main.rs` | Logging, validated server/Leptos configuration, route generation, and TCP listener |
+| `src/server_config.rs` | Server-only origin/data-path validation and optional development Google credentials |
 | `src/app.rs` | HTML shell, shared navigation/audio layout, routes, and dialog dismissal helper |
 | `src/lib.rs` | Browser hydration entry point and shared library exports |
 | `src/serve.rs` | Axum router, server functions, request tracing, compression, and response headers |
@@ -37,6 +39,14 @@ the static-file handler as its fallback. Middleware attaches and propagates
 `x-request-id`, records request/response events, compresses responses, and applies
 Cache-Control headers. Docker packages the release binary and generated site
 directory together; Fly forwards HTTP traffic to the server's port 8080.
+
+Server configuration is validated before binding the listener and shared through
+an Axum `Extension<Arc<ServerConfig>>`. Production requires a public HTTPS origin,
+an absolute data path, and paired Google OAuth credentials. Explicit loopback
+development can omit both credentials; it does not grant administrator access.
+The secret uses `SecretString` and configuration has no `Debug` implementation.
+No auth configuration is serialized to the browser. Google login, sessions, and
+database storage are not implemented yet.
 
 SIGINT and SIGTERM initiate Axum's graceful shutdown. Active connections get up to
 25 seconds to drain; remaining connections close when that deadline expires. Fly's
@@ -116,7 +126,9 @@ storage. Concurrent tests use `std::sync::Barrier`, which has no `parking_lot`
 equivalent.
 
 Delivery uses Lettre with TLS through `smtp.porkbun.com`. `PORKMAIL_PWD` is read
-from the environment and wrapped in `SecretString`. Explicit exposure creates the
+once at startup into `ServerConfig` as an optional `SecretString`; absent or empty
+values disable email. `SendMail` extracts the shared configuration from the Axum
+request extension and borrows its password. Explicit exposure creates the
 owned string required by Lettre's credentials API. The wrapper wipes its own buffer
 on drop; it does not wipe Lettre's internal password copies or the process
 environment. Delivery logging omits private fields; see [logs and privacy](README.md#logs-and-privacy).

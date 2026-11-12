@@ -1,6 +1,9 @@
 # Build and test instructions
 
-Run commands from the repository root unless another directory is specified.
+Use the [justfile](justfile) as the project's command runner. Run `just` or
+`just --list` to list commands. Recipes run from the repository root, including
+when invoked from a subdirectory, and use Bash regardless of your interactive
+shell. Run the installation commands below from the repository root.
 For runtime configuration, content maintenance, and deployment, see [README.md](README.md).
 For application design, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
@@ -9,6 +12,7 @@ For application design, see [ARCHITECTURE.md](ARCHITECTURE.md).
 For native Linux builds, install:
 
 - Rust and Cargo through rustup.
+- [`just`](https://just.systems/man/en/), the project command runner.
 - The `wasm32-unknown-unknown` Rust target.
 - `cargo-leptos`, which builds the server, browser WASM, and SCSS assets.
 - A C/C++ build toolchain, Clang, and LLD. The x86_64 Linux linker configuration
@@ -28,45 +32,60 @@ With Rust and Cargo installed:
 ```sh
 rustup target add wasm32-unknown-unknown
 cargo install cargo-leptos --locked
+cargo install just --locked
 ```
 
 Docker builds require a running Docker daemon; the builder image installs Rust
 build tools itself. Browser tests additionally require Node.js 20 or newer and npm.
+
+For coverage and dependency security checks, also install:
+
+```sh
+cargo install cargo-tarpaulin --locked
+cargo install cargo-audit --locked
+cargo install cargo-deny --locked
+```
 
 ## Development build
 
 Build and serve the complete site with automatic reload:
 
 ```sh
-env RUSTFLAGS="--cfg erase_components" cargo leptos watch
+just dev
 ```
 
-Open `http://localhost:8080`. Automatic reload uses port 8081.
+Open `http://localhost:8080`. Automatic reload uses port 8081. This recipe supplies
+local runtime settings and removes Google and SMTP credentials. Use
+`just dev-auth` for the interactive Google credential launcher described in
+[README.md](README.md#testing-google-configuration-locally).
 
 To build without starting a server:
 
 ```sh
-env RUSTFLAGS="--cfg erase_components" cargo leptos build --cargo-locked
+just build
 ```
 
 The server binary is `target/debug/leptos-website-maj`; browser assets and copied
 public files are in `target/site/`. The component-erasure flag matches the Docker
-build and is also used by the checks below.
+build and is set by the justfile for builds and checks. `just run` starts the
+existing debug binary without rebuilding; `just dev-source` runs against source
+content without building browser assets.
 
 ## Release build
 
 ```sh
-env RUSTFLAGS="--cfg erase_components" cargo leptos build --release --cargo-locked
+just build-release
 ```
 
 The server binary is `target/release/leptos-website-maj`. Keep `target/site/` with
 it when preparing a runtime environment. Generated `target/site/` and `pkg/`
-output must not be edited or committed.
+output must not be edited or committed. `just run-release` runs this binary with
+local development settings; see README for production runtime configuration.
 
 ## Docker build
 
 ```sh
-docker build -t maj-web .
+just docker-build
 ```
 
 The multi-stage Dockerfile builds release server and browser assets and packages
@@ -82,13 +101,13 @@ builds, configure a native builder or emulation for the requested platform.
 Run the full Rust test suite without SMTP credentials:
 
 ```sh
-env -u PORKMAIL_PWD RUSTFLAGS="--cfg erase_components" cargo test --locked --features ssr
+just test
 ```
 
 The tests do not send email. They cover contact validation and rate limiting,
 content loading, show dates, gallery thumbnails, static file responses, and album
-route HTTP status codes. For a focused group, append one of these filters to
-`cargo test --locked --lib --features ssr`, keeping the same environment settings:
+route HTTP status codes. The recipe removes SMTP and Google credentials. For a
+focused group, use `just test --lib FILTER` with one of these filters:
 
 | Filter | Coverage |
 | --- | --- |
@@ -97,26 +116,31 @@ route HTTP status codes. For a focused group, append one of these filters to
 | `routes::shows::tests` | Calendar dates, sorting, and content loading |
 | `routes::about::tests` | Gallery loading, error rendering, and thumbnail assets |
 | `routes::media::tests` | Video content loading |
+| `server_config::tests` | Origin/path validation, required production credentials, local operation without Google, and private errors |
 
 Run the album HTTP regression test separately with:
 
 ```sh
-env -u PORKMAIL_PWD RUSTFLAGS="--cfg erase_components" cargo test --locked --features ssr --test album_routes
+just test --test album_routes
 ```
 
-The content import regression checks require Python 3 with its standard library:
+Run content-import and development-launcher regression checks with:
 
 ```sh
-python3 scripts/test_update_json.py
+just test-scripts
 ```
 
-They use temporary directories to check valid imports, archive path and link
-rejection, content validation, and preservation of existing files on invalid input.
+These require Python 3 with its standard library, Fish 3.7 or newer, and just.
+Temporary directories cover valid imports, archive path and link rejection,
+content validation, and preservation of existing files on invalid input. Dummy
+credentials and mocked clipboard/Cargo commands check clipboard clearing before
+launch, failed clearing, empty input, and credential handling. The tests exercise
+the launcher's just recipe without accessing the real clipboard, Google, or SMTP.
 
-After building the debug server, run the Linux shutdown regression checks with:
+Build the debug server and run the Linux shutdown regression checks with:
 
 ```sh
-python3 scripts/test_shutdown.py
+just test-shutdown
 ```
 
 These start isolated servers on automatically selected localhost ports, without
@@ -127,48 +151,97 @@ SMTP credentials. They check complete downloads during SIGINT and SIGTERM and th
 Check formatting and lint both compilation targets:
 
 ```sh
-cargo fmt --all -- --check
-env -u PORKMAIL_PWD RUSTFLAGS="--cfg erase_components" cargo clippy --locked --features ssr --all-targets -- -D warnings
-env -u PORKMAIL_PWD RUSTFLAGS="--cfg erase_components" cargo clippy --locked --lib --no-default-features --features hydrate --target wasm32-unknown-unknown --target-dir target/front -- -D warnings
+just fmt-check
+just lint
 ```
 
-After dependencies are cached, add `--offline` to Cargo test/check commands or
-`--cargo-offline` to `cargo leptos build` to avoid network access.
+Use `just fmt` to format the justfile and Rust source. `just lint-ssr` and `just lint-hydrate`
+run each target separately. `just check` combines formatting checks, both linters,
+Rust tests, and script tests; shutdown and browser tests are separate.
+
+Recipes that accept arguments forward them without shell interpolation. Examples:
+`just test --offline --lib server_config::tests` and `just build --cargo-offline`
+use cached dependencies. Build and test recipes enforce the existing lockfile.
+
+## Rust coverage
+
+Run the native Rust unit and integration tests with cargo-tarpaulin:
+
+```sh
+just coverage
+```
+
+The recipe uses `ssr` and the LLVM backend, preserves the component-erasure flag,
+and removes Google/SMTP credentials. Instrumented builds are isolated in
+`target/tarpaulin/`; reports are written to `target/coverage/tarpaulin-report.html`
+and `target/coverage/lcov.info`. Reports are ignored under `target/`, and raw LLVM
+profile files are ignored separately. No coverage percentage currently causes a
+failure, but failing tests still fail the command.
+
+The first run rebuilds instrumented dependencies and can take longer than normal
+tests. To limit compiler memory and use cached crates, run
+`env CARGO_NET_OFFLINE=true just coverage --jobs 2 --offline` after the dependency
+metadata and sources are cached. The report measures native Rust code; it does
+not include browser/WASM execution or the Python/Fish script tests. Continue to
+run `just test-scripts` and the browser checks separately.
+
+See the [Tarpaulin documentation](https://github.com/xd009642/tarpaulin) for
+additional command options.
+
+## Dependency security checks
+
+```sh
+just audit
+just deny
+```
+
+`just security` runs both commands. cargo-audit checks `Cargo.lock`; cargo-deny
+uses [deny.toml](deny.toml) with all features enabled for dependency graph analysis,
+without compiling `ssr` and `hydrate` together. Its selected checks are advisories,
+bans, and sources. Both commands retain their nonzero exit status on failure;
+no advisory exceptions are configured.
+
+Normal runs need network access to refresh advisory data and dependency metadata.
+For an explicitly cached development check after the databases are populated,
+use `just audit --no-fetch` or `just deny --offline`. A missing/stale database
+may still fail. These checks are separate from `just check` and do not upload
+reports. See [RustSec](https://rustsec.org/) and the
+[cargo-deny configuration reference](https://embarkstudios.github.io/cargo-deny/checks/cfg.html).
 
 ## Browser checks
 
-Playwright does not start a server. Build the complete application and start a
-separate test server without SMTP credentials:
+Build the complete application and start a separate browser-test server without
+SMTP or Google credentials:
 
 ```sh
-env RUSTFLAGS="--cfg erase_components" cargo leptos build --cargo-locked
-env -u PORKMAIL_PWD LEPTOS_SITE_ADDR=127.0.0.1:8082 ./target/debug/leptos-website-maj
+just test-server
 ```
 
-Leave that process running. In a separate terminal, install browser test
-dependencies from `end2end/`:
+Leave that process running on `127.0.0.1:8082`. In another terminal, install browser
+test dependencies if needed:
 
 ```sh
-cd end2end
-npm ci
-npx playwright install --with-deps chromium firefox webkit
+just e2e-setup
 ```
 
 Installing browser system libraries may require administrator privileges. Run all
 three browser projects with:
 
 ```sh
-env PLAYWRIGHT_BASE_URL=http://127.0.0.1:8082 npx playwright test
+just e2e
 ```
 
 To run only installed Chromium and Firefox browsers:
 
 ```sh
-env PLAYWRIGHT_BASE_URL=http://127.0.0.1:8082 npx playwright test --project=chromium --project=firefox
+just e2e --project=chromium --project=firefox
 ```
 
-The default base URL is `http://127.0.0.1:8080` if `PLAYWRIGHT_BASE_URL` is unset.
-Stop the test server with Ctrl+C when finished.
+The just recipe defaults to `http://127.0.0.1:8082`, matching `just test-server`.
+To test an existing development server, use
+`env PLAYWRIGHT_BASE_URL=http://127.0.0.1:8080 just e2e`.
+Direct Playwright invocations still use the configuration's default port 8080.
+Playwright does not start a server. Stop the test server with Ctrl+C when finished.
 
 Tests cover the homepage, keyboard and dialog focus behavior, photo navigation,
 portrait sizing, thumbnail loading, audio event synchronization, rejected playback,
