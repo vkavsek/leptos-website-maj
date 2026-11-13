@@ -13,6 +13,8 @@ pub mod routes;
 pub mod serve;
 #[cfg(feature = "ssr")]
 pub mod server_config;
+#[cfg(feature = "ssr")]
+pub mod storage;
 
 // Re-exports
 pub use error::MajServerError;

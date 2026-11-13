@@ -6,8 +6,17 @@ use leptos_website_maj::app::App;
 use leptos_website_maj::server_config::ServerConfig;
 use tracing::info;
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Set the process-wide creation mask before any runtime threads can create files.
+    // Gives the server private defaults for newly created files and directories.
+    // 0: remove no owner permissions,
+    // 7: remove all group permissions,
+    // 7: remove all permissions for everyone else
+    #[cfg(unix)]
+    // SAFETY: umask has no preconditions; this runs before threads start, avoiding creation races.
+    unsafe {
+        libc::umask(0o077);
+    }
     #[cfg(not(debug_assertions))]
     {
         leptos_website_maj::init_production_tracing();
@@ -17,18 +26,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         leptos_website_maj::init_dbg_tracing();
     }
 
-    let server_config = ServerConfig::from_env()?;
+    let mut server_config = ServerConfig::from_env()?;
 
     // `None` imports the default Cargo.toml configuration. ("./Cargo.toml")
     let conf = get_configuration(None)?;
     let leptos_options = conf.leptos_options;
-    let addr = leptos_options.site_addr;
-    let routes = generate_route_list(App);
+    server_config.data_dir = leptos_website_maj::storage::prepare(
+        &server_config.data_dir,
+        &[
+            std::path::Path::new(leptos_options.site_root.as_ref()),
+            std::path::Path::new("public"),
+        ],
+    )?;
 
-    let listener = tokio::net::TcpListener::bind(&addr).await?;
-    info!("Listening on http://{}", listener.local_addr()?);
+    tokio::runtime::Runtime::new()?.block_on(async move {
+        let routes = generate_route_list(App);
+        let listener = tokio::net::TcpListener::bind(&leptos_options.site_addr).await?;
+        info!("Listening on http://{}", listener.local_addr()?);
 
-    leptos_website_maj::serve(listener, routes, leptos_options, server_config).await?;
-
-    Ok(())
+        leptos_website_maj::serve(listener, routes, leptos_options, server_config).await
+    })
 }

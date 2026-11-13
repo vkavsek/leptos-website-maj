@@ -117,6 +117,7 @@ focused group, use `just test --lib FILTER` with one of these filters:
 | `routes::about::tests` | Gallery loading, error rendering, and thumbnail assets |
 | `routes::media::tests` | Video content loading |
 | `server_config::tests` | Origin/path validation, required production credentials, local operation without Google, and private errors |
+| `storage::tests` | Private modes/layout, preservation of data, public path separation, and rejection of unsafe links |
 
 Run the album HTTP regression test separately with:
 
@@ -145,8 +146,10 @@ just test-shutdown
 
 These start isolated servers on automatically selected localhost ports, without
 SMTP credentials. They check complete downloads during SIGINT and SIGTERM and the
-25-second shutdown deadline with a stalled download. The deadline check takes about
-25 seconds. Python's standard library is sufficient.
+25-second shutdown deadline with a stalled download. They also check private
+storage modes/umask and that database/staging files cannot be downloaded, including
+through traversal requests. The deadline check takes about 25 seconds. Python's
+standard library is sufficient.
 
 Check formatting and lint both compilation targets:
 

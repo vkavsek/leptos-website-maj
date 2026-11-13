@@ -1338,6 +1338,7 @@ dependencies = [
  "leptos_meta",
  "leptos_router",
  "lettre",
+ "libc",
  "parking_lot 0.13.0",
  "secrecy",
  "serde",

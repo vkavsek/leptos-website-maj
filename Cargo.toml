@@ -52,6 +52,7 @@ strum = "0.28"
 strum_macros = "0.28"
 parking_lot = { version = "0.13", optional = true }
 secrecy = { version = "0.10", optional = true }
+libc = { version = "0.2", optional = true }
 
 [features]
 hydrate = ["leptos/hydrate", "dep:console_error_panic_hook", "dep:wasm-bindgen"]
@@ -68,6 +69,7 @@ ssr = [
   "dep:lettre",
   "dep:parking_lot",
   "dep:secrecy",
+  "dep:libc",
 ]
 
 # Defines a size-optimized profile for the WASM bundle in release mode

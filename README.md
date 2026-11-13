@@ -30,7 +30,7 @@ Commands and tool installation are documented in [BUILD.md](BUILD.md).
 | `RUST_LOG` | Required logging filter for release binaries; use `info` for normal operation |
 | `APP_ENVIRONMENT` | `development` (loopback origin only) or `production`; defaults to development in debug builds and production in release builds |
 | `MAJ_APP_ORIGIN` | Required canonical browser origin, without a trailing slash; production requires a public HTTPS hostname |
-| `MAJ_DATA_DIR` | Required absolute data path; database and upload storage are not implemented yet |
+| `MAJ_DATA_DIR` | Required absolute private data path outside public assets; startup prepares the gallery/staging directories and an empty database file |
 | `GOOGLE_CLIENT_ID` | OAuth client ID, paired with the client secret; required in production |
 | `GOOGLE_CLIENT_SECRET` | Server-only OAuth secret; use hosting secrets in production or the interactive development launcher |
 
@@ -40,6 +40,36 @@ are not implemented yet; these settings currently validate configuration and
 make it available to server handlers. Missing or invalid production settings
 stop startup without logging their values. Local development may omit both
 Google credentials; a partial or placeholder pair is rejected.
+
+At startup, the server creates `gallery/originals/`, `gallery/thumbnails/`, and
+`staging/` beneath `MAJ_DATA_DIR`, plus an empty `admin.sqlite3` file. Directories
+use mode `0700` and the database file mode `0600`. A process creation mask of
+`0077` is set before Tokio starts, covering future companion/upload files. This
+setup requires Unix filesystem permissions. SQLite tables and editing are still
+to implement; public content continues loading from `LEPTOS_SITE_ROOT`.
+
+Existing data is preserved. Startup rejects incorrect ownership, non-private
+directory/database permissions, symlinked managed subdirectories, and database
+symlinks or hard links. Root aliases are canonicalized before use. Existing SQLite
+companion files must also be private. Staging and gallery
+directories must share the data root's filesystem. For a new dedicated data root,
+run as the server's runtime user:
+
+```sh
+install -d -m 700 /path/to/dedicated/maj-data
+```
+
+For existing data, inspect the contents and ownership before correcting the
+permissions named in a startup error. The server does not automatically chmod,
+chown, truncate, or migrate existing data. Keep runtime data outside the Docker
+build context as well as the public trees.
+
+`LEPTOS_SITE_ROOT` remains the built asset directory (`/app/site` in Docker).
+Data and public roots may not overlap, including through aliases. Public asset
+trees must be symlink-free; startup rejects even dangling links that could expose
+data created later. Keep built assets immutable while the server runs. No handler
+serves private storage; gallery publication through controlled lookups remains to
+implement. Biography updates still require editing Rust and releasing.
 
 For ordinary local development, `just dev` supplies the loopback origin and
 defaults `MAJ_DATA_DIR` to `$HOME/.local/share/maj-admin-dev`, removing Google and
@@ -102,7 +132,8 @@ never through tracked configuration.
 The production Google client ID is configured in `fly.toml`. Before deploying
 the configuration changes, provide `MAJ_APP_ORIGIN` and `MAJ_DATA_DIR` as ordinary
 runtime settings, and install `GOOGLE_CLIENT_SECRET` through Fly secrets. The production secret is
-still pending. Storage, Google login, and the editor require further implementation;
+still pending. SQLite initialization, volume setup, Google login, and the editor
+require further implementation;
 do not treat the configuration foundation as a completed administration release.
 
 The server handles Ctrl+C (`SIGINT`) and `SIGTERM` by stopping new connections and

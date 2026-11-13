@@ -1,9 +1,11 @@
 """Exercise the built server with real shutdown signals and an active download."""
 
 import os
+import http.client
 import re
 import signal
 import socket
+import stat
 import subprocess
 import tempfile
 import time
@@ -19,7 +21,9 @@ class ShutdownTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
-        self.site = Path(self.temp.name)
+        self.site = Path(self.temp.name) / "site"
+        self.data = Path(self.temp.name) / "admin"
+        self.site.mkdir()
         (self.site / "download.bin").write_bytes(b"x" * DOWNLOAD_SIZE)
 
     @contextmanager
@@ -31,7 +35,7 @@ class ShutdownTests(unittest.TestCase):
         environment.update(
             APP_ENVIRONMENT="development",
             MAJ_APP_ORIGIN="http://localhost:8080",
-            MAJ_DATA_DIR=str(self.site / "admin"),
+            MAJ_DATA_DIR=str(self.data),
             LEPTOS_SITE_ADDR="127.0.0.1:0",
             LEPTOS_SITE_ROOT=str(self.site),
             RUST_LOG="info",
@@ -54,7 +58,9 @@ class ShutdownTests(unittest.TestCase):
                     if match:
                         yield process, int(match[1])
                         break
-                    self.assertIsNone(process.poll(), "server exited before listening")
+                    if process.poll() is not None:
+                        log.seek(0)
+                        self.fail("server exited before listening: " + log.read().decode(errors="replace"))
                     time.sleep(0.02)
                 else:
                     self.fail("server did not start within 10 seconds")
@@ -91,6 +97,31 @@ class ShutdownTests(unittest.TestCase):
                         received += len(chunk)
                     self.assertEqual(received, DOWNLOAD_SIZE)
                 self.assertEqual(process.wait(timeout=5), 0)
+
+    def test_private_storage_permissions_umask_and_http_isolation(self):
+        private_content = b"private-storage-test-canary"
+        with self.server() as (process, port):
+            self.assertIn("Umask:\t0077", Path(f"/proc/{process.pid}/status").read_text())
+            for relative in ["", "gallery", "gallery/originals", "gallery/thumbnails", "staging"]:
+                self.assertEqual(stat.S_IMODE((self.data / relative).stat().st_mode), 0o700)
+            database = self.data / "admin.sqlite3"
+            self.assertEqual(stat.S_IMODE(database.stat().st_mode), 0o600)
+            self.assertEqual(database.stat().st_size, 0)
+            database.write_bytes(private_content)
+            staging_file = self.data / "staging/private.txt"
+            staging_file.write_bytes(private_content)
+            staging_file.chmod(0o600)
+            for path in ["/admin.sqlite3", "/data/admin.sqlite3", "/staging/private.txt", "/../admin/admin.sqlite3", "/%2e%2e/admin/admin.sqlite3"]:
+                with self.subTest(path=path):
+                    connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                    try:
+                        connection.request("GET", path)
+                        response = connection.getresponse()
+                        self.assertIn(response.status, [400, 404])
+                        self.assertNotIn(private_content, response.read())
+                    finally:
+                        connection.close()
+        self.assertEqual(database.read_bytes(), private_content)
 
     def test_stalled_download_cannot_hold_shutdown_open(self):
         with self.server() as (process, port), self.download(port):

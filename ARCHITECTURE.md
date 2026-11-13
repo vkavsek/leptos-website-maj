@@ -2,7 +2,8 @@
 
 The application uses Leptos for server rendering and browser hydration, Axum on
 Tokio for HTTP, and Lettre for SMTP delivery. Public content comes from files;
-there is no database. Build and test commands are in [BUILD.md](BUILD.md), and
+private filesystem storage is prepared but SQLite is not initialized. Build and
+test commands are in [BUILD.md](BUILD.md), and
 runtime configuration and maintenance are in [README.md](README.md).
 
 ## Source organization
@@ -12,6 +13,7 @@ runtime configuration and maintenance are in [README.md](README.md).
 | `justfile` | Shared build/run/test, deployment, and content-maintenance commands |
 | `src/main.rs` | Logging, validated server/Leptos configuration, route generation, and TCP listener |
 | `src/server_config.rs` | Server-only origin/data-path validation and optional development Google credentials |
+| `src/storage.rs` | Private layout, ownership/mode validation, and public/data separation |
 | `src/app.rs` | HTML shell, shared navigation/audio layout, routes, and dialog dismissal helper |
 | `src/lib.rs` | Browser hydration entry point and shared library exports |
 | `src/serve.rs` | Axum router, server functions, request tracing, compression, and response headers |
@@ -40,13 +42,20 @@ the static-file handler as its fallback. Middleware attaches and propagates
 Cache-Control headers. Docker packages the release binary and generated site
 directory together; Fly forwards HTTP traffic to the server's port 8080.
 
-Server configuration is validated before binding the listener and shared through
+The process sets Unix umask `0077` before creating the Tokio runtime. Configuration
+and private storage are validated before binding the listener, and configuration
+is shared through
 an Axum `Extension<Arc<ServerConfig>>`. Production requires a public HTTPS origin,
 an absolute data path, and paired Google OAuth credentials. Explicit loopback
 development can omit both credentials; it does not grant administrator access.
 The secret uses `SecretString` and configuration has no `Debug` implementation.
 No auth configuration is serialized to the browser. Google login, sessions, and
-database storage are not implemented yet.
+SQLite tables are not implemented yet. Storage contains an empty `admin.sqlite3`
+reserved with mode `0600`, plus original/thumbnail and staging directories with
+mode `0700`. Existing files are retained; unsafe ownership, modes, links, or public
+path overlap stops startup. Gallery/staging share the data root's filesystem for
+later atomic publication. Public asset trees are checked for symlinks at startup
+and must remain immutable at runtime; the static handler serves only built assets.
 
 SIGINT and SIGTERM initiate Axum's graceful shutdown. Active connections get up to
 25 seconds to drain; remaining connections close when that deadline expires. Fly's
