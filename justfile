@@ -35,6 +35,10 @@ build *args:
 build-release *args:
     cargo leptos build --release --cargo-locked "$@"
 
+# Daily development cleanup: remove build output, generated site assets, and coverage reports.
+clean:
+    cargo clean
+
 # Run the existing debug binary locally without credentials.
 run:
     env -u PORKMAIL_PWD -u GOOGLE_CLIENT_ID -u GOOGLE_CLIENT_SECRET \
@@ -56,6 +60,16 @@ run-production:
 # Run Rust tests; additional Cargo arguments and test filters are forwarded.
 test *args:
     env -u PORKMAIL_PWD -u GOOGLE_CLIENT_ID -u GOOGLE_CLIENT_SECRET cargo test --locked --features ssr "$@"
+
+# Initialize/migrate the selected database without HTTP or provider credentials.
+db-migrate:
+    env -u PORKMAIL_PWD -u GOOGLE_CLIENT_ID -u GOOGLE_CLIENT_SECRET \
+      MAJ_DATA_DIR="${MAJ_DATA_DIR:-$HOME/.local/share/maj-admin-dev}" \
+      RUST_LOG="${RUST_LOG:-info}" cargo run --locked --features ssr -- admin migrate
+
+# Create a versioned SQL migration with sqlx-cli; review it before applying.
+migration-add name:
+    cargo sqlx migrate add "$1"
 
 # Measure native Rust test coverage; write HTML and LCOV reports under target/coverage.
 coverage *args:

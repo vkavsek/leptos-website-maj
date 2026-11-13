@@ -14,6 +14,7 @@ Install Rust, the `wasm32-unknown-unknown` target, `cargo-leptos`, and `just`. L
 - `just dev`: rebuild and serve locally at `http://localhost:8080` without Google/SMTP credentials.
 - `just dev-auth`: prompt for development Google credentials and clear the clipboard before serving.
 - `just build` / `just build-release`: build the server and browser WASM/CSS assets.
+- `just clean`: run `cargo clean` for daily continuous-development cleanup.
 - `just run` / `just run-release`: run an existing local build; `just dev-source` serves source content.
 - `just test`: run Rust tests; append Cargo arguments or a test filter as needed.
 - `just coverage`: measure native Rust coverage with cargo-tarpaulin; HTML/LCOV reports go to `target/coverage/`.
@@ -22,6 +23,17 @@ Install Rust, the `wasm32-unknown-unknown` target, `cargo-leptos`, and `just`. L
 - `just fmt` / `just fmt-check`: format the justfile and Rust or check formatting.
 - `just lint`: lint server and browser targets; `just check` also checks formatting and runs Rust/script tests.
 - `just test-server`: build and serve on port 8082. In another terminal, use `just e2e-setup`, then `just e2e`.
+
+## Development Disk Usage
+
+During continuous development, run `just clean` (`cargo clean`) daily at a natural
+stopping point between work sessions. Incremental artifacts and compiled
+dependencies across server, WASM, release, and coverage builds can fill the drive.
+Stop watchers and active builds/tests first; preserve needed reports outside
+`target/`. Cleanup also removes generated site assets and binaries, so rebuild
+before running them again. Check free space before large build/test sessions and
+avoid redundant builds. With the default target directory, cleanup also removes
+the separate `target/front/` and `target/tarpaulin/` builds and coverage reports.
 
 ## Coding Style & Naming Conventions
 

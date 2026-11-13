@@ -20,6 +20,14 @@ For native Linux builds, install:
 - OpenSSL development headers and `pkg-config` for Lettre's native TLS support.
 - CA certificates for dependency downloads and SMTP TLS certificate verification.
 
+SQLx builds bundled SQLite with the C toolchain; no external database server or
+SQLite development package is needed. For creating migration files, install the
+matching SQLx CLI (0.9):
+
+```sh
+cargo install sqlx-cli --version 0.9.0 --locked --no-default-features --features sqlite
+```
+
 On Debian or Ubuntu, install the system dependencies with:
 
 ```sh
@@ -71,6 +79,12 @@ build and is set by the justfile for builds and checks. `just run` starts the
 existing debug binary without rebuilding; `just dev-source` runs against source
 content without building browser assets.
 
+During continuous development, run `just clean` (`cargo clean`) daily between
+sessions to prevent incremental compilation and compiled dependencies from
+filling the drive. Stop watchers/builds first and preserve needed coverage reports.
+Cleanup removes generated assets and binaries too, so the next run requires a
+rebuild. See [development disk usage](README.md#development-disk-usage) for details.
+
 ## Release build
 
 ```sh
@@ -118,6 +132,7 @@ focused group, use `just test --lib FILTER` with one of these filters:
 | `routes::media::tests` | Video content loading |
 | `server_config::tests` | Origin/path validation, required production credentials, local operation without Google, and private errors |
 | `storage::tests` | Private modes/layout, preservation of data, public path separation, and rejection of unsafe links |
+| `database::tests` | All pooled connection settings, empty approvals, migrations/reopen, constraints, corruption, and writer contention |
 
 Run the album HTTP regression test separately with:
 
@@ -148,7 +163,9 @@ These start isolated servers on automatically selected localhost ports, without
 SMTP credentials. They check complete downloads during SIGINT and SIGTERM and the
 25-second shutdown deadline with a stalled download. They also check private
 storage modes/umask and that database/staging files cannot be downloaded, including
-through traversal requests. The deadline check takes about 25 seconds. Python's
+through traversal requests. Database command tests check repeat migrations without
+HTTP/provider configuration and startup rejection for corruption, missing Fly
+storage, and unknown commands. The deadline check takes about 25 seconds. Python's
 standard library is sufficient.
 
 Check formatting and lint both compilation targets:

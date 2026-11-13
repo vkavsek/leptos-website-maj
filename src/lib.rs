@@ -5,6 +5,8 @@
 // ###################################
 pub mod app;
 pub mod audio;
+#[cfg(feature = "ssr")]
+pub mod database;
 pub mod error;
 #[cfg(feature = "ssr")]
 pub mod fallback;

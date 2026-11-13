@@ -24,18 +24,20 @@ const REQUEST_ID_HEADER: &str = "x-request-id";
 /// SERVE
 /// The core async function returning a future that will serve this application.
 ///
-/// Accepts a listener, generated Leptos routes, rendering options, and validated server configuration.
-/// Configuration is shared through a server-only extension, never hydration data.
+/// Accepts a listener, generated Leptos routes, rendering options, validated server
+/// configuration, and the initialized database pool. Configuration and database
+/// are shared through server-only extensions, never hydration data.
 /// It sets up a TraceLayer that provides console logging.
 /// It returns a `Result` containing a `Serve` future. Needs to be awaited:
 /// ```ignore
-/// leptos_website_maj::serve(listener, routes, leptos_options, server_config).await?;
+/// leptos_website_maj::serve(listener, routes, leptos_options, server_config, database).await?;
 /// ```
 pub async fn serve(
     listener: TcpListener,
     routes: Vec<AxumRouteListing>,
     state: LeptosOptions,
     server_config: ServerConfig,
+    database: sqlx::SqlitePool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let x_request_id = HeaderName::from_static(REQUEST_ID_HEADER);
 
@@ -87,6 +89,7 @@ pub async fn serve(
         // Add Cache-Control without changing file-service responses.
         .layer(middleware::map_response(midware::response_mapper_midware))
         .layer(Extension(Arc::new(server_config)))
+        .layer(Extension(database))
         .with_state(state);
 
     // Notify select! when shutdown starts; normal server uptime must have no timeout.

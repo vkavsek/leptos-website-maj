@@ -13,6 +13,34 @@ use std::{
     path::{Path, PathBuf},
 };
 
+/// Refuses Fly startup unless `/data` is a separate mounted filesystem.
+/// This checks mount availability, not backups or the identity of the provisioned volume.
+#[cfg(target_os = "linux")]
+pub fn require_fly_volume(data_dir: &Path) -> io::Result<()> {
+    use std::os::unix::fs::MetadataExt;
+    let mounts = std::fs::read_to_string("/proc/self/mountinfo")?;
+    if data_dir != Path::new("/data")
+        || !mounts
+            .lines()
+            .any(|line| line.split_whitespace().nth(4) == Some("/data"))
+        || std::fs::metadata("/data")?.dev() == std::fs::metadata("/")?.dev()
+    {
+        return Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            "Fly requires a volume mounted at /data; refusing ephemeral database storage",
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(not(target_os = "linux"))]
+pub fn require_fly_volume(_data_dir: &Path) -> io::Result<()> {
+    Err(io::Error::new(
+        io::ErrorKind::Unsupported,
+        "Fly mount verification requires Linux",
+    ))
+}
+
 #[cfg(not(unix))]
 /// Refuses startup without changing storage when Unix permission checks are unavailable.
 pub fn prepare(_data_dir: &Path, _public_roots: &[&Path]) -> io::Result<PathBuf> {

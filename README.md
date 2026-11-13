@@ -20,6 +20,34 @@ Commands and tool installation are documented in [BUILD.md](BUILD.md).
   content loading, and contact form protections.
 - [AUDIT.md](AUDIT.md): audit findings and their resolution history.
 
+## Development disk usage
+
+During continuous development, run `just clean` daily, preferably at the end of
+the work session. It runs `cargo clean`. Incremental compilation and compiled
+dependencies can accumulate enough output to fill the drive, particularly when
+building server, WASM, release, and coverage variants of this project.
+
+Stop development watchers and active builds/tests before cleaning. Save any
+coverage reports you want to retain outside `target/`, then run:
+
+```sh
+just clean
+```
+
+With the default configuration this removes the entire `target/` tree, including
+`target/front/`, `target/tarpaulin/`, generated `target/site/` assets, compiled
+dependencies, and `target/coverage/` reports. The next build recompiles dependencies;
+rebuild with `just build` before using `just run`. Source files and runtime data
+kept outside `target/` are retained. Cargo's downloaded dependency cache and
+installed command-line tools are separate and are not removed by this command.
+If you override Cargo's target directory, cleanup follows that setting.
+
+Check available space before larger build/test sessions with `df -h .`; use
+`du -sh target` to inspect this project's build output when present. Keep coverage
+builds limited to the relevant changes and avoid accumulating unnecessary build
+variants between daily cleanups. Cleaning reduces disk use at the cost of a slower
+first rebuild; it does not replace checking free space during long sessions.
+
 ## Runtime configuration
 
 | Variable | Purpose |
@@ -30,7 +58,7 @@ Commands and tool installation are documented in [BUILD.md](BUILD.md).
 | `RUST_LOG` | Required logging filter for release binaries; use `info` for normal operation |
 | `APP_ENVIRONMENT` | `development` (loopback origin only) or `production`; defaults to development in debug builds and production in release builds |
 | `MAJ_APP_ORIGIN` | Required canonical browser origin, without a trailing slash; production requires a public HTTPS hostname |
-| `MAJ_DATA_DIR` | Required absolute private data path outside public assets; startup prepares the gallery/staging directories and an empty database file |
+| `MAJ_DATA_DIR` | Required absolute private data path outside public assets; startup prepares storage and migrates SQLite before listening |
 | `GOOGLE_CLIENT_ID` | OAuth client ID, paired with the client secret; required in production |
 | `GOOGLE_CLIENT_SECRET` | Server-only OAuth secret; use hosting secrets in production or the interactive development launcher |
 
@@ -42,11 +70,13 @@ stop startup without logging their values. Local development may omit both
 Google credentials; a partial or placeholder pair is rejected.
 
 At startup, the server creates `gallery/originals/`, `gallery/thumbnails/`, and
-`staging/` beneath `MAJ_DATA_DIR`, plus an empty `admin.sqlite3` file. Directories
+`staging/` beneath `MAJ_DATA_DIR`, plus `admin.sqlite3`. Directories
 use mode `0700` and the database file mode `0600`. A process creation mask of
 `0077` is set before Tokio starts, covering future companion/upload files. This
-setup requires Unix filesystem permissions. SQLite tables and editing are still
-to implement; public content continues loading from `LEPTOS_SITE_ROOT`.
+setup requires Unix filesystem permissions. SQLite contains the administrator
+approval table and the library's session table. New databases have zero approved
+administrators. Login and editing are still to implement; public content continues
+loading from `LEPTOS_SITE_ROOT`.
 
 Existing data is preserved. Startup rejects incorrect ownership, non-private
 directory/database permissions, symlinked managed subdirectories, and database
@@ -70,6 +100,40 @@ trees must be symlink-free; startup rejects even dangling links that could expos
 data created later. Keep built assets immutable while the server runs. No handler
 serves private storage; gallery publication through controlled lookups remains to
 implement. Biography updates still require editing Rust and releasing.
+
+Database initialization uses SQLx with foreign keys, WAL, `synchronous=FULL`, and
+a five-second busy timeout on every connection. Embedded versioned migrations and
+the session library's schema setup run before HTTP starts. Missing/corrupt files,
+migration failures, or checksum mismatches stop startup. On Fly (`FLY_APP_NAME`
+present), `/data` must be a separate mounted filesystem; an ordinary directory
+on the container's root filesystem is rejected before creating storage. Mount
+checks do not verify volume identity or backups; provision persistence separately.
+
+To initialize or migrate local data without Google/SMTP credentials or an HTTP
+origin, run `just db-migrate`. It uses the normal development data path unless
+`MAJ_DATA_DIR` is set. For an existing deployed binary, run
+`./leptos-website-maj admin migrate` as the runtime user with `MAJ_DATA_DIR` set.
+The command validates private storage, runs the same database setup as HTTP
+startup, closes the pool, and exits without opening a listener. Unknown commands
+fail instead of starting HTTP.
+
+Create new migrations with `just migration-add descriptive_name` (requires
+sqlx-cli). Review the generated SQL, rebuild, and apply it with `just db-migrate`.
+Applied migration files are immutable: add a new migration for later changes.
+Back up existing data before schema-changing releases. Leave SQLite's WAL/SHM
+files in place while running; copying only a live main file is not a backup.
+Stop writers and use SQLite's backup API or a coordinated backup of database and
+gallery files. Automatic backups and the administration backup command remain pending.
+
+**Database dependency release blocker (2026-11-13):** current advisory checks flag
+bundled `libsqlite3-sys` 0.37.0 under
+[RUSTSEC-2026-0459](https://rustsec.org/advisories/RUSTSEC-2026-0459.html).
+A crafted database/WAL pair can expose process memory. Private storage restricts
+who can supply those files, but does not patch SQLite. SQLx 0.9.0 requires
+`libsqlite3-sys <0.38.0`, while the fix requires `>=0.39.0`; the current SQLx release
+cannot resolve the patched crate. Deployment requires a supported patched SQLite
+dependency path. No advisory exception has been added. The existing unmaintained
+`paste` advisory also remains.
 
 For ordinary local development, `just dev` supplies the loopback origin and
 defaults `MAJ_DATA_DIR` to `$HOME/.local/share/maj-admin-dev`, removing Google and
@@ -132,7 +196,7 @@ never through tracked configuration.
 The production Google client ID is configured in `fly.toml`. Before deploying
 the configuration changes, provide `MAJ_APP_ORIGIN` and `MAJ_DATA_DIR` as ordinary
 runtime settings, and install `GOOGLE_CLIENT_SECRET` through Fly secrets. The production secret is
-still pending. SQLite initialization, volume setup, Google login, and the editor
+still pending. Volume setup, Google login, and the editor
 require further implementation;
 do not treat the configuration foundation as a completed administration release.
 

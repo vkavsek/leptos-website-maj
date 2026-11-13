@@ -2,7 +2,7 @@
 
 The application uses Leptos for server rendering and browser hydration, Axum on
 Tokio for HTTP, and Lettre for SMTP delivery. Public content comes from files;
-private filesystem storage is prepared but SQLite is not initialized. Build and
+private SQLite storage holds approval and session tables. Build and
 test commands are in [BUILD.md](BUILD.md), and
 runtime configuration and maintenance are in [README.md](README.md).
 
@@ -14,6 +14,7 @@ runtime configuration and maintenance are in [README.md](README.md).
 | `src/main.rs` | Logging, validated server/Leptos configuration, route generation, and TCP listener |
 | `src/server_config.rs` | Server-only origin/data-path validation and optional development Google credentials |
 | `src/storage.rs` | Private layout, ownership/mode validation, and public/data separation |
+| `src/database.rs`, `migrations/` | Shared SQLx pool settings, embedded application migrations, and session schema setup |
 | `src/app.rs` | HTML shell, shared navigation/audio layout, routes, and dialog dismissal helper |
 | `src/lib.rs` | Browser hydration entry point and shared library exports |
 | `src/serve.rs` | Axum router, server functions, request tracing, compression, and response headers |
@@ -49,13 +50,22 @@ an Axum `Extension<Arc<ServerConfig>>`. Production requires a public HTTPS origi
 an absolute data path, and paired Google OAuth credentials. Explicit loopback
 development can omit both credentials; it does not grant administrator access.
 The secret uses `SecretString` and configuration has no `Debug` implementation.
-No auth configuration is serialized to the browser. Google login, sessions, and
-SQLite tables are not implemented yet. Storage contains an empty `admin.sqlite3`
-reserved with mode `0600`, plus original/thumbnail and staging directories with
+No auth configuration is serialized to the browser. Google login and session
+middleware are not implemented yet. Storage contains `admin.sqlite3`
+with mode `0600`, plus original/thumbnail and staging directories with
 mode `0700`. Existing files are retained; unsafe ownership, modes, links, or public
 path overlap stops startup. Gallery/staging share the data root's filesystem for
 later atomic publication. Public asset trees are checked for symlinks at startup
 and must remain immutable at runtime; the static handler serves only built assets.
+
+Before binding the listener, SQLx opens that database with foreign keys, WAL,
+`synchronous=FULL`, and a five-second busy timeout on every pooled connection.
+Application migrations are embedded via `sqlx::migrate!`; `build.rs` tracks changes
+to the migration directory. The session store initializes its own table using the
+same pool. Initialization failure aborts startup. The pool is shared through an
+Axum extension and closed after serving ends. No migration approves a user.
+`admin migrate` performs the same setup without HTTP/provider configuration and
+exits. Fly startup also requires a separate filesystem mounted at `/data`.
 
 SIGINT and SIGTERM initiate Axum's graceful shutdown. Active connections get up to
 25 seconds to drain; remaining connections close when that deadline expires. Fly's
