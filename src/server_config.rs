@@ -5,6 +5,7 @@ use secrecy::SecretString;
 use std::{env, net::IpAddr, path::PathBuf};
 
 pub struct ServerConfig {
+    pub development: bool,
     pub app_origin: String,
     pub data_dir: PathBuf,
     pub google: Option<GoogleCredentials>,
@@ -26,6 +27,10 @@ impl ServerConfig {
             read_env("GOOGLE_CLIENT_SECRET")?,
             env::var("PORKMAIL_PWD").ok(),
         )
+    }
+
+    pub fn google_callback(&self) -> String {
+        format!("{}/auth/google/callback", self.app_origin)
     }
 
     fn parse(
@@ -94,6 +99,7 @@ impl ServerConfig {
             }
         };
         Ok(Self {
+            development,
             app_origin,
             data_dir,
             google,
@@ -101,10 +107,6 @@ impl ServerConfig {
                 .filter(|password| !password.is_empty())
                 .map(SecretString::from),
         })
-    }
-
-    pub fn google_callback(&self) -> String {
-        format!("{}/auth/google/callback", self.app_origin)
     }
 }
 

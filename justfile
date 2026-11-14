@@ -63,9 +63,13 @@ test *args:
 
 # Initialize/migrate the selected database without HTTP or provider credentials.
 db-migrate:
+    just admin migrate
+
+# Run a private operator command; use `just admin --help` for available subcommands.
+admin *args:
     env -u PORKMAIL_PWD -u GOOGLE_CLIENT_ID -u GOOGLE_CLIENT_SECRET \
       MAJ_DATA_DIR="${MAJ_DATA_DIR:-$HOME/.local/share/maj-admin-dev}" \
-      RUST_LOG="${RUST_LOG:-info}" cargo run --locked --features ssr -- admin migrate
+      RUST_LOG="${RUST_LOG:-info}" cargo run --locked --features ssr -- admin "$@"
 
 # Create a versioned SQL migration with sqlx-cli; review it before applying.
 migration-add name:

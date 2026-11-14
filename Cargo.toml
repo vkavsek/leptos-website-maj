@@ -53,8 +53,29 @@ strum_macros = "0.28"
 parking_lot = { version = "0.13", optional = true }
 secrecy = { version = "0.10", optional = true }
 libc = { version = "0.2", optional = true }
-sqlx = { version = "0.9", default-features = false, features = ["sqlite", "runtime-tokio", "migrate", "macros"], optional = true }
-tower-sessions-sqlx-store = { version = "0.16", default-features = false, features = ["sqlite"], optional = true }
+sqlx = { version = "0.9", default-features = false, features = [
+  "sqlite",
+  "runtime-tokio",
+  "migrate",
+  "macros",
+], optional = true }
+tower-sessions-sqlx-store = { version = "0.16", default-features = false, features = [
+  "sqlite",
+], optional = true }
+tower-sessions = { version = "0.15", default-features = false, features = [
+  "axum-core",
+], optional = true }
+oauth2 = { version = "5", default-features = false, optional = true }
+sha2 = { version = "0.11", optional = true }
+subtle = { version = "2", optional = true }
+tempfile = { version = "3", optional = true }
+url = { version = "2", optional = true }
+image = { version = "0.25", default-features = false, features = [
+  "jpeg",
+  "png",
+  "webp",
+], optional = true }
+clap = { version = "4", features = ["derive"], optional = true }
 
 [features]
 hydrate = ["leptos/hydrate", "dep:console_error_panic_hook", "dep:wasm-bindgen"]
@@ -74,6 +95,14 @@ ssr = [
   "dep:libc",
   "dep:sqlx",
   "dep:tower-sessions-sqlx-store",
+  "dep:tower-sessions",
+  "dep:oauth2",
+  "dep:sha2",
+  "dep:subtle",
+  "dep:tempfile",
+  "dep:url",
+  "dep:image",
+  "dep:clap",
 ]
 
 # Defines a size-optimized profile for the WASM bundle in release mode

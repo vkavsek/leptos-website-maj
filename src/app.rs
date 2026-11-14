@@ -70,6 +70,38 @@ pub fn App() -> impl IntoView {
     }
 }
 
+/// Light-dismiss fallback for browsers without `closedby` support.
+pub fn use_dialog_light_dismiss(dialog_ref: NodeRef<leptos::html::Dialog>) {
+    use leptos::ev::{pointerdown, pointerup, PointerEvent};
+    use leptos_use_event_listener::use_event_listener;
+
+    let (pressed_outside, set_pressed_outside) = signal(false);
+    let outside = move |event: &PointerEvent| {
+        dialog_ref.get_untracked().is_some_and(|dialog| {
+            if web_sys::js_sys::Reflect::has(dialog.as_ref(), &"closedBy".into()).unwrap_or(false)
+                || event.target().as_ref() != Some(dialog.as_ref())
+            {
+                return false;
+            }
+            let bounds = dialog.get_bounding_client_rect();
+            let (x, y) = (event.client_x() as f64, event.client_y() as f64);
+            x < bounds.left() || x > bounds.right() || y < bounds.top() || y > bounds.bottom()
+        })
+    };
+    let _ = use_event_listener(dialog_ref, pointerdown, move |event| {
+        set_pressed_outside.set(outside(&event));
+    });
+    let _ = use_event_listener(dialog_ref, pointerup, move |event| {
+        // Do not dismiss a text-selection drag that starts inside the dialog.
+        if pressed_outside.get_untracked() && outside(&event) {
+            if let Some(dialog) = dialog_ref.get_untracked() {
+                dialog.close();
+            }
+        }
+        set_pressed_outside.set(false);
+    });
+}
+
 #[component]
 fn PageLayout() -> impl IntoView {
     let location = leptos_router::hooks::use_location();
@@ -150,36 +182,4 @@ fn PageLayout() -> impl IntoView {
                 </main>
             </div>
     }
-}
-
-/// Light-dismiss fallback for browsers without `closedby` support.
-pub fn use_dialog_light_dismiss(dialog_ref: NodeRef<leptos::html::Dialog>) {
-    use leptos::ev::{pointerdown, pointerup, PointerEvent};
-    use leptos_use_event_listener::use_event_listener;
-
-    let (pressed_outside, set_pressed_outside) = signal(false);
-    let outside = move |event: &PointerEvent| {
-        dialog_ref.get_untracked().is_some_and(|dialog| {
-            if web_sys::js_sys::Reflect::has(dialog.as_ref(), &"closedBy".into()).unwrap_or(false)
-                || event.target().as_ref() != Some(dialog.as_ref())
-            {
-                return false;
-            }
-            let bounds = dialog.get_bounding_client_rect();
-            let (x, y) = (event.client_x() as f64, event.client_y() as f64);
-            x < bounds.left() || x > bounds.right() || y < bounds.top() || y > bounds.bottom()
-        })
-    };
-    let _ = use_event_listener(dialog_ref, pointerdown, move |event| {
-        set_pressed_outside.set(outside(&event));
-    });
-    let _ = use_event_listener(dialog_ref, pointerup, move |event| {
-        // Do not dismiss a text-selection drag that starts inside the dialog.
-        if pressed_outside.get_untracked() && outside(&event) {
-            if let Some(dialog) = dialog_ref.get_untracked() {
-                dialog.close();
-            }
-        }
-        set_pressed_outside.set(false);
-    });
 }

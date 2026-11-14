@@ -13,6 +13,38 @@ use std::{
     path::{Path, PathBuf},
 };
 
+/// Holds a process-shared lock until the returned file is dropped.
+/// Backup/import use an exclusive lock; HTTP and identity commands use shared locks.
+#[cfg(unix)]
+pub fn lock(data_dir: &Path, exclusive: bool) -> io::Result<std::fs::File> {
+    use std::os::unix::fs::OpenOptionsExt;
+    let path = data_dir.join("admin.lock");
+    let file = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .mode(0o600)
+        .custom_flags(libc::O_NOFOLLOW)
+        .open(&path)?;
+    check_private(&path, false)?;
+    let result = if exclusive {
+        file.try_lock()
+    } else {
+        file.try_lock_shared()
+    };
+    result.map_err(|error| io::Error::other(format!("Storage is busy; stop the HTTP server and other administration commands before backup/import: {error}")))?;
+    Ok(file)
+}
+
+#[cfg(not(unix))]
+pub fn lock(_data_dir: &Path, _exclusive: bool) -> io::Result<std::fs::File> {
+    Err(io::Error::new(
+        io::ErrorKind::Unsupported,
+        "Private storage requires Unix filesystem permissions",
+    ))
+}
+
 /// Refuses Fly startup unless `/data` is a separate mounted filesystem.
 /// This checks mount availability, not backups or the identity of the provisioned volume.
 #[cfg(target_os = "linux")]
@@ -180,7 +212,7 @@ pub fn prepare(data_dir: &Path, public_roots: &[&Path]) -> io::Result<PathBuf> {
 /// than being treated as missing directories. If no parent exists, the original
 /// error is returned; a missing final name produces `InvalidInput`.
 /// Path resolution alone does not validate ownership, permissions, or file types.
-fn resolve_missing(path: &Path) -> io::Result<PathBuf> {
+pub(crate) fn resolve_missing(path: &Path) -> io::Result<PathBuf> {
     match path.canonicalize() {
         Ok(path) => Ok(path),
         Err(error) if error.kind() == io::ErrorKind::NotFound => {
@@ -206,7 +238,7 @@ fn resolve_missing(path: &Path) -> io::Result<PathBuf> {
 ///
 /// Unexpected ownership, permissions, types, or link counts produce
 /// `PermissionDenied`; errors while reading metadata propagate unchanged.
-fn check_private(path: &Path, directory: bool) -> io::Result<()> {
+pub(crate) fn check_private(path: &Path, directory: bool) -> io::Result<()> {
     use std::os::unix::fs::MetadataExt;
     let metadata = std::fs::symlink_metadata(path)?;
     // SAFETY: geteuid has no arguments or preconditions.
@@ -236,7 +268,7 @@ fn check_private(path: &Path, directory: bool) -> io::Result<()> {
 /// whose targets could become private storage later. Only actual directories are
 /// traversed. A link produces `InvalidInput`; directory enumeration errors
 /// propagate so an unreadable subtree cannot silently escape validation.
-fn reject_public_symlinks(root: &Path) -> io::Result<()> {
+pub(crate) fn reject_public_symlinks(root: &Path) -> io::Result<()> {
     for entry in std::fs::read_dir(root)? {
         let entry = entry?;
         let kind = entry.file_type()?;
@@ -402,5 +434,24 @@ mod tests {
         symlink(fixture.0.join("site/secret"), data.join("admin.sqlite3")).unwrap();
         assert!(fixture.prepare().is_err());
         assert!(!fixture.0.join("site/secret").exists());
+    }
+
+    #[test]
+    fn shared_runtime_locks_exclude_maintenance_until_all_readers_exit() {
+        let fixture = Fixture::new();
+        let root = fixture.prepare().unwrap();
+        let first = lock(&root, false).unwrap();
+        let second = lock(&root, false).unwrap();
+        assert!(lock(&root, true).is_err());
+        drop(first);
+        assert!(lock(&root, true).is_err());
+        drop(second);
+        let maintenance = lock(&root, true).unwrap();
+        assert!(lock(&root, false).is_err());
+        drop(maintenance);
+        assert!(lock(&root, false).is_ok());
+        fs::remove_file(root.join("admin.lock")).unwrap();
+        symlink(root.join("admin.sqlite3"), root.join("admin.lock")).unwrap();
+        assert!(lock(&root, false).is_err());
     }
 }

@@ -15,6 +15,9 @@ runtime configuration and maintenance are in [README.md](README.md).
 | `src/server_config.rs` | Server-only origin/data-path validation and optional development Google credentials |
 | `src/storage.rs` | Private layout, ownership/mode validation, and public/data separation |
 | `src/database.rs`, `migrations/` | Shared SQLx pool settings, embedded application migrations, and session schema setup |
+| `src/cli.rs` | Clap operator interface, explicit approval/revocation, command dispatch |
+| `src/auth.rs` | SQLite sessions, browser-bound login transactions, shared authorization/CSRF guards |
+| `src/content.rs` | Validated offline import and checksummed database/gallery backups |
 | `src/app.rs` | HTML shell, shared navigation/audio layout, routes, and dialog dismissal helper |
 | `src/lib.rs` | Browser hydration entry point and shared library exports |
 | `src/serve.rs` | Axum router, server functions, request tracing, compression, and response headers |
@@ -50,22 +53,49 @@ an Axum `Extension<Arc<ServerConfig>>`. Production requires a public HTTPS origi
 an absolute data path, and paired Google OAuth credentials. Explicit loopback
 development can omit both credentials; it does not grant administrator access.
 The secret uses `SecretString` and configuration has no `Debug` implementation.
-No auth configuration is serialized to the browser. Google login and session
-middleware are not implemented yet. Storage contains `admin.sqlite3`
+No auth configuration is serialized to the browser. Google login and the editing
+UI are not implemented yet. Storage contains `admin.sqlite3`
 with mode `0600`, plus original/thumbnail and staging directories with
 mode `0700`. Existing files are retained; unsafe ownership, modes, links, or public
 path overlap stops startup. Gallery/staging share the data root's filesystem for
 later atomic publication. Public asset trees are checked for symlinks at startup
 and must remain immutable at runtime; the static handler serves only built assets.
 
-Before binding the listener, SQLx opens that database with foreign keys, WAL,
-`synchronous=FULL`, and a five-second busy timeout on every pooled connection.
+Before binding the listener, `DatabaseManager` opens that database with foreign
+keys, WAL, `synchronous=FULL`, and a five-second busy timeout on every pooled connection.
 Application migrations are embedded via `sqlx::migrate!`; `build.rs` tracks changes
 to the migration directory. The session store initializes its own table using the
-same pool. Initialization failure aborts startup. The pool is shared through an
-Axum extension and closed after serving ends. No migration approves a user.
+same pool. Initialization failure aborts startup. The manager owns a private SQLx
+pool; cloning the manager shares its connections without an additional mutex.
+Application SQL lives in `database.rs`, and other routines call named manager
+methods. Direct pool access is available only to Rust tests; versioned migrations
+and independent Python database checks remain separate. The shared pool is closed
+after serving ends. No migration approves a user.
 `admin migrate` performs the same setup without HTTP/provider configuration and
 exits. Fly startup also requires a separate filesystem mounted at `/data`.
+
+`serve::router` builds the middleware/context stack used by production and tests.
+SQLite session middleware wraps private namespace guards. Axum receives the manager
+and configuration through extensions; Leptos receives the same values through
+additional server context and extracts the same session from request parts.
+Private response cache/referrer headers survive release-mode mapping. Guards
+enforce idle/absolute expiry and current approval/generation; mutation guards add
+Origin and constant-time CSRF checks. Login transaction consumption is an atomic
+browser-bound delete/return operation. A scoped cleanup task removes expired
+transactions and sessions every five minutes and is aborted when serving ends.
+
+The HTTP process and identity commands hold shared filesystem locks. Offline
+import/backup commands require exclusive ownership across processes. Import stages
+validated images before atomically linking private files and committing catalog
+rows, with a singleton marker preventing a second import. The manager inserts the
+catalog in one transaction, calls the content routine's file-publication closure,
+and commits only after publication succeeds. Publication failure removes new links
+and rolls back rows; ambiguous commit failure retains files to avoid breaking any
+committed references. Backup opens the database without applying pending migrations,
+uses `VACUUM INTO`, copies matching gallery
+files, and writes SHA-256 manifest/completion files. Startup never imports bundled
+content automatically. Public loaders still use built files until the later
+content workflow change.
 
 SIGINT and SIGTERM initiate Axum's graceful shutdown. Active connections get up to
 25 seconds to drain; remaining connections close when that deadline expires. Fly's

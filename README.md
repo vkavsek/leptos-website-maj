@@ -63,9 +63,9 @@ first rebuild; it does not replace checking free space during long sessions.
 | `GOOGLE_CLIENT_SECRET` | Server-only OAuth secret; use hosting secrets in production or the interactive development launcher |
 
 Never commit credentials or generated secret configuration. Builds and automated
-tests do not need SMTP or Google credentials. Google sign-in and administration
-are not implemented yet; these settings currently validate configuration and
-make it available to server handlers. Missing or invalid production settings
+tests do not need SMTP or Google credentials. Google sign-in and the editing UI
+are not implemented yet; private operator commands and session/authorization
+foundations are available. Missing or invalid production settings
 stop startup without logging their values. Local development may omit both
 Google credentials; a partial or placeholder pair is rejected.
 
@@ -74,7 +74,8 @@ At startup, the server creates `gallery/originals/`, `gallery/thumbnails/`, and
 use mode `0700` and the database file mode `0600`. A process creation mask of
 `0077` is set before Tokio starts, covering future companion/upload files. This
 setup requires Unix filesystem permissions. SQLite contains the administrator
-approval table and the library's session table. New databases have zero approved
+approval, login-transaction, shows, videos, gallery, import-marker, and session
+tables. New databases have zero approved
 administrators. Login and editing are still to implement; public content continues
 loading from `LEPTOS_SITE_ROOT`.
 
@@ -90,8 +91,9 @@ install -d -m 700 /path/to/dedicated/maj-data
 ```
 
 For existing data, inspect the contents and ownership before correcting the
-permissions named in a startup error. The server does not automatically chmod,
-chown, truncate, or migrate existing data. Keep runtime data outside the Docker
+permissions named in a startup error. Filesystem preparation never changes
+existing ownership/permissions or truncates files; database schema migrations
+run during normal startup and operator initialization. Keep runtime data outside the Docker
 build context as well as the public trees.
 
 `LEPTOS_SITE_ROOT` remains the built asset directory (`/app/site` in Docker).
@@ -122,8 +124,89 @@ sqlx-cli). Review the generated SQL, rebuild, and apply it with `just db-migrate
 Applied migration files are immutable: add a new migration for later changes.
 Back up existing data before schema-changing releases. Leave SQLite's WAL/SHM
 files in place while running; copying only a live main file is not a backup.
-Stop writers and use SQLite's backup API or a coordinated backup of database and
-gallery files. Automatic backups and the administration backup command remain pending.
+Use the coordinated backup command below. Automatic scheduling, encryption, and
+off-machine transfer remain operator responsibilities.
+
+### Private operator commands
+
+`just admin --help` lists Clap's subcommands. The recipes remove Google/SMTP
+credentials and default to the development data directory. Set `MAJ_DATA_DIR`
+to operate on another directory. Deployed binaries accept the same `admin ...`
+arguments without Cargo/Just, provider credentials, or HTTP-origin configuration.
+Command results go to stdout and diagnostics to stderr; `list-users` emits JSON.
+
+| Command | Behaviour |
+| --- | --- |
+| `just admin migrate` | Prepare storage and migrate schemas; also available as `just db-migrate` |
+| `just admin list-users` | List explicit identity approvals, labels, enabled flags, and generations |
+| `just admin grant-google --issuer https://accounts.google.com --subject VERIFIED_SUBJECT --label owner` | Approve the exact verified subject; repeat grants keep an enabled user's generation unchanged |
+| `just admin revoke-google --issuer https://accounts.google.com --subject VERIFIED_SUBJECT` | Disable the identity and advance its generation |
+| `just admin revoke-all-sessions` | Advance all generations and remove browser sessions/login transactions |
+| `just admin import-content --source public` | Import the bundled catalog once; stop HTTP first |
+| `just admin backup --output /absolute/private/backup-name` | Snapshot database/gallery into a new directory; stop HTTP first |
+
+An approval is a local access decision, not identity verification. Copy the issuer
+and subject from the future verified Google login flow; an email address or Google
+Console Test users entry does not identify the local approval record. Re-enabling
+a revoked identity advances its generation again so old sessions cannot revive.
+Use the same binary version as the serving application for identity commands;
+perform schema upgrades in a planned maintenance window.
+
+HTTP and ordinary identity commands hold shared locks on `MAJ_DATA_DIR/admin.lock`.
+Import and backup require an exclusive lock and fail promptly while HTTP or another
+operator process holds one. Stop the server for these maintenance operations, then
+restart it afterward. Leave the lock file in place; removing it does not safely
+unlock another process. Directory/database validation applies to these commands
+too. The lock file is private (`0600`) and excluded from Git/Docker contexts.
+
+Import validates all JSON dates, HTTPS YouTube URLs/IDs, image bytes and thumbnails
+before publishing catalog rows. Optional show fields remain optional. Originals
+are JPEG/PNG/WebP, at most 20 MiB, 40 million pixels and 12000 pixels per side;
+thumbnails must be 480x270 WebP. Decoder allocation is capped at 256 MiB per image;
+allow additional memory for the process and input/output buffers. Import handles
+one image at a time. JSON files are limited to 2 MiB, with at most 10000 shows,
+1000 videos, and 1000 photos. Source symlinks, malformed data, and existing catalogs
+are rejected. Files receive opaque stored names; public filenames remain in the
+database for the later gallery handlers. Failed publication can leave private
+orphans after a crash, but must not expose partially imported records. Public
+pages still read built content until the editing workflows are implemented.
+
+Backup does **not** run pending schema migrations. Provision its parent directory
+privately, keep it outside public trees and the Docker build context, and choose
+a new destination name. The command uses SQLite `VACUUM INTO`, copies gallery
+files, validates all referenced originals/thumbnails, and writes `manifest.json`
+with SHA-256 checksums. `COMPLETE` is written last and contains the manifest hash.
+An incomplete directory lacks a valid completion marker and must not be restored;
+inspect failed backups before removing only their dedicated destination. Existing
+destinations are never overwritten. Staging uploads are excluded; unreferenced
+gallery files may be included. Do not copy only a live SQLite main file as a backup.
+
+For restoration, stop all processes using the target data directory, verify the
+completion marker, manifest version, and every file checksum, then restore the
+database and gallery together into a new private directory with the documented
+modes. Run `admin revoke-all-sessions` on the restored database before exposing
+it. Native tests cover isolated restore and revocation; production recovery and
+off-machine backups still require verification during deployment planning.
+
+### Session and authorization foundation
+
+The server shares the SQLx pool, validated configuration, and session context
+with Axum handlers and Leptos server functions. `src/auth.rs` provides shared
+administrator and mutation guards; every future mutation must use them too.
+Private `/admin`, `/api/admin`, and `/auth` responses retain `no-store` and
+`Referrer-Policy: no-referrer`, including errors and redirects. No Google callback
+or content-editing endpoint is enabled by this foundation.
+
+Production sessions use `__Host-maj_admin`, Secure, HttpOnly, SameSite=Lax, Path=/,
+and no Domain; loopback development uses `maj_admin_dev` without Secure. Guards
+enforce 30-minute idle and eight-hour absolute limits, checking current approval
+and generation on each protected request. Mutations require an exact Origin and
+session-bound `x-csrf-token`. Expired sessions/transactions are cleaned every five
+minutes. Login transactions use OAuth2-generated state, PKCE and nonce material,
+expire after five minutes, and are consumed once for their initiating browser.
+At most three outstanding transactions per browser and 128 overall are allowed.
+OAuth2 supplies these primitives now; OpenID Connect token verification belongs
+to the later login implementation and must be reviewed for dependency advisories.
 
 **Database dependency release blocker (2026-11-13):** current advisory checks flag
 bundled `libsqlite3-sys` 0.37.0 under
@@ -239,6 +322,11 @@ The configured site root must contain:
   `.jpeg`), PNG, SVG, and WebP files are listed, regardless of extension case.
   Links, subdirectories, other files, and filenames that are not valid UTF-8 are ignored.
 - `img/about_thumbnails/`: generated WebP thumbnails for the gallery.
+- `img/albums/`: album artwork and its smaller display versions.
+
+Picture filenames use lowercase letters and underscores in place of spaces.
+Gallery thumbnails retain the original filename with `.webp` appended. Future
+uploads must normalize names on the server before storage.
 
 Correct a failed content file and restart or redeploy to clear its cached error.
 Changing `LEPTOS_SITE_ROOT` also requires a restart.

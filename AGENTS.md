@@ -15,6 +15,7 @@ Install Rust, the `wasm32-unknown-unknown` target, `cargo-leptos`, and `just`. L
 - `just dev-auth`: prompt for development Google credentials and clear the clipboard before serving.
 - `just build` / `just build-release`: build the server and browser WASM/CSS assets.
 - `just clean`: run `cargo clean` for daily continuous-development cleanup.
+- `just admin --help`: list private operator commands; import/backup require a stopped HTTP server.
 - `just run` / `just run-release`: run an existing local build; `just dev-source` serves source content.
 - `just test`: run Rust tests; append Cargo arguments or a test filter as needed.
 - `just coverage`: measure native Rust coverage with cargo-tarpaulin; HTML/LCOV reports go to `target/coverage/`.
@@ -38,6 +39,21 @@ the separate `target/front/` and `target/tarpaulin/` builds and coverage reports
 ## Coding Style & Naming Conventions
 
 Use Rust 2021 and four-space indentation. Use `snake_case` for modules/functions and `PascalCase` for types and Leptos components. Match the existing two-space indentation in SCSS and TypeScript. Keep server-only code behind `ssr` and hydration code behind `hydrate`. Reuse existing components and SCSS theme variables.
+
+After module documentation and inner attributes, put module declarations (`mod name;`)
+first, then all module-wide imports and re-exports (`use`/`pub use`), then
+module-wide constants and statics. Order the remaining Rust items as follows:
+error types and their implementations;
+public functions and types used by other modules (including `pub(crate)`);
+private structs/enums; helpers and private functions; then tests and test-only helpers.
+Keep implementations with their type's group, placing public methods before
+private helpers within an implementation. Preserve visibility and keep attributes
+and documentation attached to the items they describe when moving code.
+
+Add short descriptive comments at meaningful processing stages, especially in
+nested loops, conditionals, and blocks of computation. Explain the block's purpose,
+important ordering, or safety invariant. Keep comments close to the relevant code
+and usually one line; avoid narrating obvious individual statements.
 
 ## Testing Guidelines
 
@@ -78,6 +94,11 @@ Recent commits use `FEAT:`, `FIX:`, or `UPDATE:` followed by short descriptions.
 ## Security & Generated Files
 
 Supply `PORKMAIL_PWD` through the environment; never commit credentials. Treat `target/site/` and `pkg/` as generated output. Edit source assets in `public/` and `style/` instead.
+
+Use lowercase picture filenames and replace spaces with underscores. Keep album
+artwork in `public/img/albums/` and preserve matching gallery original/thumbnail
+names. When uploads are implemented, normalize filenames on the server before
+storing them and handle collisions without overwriting existing files.
 
 ## Additional Guidelines
 

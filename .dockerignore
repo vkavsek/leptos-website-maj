@@ -30,5 +30,6 @@
 /target
 **/admin.sqlite3
 **/admin.sqlite3-*
+**/admin.lock
 LICENSE
 README.md

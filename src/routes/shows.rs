@@ -53,9 +53,6 @@ pub fn FutureShows() -> impl IntoView {
     view! { <RenderShows selector /> }
 }
 
-// ###################################
-// ->   UTILS
-// ###################################
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct EventsSorted {
     date_desc: Vec<Event>,
@@ -76,10 +73,10 @@ pub struct EventsDeser(Vec<Event>);
 
 #[derive(Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Default, Serialize, Deserialize)]
 pub struct Event {
-    date: Option<String>,
-    name: Option<String>,
-    club: Option<String>,
-    location: Option<String>,
+    pub(crate) date: Option<String>,
+    pub(crate) name: Option<String>,
+    pub(crate) club: Option<String>,
+    pub(crate) location: Option<String>,
 }
 impl Event {
     pub fn get_date(&self) -> Option<DateTime<Utc>> {
@@ -96,6 +93,31 @@ impl Event {
                 .ok()
         })?
     }
+}
+
+#[cfg(feature = "ssr")]
+pub(crate) fn parse_shows(json: &str) -> Result<EventsSorted, MajServerError> {
+    use std::cmp::Reverse;
+
+    let mut shows: EventsDeser = serde_json::from_str(json)?;
+    for (index, show) in shows.0.iter().enumerate() {
+        if show.get_date().is_none() {
+            return Err(MajServerError::SerdeJson(format!(
+                "Show {} must have a valid date in day.month.year format.",
+                index + 1
+            )));
+        }
+    }
+    shows.0.sort_by_key(|show| Reverse(show.get_date()));
+
+    let date_desc = shows.0.clone();
+    let mut date_asc = shows.0;
+    date_asc.reverse();
+
+    Ok(EventsSorted {
+        date_desc,
+        date_asc,
+    })
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -227,31 +249,6 @@ async fn load_shows(site_root: &str) -> Result<EventsSorted, MajServerError> {
     tracing::info!("Initializing SHOWS");
     let show_json = tokio::fs::read_to_string(path).await?;
     parse_shows(&show_json)
-}
-
-#[cfg(feature = "ssr")]
-fn parse_shows(json: &str) -> Result<EventsSorted, MajServerError> {
-    use std::cmp::Reverse;
-
-    let mut shows: EventsDeser = serde_json::from_str(json)?;
-    for (index, show) in shows.0.iter().enumerate() {
-        if show.get_date().is_none() {
-            return Err(MajServerError::SerdeJson(format!(
-                "Show {} must have a valid date in day.month.year format.",
-                index + 1
-            )));
-        }
-    }
-    shows.0.sort_by_key(|show| Reverse(show.get_date()));
-
-    let date_desc = shows.0.clone();
-    let mut date_asc = shows.0;
-    date_asc.reverse();
-
-    Ok(EventsSorted {
-        date_desc,
-        date_asc,
-    })
 }
 
 #[cfg(all(test, feature = "ssr"))]

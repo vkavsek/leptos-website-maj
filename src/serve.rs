@@ -2,6 +2,7 @@
 // ->   SERVE
 // ###################################
 use crate::app::app_shell;
+use crate::database::DatabaseManager;
 use crate::fallback::static_file_and_err_handler;
 use crate::server_config::ServerConfig;
 
@@ -25,7 +26,7 @@ const REQUEST_ID_HEADER: &str = "x-request-id";
 /// The core async function returning a future that will serve this application.
 ///
 /// Accepts a listener, generated Leptos routes, rendering options, validated server
-/// configuration, and the initialized database pool. Configuration and database
+/// configuration, and the initialized database manager. Configuration and database
 /// are shared through server-only extensions, never hydration data.
 /// It sets up a TraceLayer that provides console logging.
 /// It returns a `Result` containing a `Serve` future. Needs to be awaited:
@@ -37,8 +38,63 @@ pub async fn serve(
     routes: Vec<AxumRouteListing>,
     state: LeptosOptions,
     server_config: ServerConfig,
-    database: sqlx::SqlitePool,
+    database: DatabaseManager,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    // Create a cleanup task that removes expired temporary auth data from SQLite.
+    // The first tick is immediate; later ticks follow a five-minute schedule.
+    let mut cleanup = tokio::task::JoinSet::new();
+    let cleanup_database = database.clone();
+    cleanup.spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_secs(300));
+        loop {
+            interval.tick().await;
+            // Purge expired login transactions and browser sessions without blocking HTTP startup.
+            if cleanup_database.cleanup_expired_auth().await.is_err() {
+                // Keep serving and retry next tick without logging stored authentication details.
+                tracing::warn!("Expired authentication record cleanup failed");
+            }
+        }
+    });
+    let app = router(routes, state, server_config, database);
+
+    // Notify select! when shutdown starts; normal server uptime must have no timeout.
+    let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel();
+
+    let server = axum::serve(listener, app)
+        .with_graceful_shutdown(async move {
+            shutdown_signal().await;
+            let _ = shutdown_tx.send(());
+        })
+        .into_future();
+
+    // Reuse the same server future while waiting for a signal and while draining requests.
+    tokio::pin!(server);
+    tokio::select! {
+        result = &mut server => result?,
+        _ = shutdown_rx => {
+            // Cover SMTP's 20-second limit while staying within Fly's 30-second shutdown allowance.
+            match tokio::time::timeout(Duration::from_secs(25), server).await {
+                Ok(result) => result?,
+                // Returning lets main drop the runtime and close unfinished connections.
+                Err(_) => tracing::warn!("Shutdown deadline reached; closing remaining connections"),
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Builds the production route/context/middleware stack without binding a socket.
+pub fn router(
+    routes: Vec<AxumRouteListing>,
+    state: LeptosOptions,
+    server_config: ServerConfig,
+    database: DatabaseManager,
+) -> Router {
+    let sessions = crate::auth::session_layer(&database, server_config.development);
+    let server_config = Arc::new(server_config);
+    let context_database = database.clone();
+    let context_config = server_config.clone();
     let x_request_id = HeaderName::from_static(REQUEST_ID_HEADER);
 
     let trace_layer = TraceLayer::new_for_http()
@@ -64,11 +120,19 @@ pub async fn serve(
         );
 
     // build our application with a route
-    let app = Router::new()
-        .leptos_routes(&state, routes, {
-            let options = state.clone();
-            move || app_shell(options.clone())
-        })
+    Router::new()
+        .leptos_routes_with_context(
+            &state,
+            routes,
+            move || {
+                leptos::prelude::provide_context(context_database.clone());
+                leptos::prelude::provide_context(context_config.clone());
+            },
+            {
+                let options = state.clone();
+                move || app_shell(options.clone())
+            },
+        )
         .route("/health-check", get(health))
         .layer(
             // Adding tower_http services (except CompressionLayer)
@@ -88,33 +152,11 @@ pub async fn serve(
         .layer(tower_http::compression::CompressionLayer::new())
         // Add Cache-Control without changing file-service responses.
         .layer(middleware::map_response(midware::response_mapper_midware))
-        .layer(Extension(Arc::new(server_config)))
+        .layer(middleware::from_fn(crate::auth::private_routes))
+        .layer(Extension(server_config))
         .layer(Extension(database))
-        .with_state(state);
-
-    // Notify select! when shutdown starts; normal server uptime must have no timeout.
-    let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel();
-    let server = axum::serve(listener, app)
-        .with_graceful_shutdown(async move {
-            shutdown_signal().await;
-            let _ = shutdown_tx.send(());
-        })
-        .into_future();
-    // Reuse the same server future while waiting for a signal and while draining requests.
-    tokio::pin!(server);
-    tokio::select! {
-        result = &mut server => result?,
-        _ = shutdown_rx => {
-            // Cover SMTP's 20-second limit while staying within Fly's 30-second shutdown allowance.
-            match tokio::time::timeout(Duration::from_secs(25), server).await {
-                Ok(result) => result?,
-                // Returning lets main drop the runtime and close unfinished connections.
-                Err(_) => tracing::warn!("Shutdown deadline reached; closing remaining connections"),
-            }
-        }
-    }
-
-    Ok(())
+        .layer(sessions)
+        .with_state(state)
 }
 
 /// Waits for Ctrl+C (SIGINT on Unix) or Unix SIGTERM so Axum can begin graceful shutdown.
@@ -152,6 +194,10 @@ mod midware {
     pub async fn response_mapper_midware(res: Response) -> Response {
         let mut resp = res;
 
+        if resp.headers().contains_key(CACHE_CONTROL) {
+            return resp;
+        }
+
         // Add `Cache-control` header
         debug!("Adding cache control header");
         if cfg!(debug_assertions) {
@@ -179,6 +225,135 @@ mod tests {
     use http::{header::*, StatusCode};
     use std::io::Read;
     use tower::ServiceExt;
+
+    // Test-only endpoints exercise real Leptos registration/context without a production login bypass.
+    #[leptos::server(
+        Section5ContextProbe,
+        "/api/admin",
+        "GetJson",
+        "section5_context_probe"
+    )]
+    async fn context_probe() -> Result<i64, leptos::prelude::ServerFnError> {
+        let user = crate::auth::require_server_admin()
+            .await
+            .map_err(crate::auth::AuthError::server_error)?;
+        if leptos::prelude::use_context::<Arc<ServerConfig>>().is_none() {
+            return Err(leptos::prelude::ServerFnError::new(
+                "Server configuration context missing",
+            ));
+        }
+        Ok(user.id)
+    }
+
+    #[leptos::server(name = Section5MutationProbe, prefix = "/api/admin", input = leptos::server_fn::codec::Json, output = leptos::server_fn::codec::Json, endpoint = "section5_mutation_probe")]
+    async fn mutation_probe() -> Result<i64, leptos::prelude::ServerFnError> {
+        Ok(crate::auth::require_server_mutation()
+            .await
+            .map_err(crate::auth::AuthError::server_error)?
+            .id)
+    }
+
+    #[tokio::test]
+    async fn production_router_protects_private_namespaces_and_shares_leptos_session_context() {
+        let (root, database) = crate::test_support::database().await;
+        let options = LeptosOptions::builder()
+            .output_name("leptos-website-maj")
+            .site_root(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/site"))
+            .build();
+        let app = router(
+            Vec::new(),
+            options,
+            crate::test_support::config(root.path()),
+            database.clone(),
+        );
+        let response = app
+            .clone()
+            .oneshot(Request::get("/health-check").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        assert!(!response.headers().contains_key(SET_COOKIE));
+        for path in [
+            "/admin",
+            "/api/admin/direct-request",
+            "/api/admin/section5_context_probe",
+        ] {
+            let response = app
+                .clone()
+                .oneshot(Request::get(path).body(Body::empty()).unwrap())
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::UNAUTHORIZED, "{path}");
+            assert_eq!(response.headers()[CACHE_CONTROL], "no-store");
+            assert_eq!(response.headers()[REFERRER_POLICY], "no-referrer");
+        }
+        let session = crate::auth::test_session(&database);
+        let id = database
+            .grant_administrator("https://accounts.google.com", "123", "owner")
+            .await
+            .unwrap();
+        crate::auth::establish(&session, &database, "https://accounts.google.com", "123")
+            .await
+            .unwrap();
+        let cookie = format!("maj_admin_dev={}", session.id().unwrap());
+        let response = app
+            .clone()
+            .oneshot(
+                Request::get("/api/admin/section5_context_probe")
+                    .header(COOKIE, &cookie)
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            to_bytes(response.into_body(), 4096).await.unwrap(),
+            id.to_string()
+        );
+        let token: serde_json::Value = session.get("administrator").await.unwrap().unwrap();
+        for valid in [false, true] {
+            let request = Request::post("/api/admin/section5_mutation_probe")
+                .header(COOKIE, &cookie)
+                .header(ORIGIN, "http://localhost:8080")
+                .header(
+                    "x-csrf-token",
+                    if valid {
+                        token["csrf"].as_str().unwrap()
+                    } else {
+                        "invalid"
+                    },
+                )
+                .header(CONTENT_TYPE, "application/json")
+                .body(Body::from("{}"))
+                .unwrap();
+            let response = app.clone().oneshot(request).await.unwrap();
+            assert_eq!(
+                response.status(),
+                if valid {
+                    StatusCode::OK
+                } else {
+                    StatusCode::FORBIDDEN
+                }
+            );
+            assert_eq!(response.headers()[CACHE_CONTROL], "no-store");
+        }
+        database
+            .revoke_administrator("https://accounts.google.com", "123")
+            .await
+            .unwrap();
+        let response = app
+            .oneshot(
+                Request::get("/api/admin/section5_context_probe")
+                    .header(COOKIE, cookie)
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+        database.close().await;
+    }
 
     #[tokio::test]
     async fn json_content_apis_use_the_site_root_from_router_state() {

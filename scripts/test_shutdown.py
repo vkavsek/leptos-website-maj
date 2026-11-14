@@ -1,6 +1,8 @@
 """Exercise the built server with real shutdown signals and an active download."""
 
+import hashlib
 import http.client
+import json
 import os
 import re
 import signal
@@ -127,17 +129,26 @@ class ShutdownTests(unittest.TestCase):
             with sqlite3.connect(database) as connection:
                 self.assertEqual(
                     connection.execute(
-                        "SELECT count(*) FROM administrators"
+                        """
+                        SELECT count(*)
+                        FROM administrators
+                        """
                     ).fetchone()[0],
                     0,
                 )
                 connection.execute(
-                    "INSERT INTO administrators (issuer, subject, label) VALUES (?, ?, ?)",
+                    """
+                    INSERT INTO administrators (issuer, subject, label)
+                    VALUES (?, ?, ?)
+                    """,
                     ("test-issuer", "test-subject", private_content.decode()),
                 )
                 self.assertEqual(
                     connection.execute(
-                        "SELECT count(*) FROM tower_sessions"
+                        """
+                        SELECT count(*)
+                        FROM tower_sessions
+                        """
                     ).fetchone()[0],
                     0,
                 )
@@ -168,7 +179,12 @@ class ShutdownTests(unittest.TestCase):
                         connection.close()
         with sqlite3.connect(database) as connection:
             self.assertEqual(
-                connection.execute("SELECT label FROM administrators").fetchone()[0],
+                connection.execute(
+                    """
+                    SELECT label
+                    FROM administrators
+                    """
+                ).fetchone()[0],
                 private_content.decode(),
             )
 
@@ -186,15 +202,163 @@ class ShutdownTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         with sqlite3.connect(self.data / "admin.sqlite3") as connection:
             self.assertEqual(
-                connection.execute("SELECT count(*) FROM administrators").fetchone()[0],
+                connection.execute(
+                    """
+                    SELECT count(*)
+                    FROM administrators
+                    """
+                ).fetchone()[0],
                 0,
             )
             self.assertEqual(
-                connection.execute("SELECT count(*) FROM _sqlx_migrations").fetchone()[
-                    0
-                ],
+                connection.execute(
+                    """
+                    SELECT count(*)
+                    FROM _sqlx_migrations
+                    """
+                ).fetchone()[0],
+                2,
+            )
+
+    def admin(self, *arguments, environment=None):
+        environment = self.environment() if environment is None else environment
+        environment.update(
+            GOOGLE_CLIENT_SECRET="dummy-operator-secret-must-not-be-read",
+            GOOGLE_CLIENT_ID="invalid-but-unused",
+            MAJ_APP_ORIGIN="invalid-but-unused",
+            LEPTOS_SITE_ADDR="invalid-but-unused",
+        )
+        result = subprocess.run(
+            [str(ROOT / "target/debug/leptos-website-maj"), "admin", *arguments],
+            env=environment,
+            capture_output=True,
+            timeout=45,
+        )
+        self.assertNotIn(
+            b"dummy-operator-secret-must-not-be-read", result.stdout + result.stderr
+        )
+        return result
+
+    def test_identity_commands_import_and_restorable_backup_without_credentials(self):
+        result = self.admin("list-users")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout), [])
+        identity = [
+            "--issuer",
+            "https://accounts.google.com",
+            "--subject",
+            "test-subject",
+        ]
+        for command in [
+            ["grant-google", *identity, "--label", "owner ć"],
+            ["grant-google", *identity, "--label", "owner ć"],
+            ["revoke-google", *identity],
+            ["grant-google", *identity, "--label", "owner ć"],
+            ["revoke-all-sessions"],
+        ]:
+            result = self.admin(*command)
+            self.assertEqual(result.returncode, 0, result.stderr)
+        result = self.admin("list-users")
+        users = json.loads(result.stdout)
+        self.assertEqual(len(users), 1)
+        self.assertEqual(users[0]["session_generation"], 3)
+        self.assertTrue(users[0]["enabled"])
+        result = self.admin("import-content", "--source", str(ROOT / "public"))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        result = self.admin("import-content", "--source", str(ROOT / "public"))
+        self.assertNotEqual(result.returncode, 0)
+        output = Path(self.temp.name) / "backup"
+        result = self.admin("backup", "--output", str(output))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        manifest_bytes = (output / "manifest.json").read_bytes()
+        self.assertEqual(
+            (output / "COMPLETE").read_text().strip(),
+            hashlib.sha256(manifest_bytes).hexdigest(),
+        )
+        manifest = json.loads(manifest_bytes)
+        for name, checksum in manifest["files"].items():
+            self.assertEqual(
+                hashlib.sha256((output / name).read_bytes()).hexdigest(), checksum
+            )
+        with sqlite3.connect(output / "admin.sqlite3") as connection:
+            self.assertEqual(
+                connection.execute(
+                    """
+                    SELECT count(*)
+                    FROM administrators
+                    """
+                ).fetchone()[0],
                 1,
             )
+            self.assertGreater(
+                connection.execute(
+                    """
+                    SELECT count(*)
+                    FROM gallery_images
+                    """
+                ).fetchone()[0],
+                0,
+            )
+
+    def test_maintenance_requires_exclusive_process_lock_while_identity_commands_still_work(
+        self,
+    ):
+        with self.server():
+            result = self.admin("list-users")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(json.loads(result.stdout), [])
+            output = Path(self.temp.name) / "busy-backup"
+            for arguments in [
+                ("backup", "--output", str(output)),
+                ("import-content", "--source", str(ROOT / "public")),
+            ]:
+                result = self.admin(*arguments)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(b"Storage is busy", result.stderr)
+            self.assertFalse(output.exists())
+
+    def test_backup_does_not_apply_new_migrations_to_an_old_database(self):
+        self.data.mkdir(mode=0o700)
+        database = self.data / "admin.sqlite3"
+        with sqlite3.connect(database) as connection:
+            connection.execute(
+                """
+                CREATE TABLE previous_release (
+                    value TEXT
+                )
+                """
+            )
+            connection.execute(
+                """
+                INSERT INTO previous_release
+                VALUES ('preserved')
+                """
+            )
+        database.chmod(0o600)
+        output = Path(self.temp.name) / "old-backup"
+        result = self.admin("backup", "--output", str(output))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for path in [database, output / "admin.sqlite3"]:
+            with sqlite3.connect(path) as connection:
+                self.assertEqual(
+                    connection.execute(
+                        """
+                        SELECT value
+                        FROM previous_release
+                        """
+                    ).fetchone()[0],
+                    "preserved",
+                )
+                self.assertEqual(
+                    connection.execute(
+                        """
+                        SELECT count(*)
+                        FROM sqlite_master
+                        WHERE name = 'administrators'
+                        """
+                    ).fetchone()[0],
+                    0,
+                )
 
     def test_invalid_database_mount_or_command_never_starts_http(self):
         self.data.mkdir(mode=0o700)

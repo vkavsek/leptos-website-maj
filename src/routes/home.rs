@@ -9,48 +9,6 @@ use secrecy::ExposeSecret;
 #[cfg(feature = "ssr")]
 use std::time::{Duration, Instant};
 
-enum LinkLocation {
-    Fb,
-    TikTok,
-    Ig,
-    Yt,
-}
-
-impl LinkLocation {
-    /// Returns a tuple in the form of: (HREF_TARGET, IMAGE_LOCATION, size-x, size-y)
-    fn process(&self) -> (&'static str, &'static str, i32, i32) {
-        match self {
-            LinkLocation::Fb => (
-                "https://www.facebook.com/majkavsek",
-                "/img/contact_icons/FB.svg",
-                60,
-                60,
-            ),
-            LinkLocation::TikTok => (
-                "https://www.tiktok.com/@majkavsek?lang=en",
-                "/img/contact_icons/TIKTOK.svg",
-                60,
-                61,
-            ),
-            LinkLocation::Ig => (
-                "https://www.instagram.com/maj.kavsek/",
-                "/img/contact_icons/insta.svg",
-                179,
-                174,
-            ),
-            LinkLocation::Yt => (
-                "https://www.youtube.com/@MajKavsek",
-                "/img/contact_icons/YT.svg",
-                177,
-                128,
-            ),
-        }
-    }
-}
-
-// ###################################
-// ->   COMPONENTS
-// ###################################
 #[component]
 pub fn Home() -> impl IntoView {
     const FB: LinkLocation = LinkLocation::Fb;
@@ -86,6 +44,56 @@ pub fn Home() -> impl IntoView {
         </div>
     }
 }
+
+enum LinkLocation {
+    Fb,
+    TikTok,
+    Ig,
+    Yt,
+}
+
+impl LinkLocation {
+    /// Returns a tuple in the form of: (HREF_TARGET, IMAGE_LOCATION, size-x, size-y)
+    fn process(&self) -> (&'static str, &'static str, i32, i32) {
+        match self {
+            LinkLocation::Fb => (
+                "https://www.facebook.com/majkavsek",
+                "/img/contact_icons/fb.svg",
+                60,
+                60,
+            ),
+            LinkLocation::TikTok => (
+                "https://www.tiktok.com/@majkavsek?lang=en",
+                "/img/contact_icons/tiktok.svg",
+                60,
+                61,
+            ),
+            LinkLocation::Ig => (
+                "https://www.instagram.com/maj.kavsek/",
+                "/img/contact_icons/insta.svg",
+                179,
+                174,
+            ),
+            LinkLocation::Yt => (
+                "https://www.youtube.com/@MajKavsek",
+                "/img/contact_icons/yt.svg",
+                177,
+                128,
+            ),
+        }
+    }
+}
+
+const MAX_NAME_LENGTH: usize = 100;
+const MAX_EMAIL_LENGTH: usize = 254;
+const MAX_SUBJECT_LENGTH: usize = 200;
+const MAX_MESSAGE_LENGTH: usize = 10_000;
+const MAIL_RATE_LIMIT_MESSAGE: &str =
+    "The contact form has reached its hourly sending limit. Please try again later.";
+
+#[cfg(feature = "ssr")]
+// shortcut: allowance resets per process; use shared storage for a durable cap across replicas.
+static MAIL_ATTEMPTS: Mutex<Vec<Instant>> = Mutex::new(Vec::new());
 
 #[component]
 fn LinkWithModal(loc: LinkLocation) -> impl IntoView {
@@ -160,13 +168,6 @@ fn LinkWithModal(loc: LinkLocation) -> impl IntoView {
             </dialog>
     }
 }
-
-const MAX_NAME_LENGTH: usize = 100;
-const MAX_EMAIL_LENGTH: usize = 254;
-const MAX_SUBJECT_LENGTH: usize = 200;
-const MAX_MESSAGE_LENGTH: usize = 10_000;
-const MAIL_RATE_LIMIT_MESSAGE: &str =
-    "The contact form has reached its hourly sending limit. Please try again later.";
 
 #[component]
 fn Mail() -> impl IntoView {
@@ -258,7 +259,7 @@ fn Mail() -> impl IntoView {
             <img
                 class="contacts-img"
                 alt="Send me an email"
-                src="/img/contact_icons/MAIL.svg"
+                src="/img/contact_icons/mail.svg"
                 width="62"
                 height="38"
             />
@@ -343,10 +344,6 @@ fn Mail() -> impl IntoView {
 // ###################################
 // ->   SERVER
 // ###################################
-#[cfg(feature = "ssr")]
-// shortcut: allowance resets per process; use shared storage for a durable cap across replicas.
-static MAIL_ATTEMPTS: Mutex<Vec<Instant>> = Mutex::new(Vec::new());
-
 #[cfg(feature = "ssr")]
 fn validate_mail(
     name: &str,
@@ -671,6 +668,7 @@ mod tests {
         let app = Router::new().route(SendMail::PATH, post(leptos_axum::handle_server_fns));
         let app_with_password = |password: Option<&str>| {
             app.clone().layer(Extension(Arc::new(ServerConfig {
+                development: true,
                 app_origin: "http://localhost:8080".into(),
                 data_dir: "/tmp/maj-mail-test".into(),
                 google: None,

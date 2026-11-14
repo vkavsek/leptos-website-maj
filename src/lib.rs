@@ -1,10 +1,19 @@
 #![recursion_limit = "256"]
 
+use tracing::Level;
+use tracing_subscriber::EnvFilter;
+
 // ###################################
 // ->   MODS
 // ###################################
 pub mod app;
 pub mod audio;
+#[cfg(feature = "ssr")]
+pub mod auth;
+#[cfg(feature = "ssr")]
+pub mod cli;
+#[cfg(feature = "ssr")]
+pub mod content;
 #[cfg(feature = "ssr")]
 pub mod database;
 pub mod error;
@@ -17,11 +26,23 @@ pub mod serve;
 pub mod server_config;
 #[cfg(feature = "ssr")]
 pub mod storage;
+#[cfg(all(test, feature = "ssr"))]
+mod test_support;
 
 // Re-exports
 pub use error::MajServerError;
 #[cfg(feature = "ssr")]
 pub use serve::serve;
+
+#[cfg(feature = "ssr")]
+pub(crate) fn encode_hex(bytes: &[u8]) -> String {
+    use std::fmt::Write;
+    let mut output = String::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        write!(output, "{byte:02x}").expect("writing to a String cannot fail");
+    }
+    output
+}
 
 // ###################################
 // ->   HYDRATE
@@ -37,8 +58,6 @@ pub fn hydrate() {
 // ###################################
 // ->   TRACING INIT
 // ###################################
-use tracing::Level;
-use tracing_subscriber::EnvFilter;
 
 // Initialize tracing for DEV
 pub fn init_dbg_tracing() {

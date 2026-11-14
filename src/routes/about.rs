@@ -6,36 +6,6 @@ use leptos::{
 };
 use leptos_meta::{Link, Title};
 
-enum Color {
-    #[allow(dead_code)]
-    Yellow,
-    Pink,
-}
-impl Color {
-    fn return_val(&self) -> &'static str {
-        match self {
-            Color::Yellow => "#fad549",
-            Color::Pink => "#ff3988",
-        }
-    }
-    fn switch(&mut self) {
-        match self {
-            Color::Yellow => {
-                *self = Color::Pink;
-            }
-            Color::Pink => {
-                *self = Color::Yellow;
-            }
-        }
-    }
-    fn other(&self) -> Self {
-        match self {
-            Color::Yellow => Color::Pink,
-            Color::Pink => Color::Yellow,
-        }
-    }
-}
-
 #[component]
 pub fn About() -> impl IntoView {
     let text_content = [
@@ -305,6 +275,36 @@ pub fn ImagesAbout() -> impl IntoView {
                 </Suspense>
             </div>
         </div>
+    }
+}
+
+enum Color {
+    #[allow(dead_code)]
+    Yellow,
+    Pink,
+}
+impl Color {
+    fn return_val(&self) -> &'static str {
+        match self {
+            Color::Yellow => "#fad549",
+            Color::Pink => "#ff3988",
+        }
+    }
+    fn switch(&mut self) {
+        match self {
+            Color::Yellow => {
+                *self = Color::Pink;
+            }
+            Color::Pink => {
+                *self = Color::Yellow;
+            }
+        }
+    }
+    fn other(&self) -> Self {
+        match self {
+            Color::Yellow => Color::Pink,
+            Color::Pink => Color::Yellow,
+        }
     }
 }
 

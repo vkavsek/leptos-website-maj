@@ -11,7 +11,7 @@ For application design, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 For native Linux builds, install:
 
-- Rust and Cargo through rustup.
+- Rust 1.89 or newer and Cargo through rustup (native file locking requires 1.89).
 - [`just`](https://just.systems/man/en/), the project command runner.
 - The `wasm32-unknown-unknown` Rust target.
 - `cargo-leptos`, which builds the server, browser WASM, and SCSS assets.
@@ -132,7 +132,10 @@ focused group, use `just test --lib FILTER` with one of these filters:
 | `routes::media::tests` | Video content loading |
 | `server_config::tests` | Origin/path validation, required production credentials, local operation without Google, and private errors |
 | `storage::tests` | Private modes/layout, preservation of data, public path separation, and rejection of unsafe links |
-| `database::tests` | All pooled connection settings, empty approvals, migrations/reopen, constraints, corruption, and writer contention |
+| `database::tests` | Pooled connection settings, migrations/reopen, constraints, corruption, writer contention, and concurrent login limits across manager clones |
+| `cli::tests` | Clap validation, explicit approvals, idempotency, revocation, and generation overflow |
+| `auth::tests` | Cookie policy, expiry, revocation, CSRF/Origin, PKCE state binding/replay, and transaction bounds |
+| `content::tests` | YouTube validation, import rollback/repeat safety, private files, and checksummed backup/restore |
 
 Run the album HTTP regression test separately with:
 
@@ -165,7 +168,9 @@ SMTP credentials. They check complete downloads during SIGINT and SIGTERM and th
 storage modes/umask and that database/staging files cannot be downloaded, including
 through traversal requests. Database command tests check repeat migrations without
 HTTP/provider configuration and startup rejection for corruption, missing Fly
-storage, and unknown commands. The deadline check takes about 25 seconds. Python's
+storage, and unknown commands. Operator regressions import real bundled content,
+exercise identity commands and cross-process locks, and verify backups of both
+current and pre-migration databases. The deadline check takes about 25 seconds. Python's
 standard library is sufficient.
 
 Check formatting and lint both compilation targets:

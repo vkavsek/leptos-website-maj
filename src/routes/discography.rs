@@ -168,6 +168,30 @@ enum Album {
     MinorFlaw,
     Galaterna,
 }
+
+struct Image<'a> {
+    img_path: &'a str,
+    img_size: (u16, u16),
+}
+
+struct LinkLogo<'b> {
+    link: &'b str,
+    logo_path: &'b str,
+    logo_size_xy: (u16, u16),
+}
+
+struct AlbumEntry<'a> {
+    release_year: u16,
+    label: &'a str,
+    title: &'a str,
+    notes: Vec<&'a str>,
+}
+
+#[derive(Params, PartialEq)]
+struct NameParams {
+    name: Option<String>,
+}
+
 impl Album {
     fn try_init_from_str(src: impl AsRef<str>) -> Option<Self> {
         match src.as_ref().to_lowercase().as_str() {
@@ -180,11 +204,11 @@ impl Album {
     fn get_image<'a>(from: &Self) -> Image<'a> {
         match from {
             Album::MinorFlaw => Image {
-                img_path: "/img/MINORFLAW-01_600p.webp",
+                img_path: "/img/albums/minorflaw-01_600p.webp",
                 img_size: (600, 600),
             },
             Album::Galaterna => Image {
-                img_path: "/img/album_artwork_360p.webp",
+                img_path: "/img/albums/album_artwork_360p.webp",
                 img_size: (360, 360),
             },
         }
@@ -193,11 +217,11 @@ impl Album {
     fn get_image_hi_res<'a>(from: &Self) -> Image<'a> {
         match from {
             Album::MinorFlaw => Image {
-                img_path: "/img/MINORFLAW-01.webp",
+                img_path: "/img/albums/minorflaw-01.webp",
                 img_size: (3000, 3000),
             },
             Album::Galaterna => Image {
-                img_path: "/img/album_artwork.webp",
+                img_path: "/img/albums/album_artwork.webp",
                 img_size: (1200, 1200),
             },
         }
@@ -260,24 +284,6 @@ impl Album {
     }
 }
 
-struct Image<'a> {
-    img_path: &'a str,
-    img_size: (u16, u16),
-}
-
-struct LinkLogo<'b> {
-    link: &'b str,
-    logo_path: &'b str,
-    logo_size_xy: (u16, u16),
-}
-
-struct AlbumEntry<'a> {
-    release_year: u16,
-    label: &'a str,
-    title: &'a str,
-    notes: Vec<&'a str>,
-}
-
 impl<'a> AlbumEntry<'a> {
     fn new(release_year: u16, label: &'a str, title: &'a str, notes: Vec<&'a str>) -> Self {
         Self {
@@ -297,9 +303,4 @@ impl<'b> LinkLogo<'b> {
             logo_size_xy,
         }
     }
-}
-
-#[derive(Params, PartialEq)]
-struct NameParams {
-    name: Option<String>,
 }
