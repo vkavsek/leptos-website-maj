@@ -226,6 +226,7 @@ impl DatabaseManager {
         )
         .execute(&mut *transaction)
         .await?;
+
         let (total, browser): (i64, i64) = sqlx::query_as(
             "SELECT count(*), coalesce(sum(browser_hash = ?), 0)
              FROM login_transactions",

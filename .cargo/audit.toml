@@ -1,0 +1,6 @@
+[advisories]
+# Reviewed 2026-11-16: openidconnect 4.1.0 uses rsa 0.9.10 only to verify Google
+# RS256 signatures with public keys; no RSA private-key operations are used.
+# Review by 2026-12-16, on dependency/advisory changes, or before any new RSA use.
+# Remove when openidconnect adopts patched rsa >=0.10. See README.md.
+ignore = ["RUSTSEC-2023-0071"]

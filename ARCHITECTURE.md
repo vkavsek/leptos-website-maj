@@ -17,6 +17,8 @@ runtime configuration and maintenance are in [README.md](README.md).
 | `src/database.rs`, `migrations/` | Shared SQLx pool settings, embedded application migrations, and session schema setup |
 | `src/cli.rs` | Clap operator interface, explicit approval/revocation, command dispatch |
 | `src/auth.rs` | SQLite sessions, browser-bound login transactions, shared authorization/CSRF guards |
+| `src/auth/google.rs` | Bounded Google metadata/key cache, OAuth2 code exchange, and RS256 ID-token validation |
+| `src/auth/login.rs` | Server-rendered sign-in, temporary identity, administrator landing, and logout routes |
 | `src/content.rs` | Validated offline import and checksummed database/gallery backups |
 | `src/app.rs` | HTML shell, shared navigation/audio layout, routes, and dialog dismissal helper |
 | `src/lib.rs` | Browser hydration entry point and shared library exports |
@@ -53,8 +55,8 @@ an Axum `Extension<Arc<ServerConfig>>`. Production requires a public HTTPS origi
 an absolute data path, and paired Google OAuth credentials. Explicit loopback
 development can omit both credentials; it does not grant administrator access.
 The secret uses `SecretString` and configuration has no `Debug` implementation.
-No auth configuration is serialized to the browser. Google login and the editing
-UI are not implemented yet. Storage contains `admin.sqlite3`
+No auth configuration is serialized to the browser. Google login is implemented;
+the content-editing UI remains pending. Storage contains `admin.sqlite3`
 with mode `0600`, plus original/thumbnail and staging directories with
 mode `0700`. Existing files are retained; unsafe ownership, modes, links, or public
 path overlap stops startup. Gallery/staging share the data root's filesystem for
@@ -83,6 +85,28 @@ enforce idle/absolute expiry and current approval/generation; mutation guards ad
 Origin and constant-time CSRF checks. Login transaction consumption is an atomic
 browser-bound delete/return operation. A scoped cleanup task removes expired
 transactions and sessions every five minutes and is aborted when serving ends.
+
+Auth routes initialize Google's HTTP client lazily. Discovery is fixed to Google's
+issuer and validates the authorization, token, and JWKS endpoint URLs against
+known Google URLs. Requests disable redirects and use bounded timeouts/bodies;
+`http-cache-semantics` determines metadata/key freshness from HTTP headers, with
+a one-hour cap and no heuristic lifetime. Non-cacheable responses are used only
+for the current lookup; responses without usable freshness are immediately stale.
+Unknown key IDs trigger throttled rotation refresh; failed lookups back off rather
+than blocking public startup. The OAuth2 exchange supplies the stored PKCE verifier.
+`openidconnect` verifies RS256 signatures, issuer, audience, expiry, and nonce.
+Application checks additionally enforce issuance time, optional not-before,
+subject shape, expiration ordering, and authorized party. `jsonwebtoken` remains
+for bounded header/JWK handling and AWS-LC fixture signing, not token verification.
+The RSA advisory exception is limited to the library's public-key verification
+path; see [the applicability assessment](README.md#rsa-advisory-applicability).
+Account tokens are neither logged nor retained.
+
+Approved callbacks rotate sessions and redirect to `/admin`. Verified unapproved
+accounts receive only five-minute identity state and redirect to `/auth/identity`
+for explicit shell-based enrollment. Admin and identity pages render on the server
+with escaped text and no JavaScript. Logout is a native POST form (or API header)
+with the same session-bound CSRF check and exact Origin policy. GET cannot log out.
 
 The HTTP process and identity commands hold shared filesystem locks. Offline
 import/backup commands require exclusive ownership across processes. Import stages

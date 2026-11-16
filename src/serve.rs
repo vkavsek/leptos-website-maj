@@ -93,6 +93,7 @@ pub fn router(
 ) -> Router {
     let sessions = crate::auth::session_layer(&database, server_config.development);
     let server_config = Arc::new(server_config);
+    let login_routes = crate::auth::login_routes(server_config.clone());
     let context_database = database.clone();
     let context_config = server_config.clone();
     let x_request_id = HeaderName::from_static(REQUEST_ID_HEADER);
@@ -134,6 +135,7 @@ pub fn router(
             },
         )
         .route("/health-check", get(health))
+        .merge(login_routes)
         .layer(
             // Adding tower_http services (except CompressionLayer)
             ServiceBuilder::new()

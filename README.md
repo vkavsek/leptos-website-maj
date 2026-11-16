@@ -63,9 +63,9 @@ first rebuild; it does not replace checking free space during long sessions.
 | `GOOGLE_CLIENT_SECRET` | Server-only OAuth secret; use hosting secrets in production or the interactive development launcher |
 
 Never commit credentials or generated secret configuration. Builds and automated
-tests do not need SMTP or Google credentials. Google sign-in and the editing UI
-are not implemented yet; private operator commands and session/authorization
-foundations are available. Missing or invalid production settings
+tests do not need SMTP or Google credentials. Google sign-in, local approval,
+logout, and private operator commands are available; the content-editing UI is
+still pending. Missing or invalid production settings
 stop startup without logging their values. Local development may omit both
 Google credentials; a partial or placeholder pair is rejected.
 
@@ -146,7 +146,7 @@ Command results go to stdout and diagnostics to stderr; `list-users` emits JSON.
 | `just admin backup --output /absolute/private/backup-name` | Snapshot database/gallery into a new directory; stop HTTP first |
 
 An approval is a local access decision, not identity verification. Copy the issuer
-and subject from the future verified Google login flow; an email address or Google
+and subject from `/auth/identity` after Google sign-in; an email address or Google
 Console Test users entry does not identify the local approval record. Re-enabling
 a revoked identity advances its generation again so old sessions cannot revive.
 Use the same binary version as the serving application for identity commands;
@@ -188,25 +188,54 @@ modes. Run `admin revoke-all-sessions` on the restored database before exposing
 it. Native tests cover isolated restore and revocation; production recovery and
 off-machine backups still require verification during deployment planning.
 
-### Session and authorization foundation
+### Google sign-in and administrator access
 
-The server shares the SQLx pool, validated configuration, and session context
+The server shares `DatabaseManager`, validated configuration, and session context
 with Axum handlers and Leptos server functions. `src/auth.rs` provides shared
 administrator and mutation guards; every future mutation must use them too.
 Private `/admin`, `/api/admin`, and `/auth` responses retain `no-store` and
-`Referrer-Policy: no-referrer`, including errors and redirects. No Google callback
-or content-editing endpoint is enabled by this foundation.
+`Referrer-Policy: no-referrer`, including errors and redirects.
+
+Visit `/admin` using the exact `MAJ_APP_ORIGIN` browser origin to sign in;
+`localhost` and `127.0.0.1` have different cookies and Origin headers.
+An account is never enrolled automatically: an
+unapproved Google account is redirected to `/auth/identity`, which shows only
+that browser's verified issuer and subject, returns HTTP 403, and expires after
+five minutes. Share those values privately with the operator. Run the approval
+command against the same data directory, then sign in again. The protected admin
+landing page currently provides account status and sign-out; content editors
+remain a later step.
+
+| Route | Purpose |
+| --- | --- |
+| `GET /auth/google/start` | Persist browser-bound state and redirect to Google with PKCE and the `openid` scope |
+| `GET /auth/google/callback` | Consume state once, exchange the code, verify identity, and check local approval |
+| `GET /auth/identity` | Temporarily show the current browser's unapproved, verified identity |
+| `POST /auth/logout` | Verify Origin/CSRF, delete the local session, and clear its cookie |
+| `GET /admin` | Show the sign-in prompt or the approved administrator landing page |
 
 Production sessions use `__Host-maj_admin`, Secure, HttpOnly, SameSite=Lax, Path=/,
 and no Domain; loopback development uses `maj_admin_dev` without Secure. Guards
 enforce 30-minute idle and eight-hour absolute limits, checking current approval
 and generation on each protected request. Mutations require an exact Origin and
-session-bound `x-csrf-token`. Expired sessions/transactions are cleaned every five
+session-bound `x-csrf-token`; the native sign-out form carries the same token in
+its hidden `csrf_token` field. Signing out affects this website, not the Google
+account. Expired sessions/transactions are cleaned every five
 minutes. Login transactions use OAuth2-generated state, PKCE and nonce material,
 expire after five minutes, and are consumed once for their initiating browser.
 At most three outstanding transactions per browser and 128 overall are allowed.
-OAuth2 supplies these primitives now; OpenID Connect token verification belongs
-to the later login implementation and must be reviewed for dependency advisories.
+Login starts and callbacks also have process-wide limits of 20 and 60 attempts
+per minute, respectively. These limits reset on process restart.
+
+OAuth2 handles the PKCE code exchange; `openidconnect` verifies RS256 signatures,
+issuer, audience, expiry and nonce. Additional checks enforce issuance time,
+optional not-before, expiration ordering, subject shape, and authorized party.
+Discovery and public keys are fetched lazily from pinned Google endpoints, with
+five-second request timeouts, 64 KiB response limits, and bounded refresh/backoff
+for rotation and failures. `http-cache-semantics` determines freshness from HTTP
+headers, capped at one hour; non-cacheable responses are discarded after use, and
+responses without usable freshness are immediately stale. Startup and existing
+local sessions make no Google requests. No access/refresh tokens are retained.
 
 **Database dependency release blocker (2026-11-13):** current advisory checks flag
 bundled `libsqlite3-sys` 0.37.0 under
@@ -215,8 +244,8 @@ A crafted database/WAL pair can expose process memory. Private storage restricts
 who can supply those files, but does not patch SQLite. SQLx 0.9.0 requires
 `libsqlite3-sys <0.38.0`, while the fix requires `>=0.39.0`; the current SQLx release
 cannot resolve the patched crate. Deployment requires a supported patched SQLite
-dependency path. No advisory exception has been added. The existing unmaintained
-`paste` advisory also remains.
+dependency path. No exception suppresses this SQLite finding. The existing
+unmaintained `paste` advisory also remains.
 
 For ordinary local development, `just dev` supplies the loopback origin and
 defaults `MAJ_DATA_DIR` to `$HOME/.local/share/maj-admin-dev`, removing Google and
@@ -279,9 +308,8 @@ never through tracked configuration.
 The production Google client ID is configured in `fly.toml`. Before deploying
 the configuration changes, provide `MAJ_APP_ORIGIN` and `MAJ_DATA_DIR` as ordinary
 runtime settings, and install `GOOGLE_CLIENT_SECRET` through Fly secrets. The production secret is
-still pending. Volume setup, Google login, and the editor
-require further implementation;
-do not treat the configuration foundation as a completed administration release.
+still pending. Production volume provisioning, real Google sign-in verification,
+and the content editors still require completion before an administration release.
 
 The server handles Ctrl+C (`SIGINT`) and `SIGTERM` by stopping new connections and
 allowing active requests up to 25 seconds to finish. SMTP delivery has a 20-second
@@ -302,8 +330,9 @@ that public default. The script clears the current clipboard
 before starting Cargo and refuses to start if clearing fails. It supports
 `wl-copy` on Wayland, `xclip` on X11, and Windows PowerShell through WSL interop.
 The secret stays out of command history and files; never paste it into the script.
-Saved clipboard history is separate and is not erased. The launcher currently
-tests configuration; actual Google sign-in is still to implement.
+Saved clipboard history is separate and is not erased. Open `/admin` after startup
+to test the development Google flow. Consent cancellation, approval, sign-out,
+and the configured callback URL should also be checked manually before deployment.
 
 ## Content maintenance
 
@@ -403,6 +432,31 @@ unmaintained `paste` 1.0.15 ([RUSTSEC-2024-0436](https://rustsec.org/advisories/
 Cargo-audit reports a warning; cargo-deny's advisory check fails under the current
 policy. Its bans and sources checks pass. No exception suppresses this finding.
 See [BUILD.md](BUILD.md#dependency-security-checks) for commands and prerequisites.
+
+### RSA advisory applicability
+
+Reviewed **2026-11-16** for `openidconnect` **4.1.0** and its `rsa` **0.9.10**
+dependency. Both [.cargo/audit.toml](.cargo/audit.toml) and [deny.toml](deny.toml)
+except only [RUSTSEC-2023-0071](https://rustsec.org/advisories/RUSTSEC-2023-0071.html).
+This private-key timing advisory does not apply to our Google sign-in verification:
+the library constructs an `RsaPublicKey` from Google's published modulus/exponent
+and verifies an RS256 signature. The application supplies no RSA private key and
+does not call RSA signing or decryption. Encrypted ID tokens and non-RS256
+signatures are rejected; the OAuth client secret is used only for HTTPS token
+exchange. Local fixture tokens are signed separately with AWS-LC.
+
+The reviewed path is `verify_rsa_signature` → `RsaPublicKey::verify` → public
+exponentiation and signature-padding verification. Private-key APIs exposed by
+the dependency are outside this path. See the
+[OpenID Connect implementation](https://github.com/ramosbugs/openidconnect-rs/blob/main/src/core/crypto.rs)
+and [RSA verification implementation](https://github.com/RustCrypto/RSA/blob/v0.9.10/src/pkcs1v15.rs).
+
+Review this exception by **2026-12-16**, whenever dependencies or the advisory
+change, and before adding any new RSA use. Remove it once upstream adopts patched
+`rsa >=0.10`. The configurations suppress this specific advisory ID, so each
+dependency change must check for new RSA paths; they do not enforce call-path
+reachability. Other advisories, including the SQLite and `paste` findings, remain
+visible and retain their existing policy.
 
 ## Logs and privacy
 

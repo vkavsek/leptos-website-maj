@@ -40,6 +40,13 @@ the separate `target/front/` and `target/tarpaulin/` builds and coverage reports
 
 Use Rust 2021 and four-space indentation. Use `snake_case` for modules/functions and `PascalCase` for types and Leptos components. Match the existing two-space indentation in SCSS and TypeScript. Keep server-only code behind `ssr` and hydration code behind `hydrate`. Reuse existing components and SCSS theme variables.
 
+Before writing a Rust implementation, check [crates.io](https://crates.io/) for
+an existing crate that meets the requirements. Use a suitable actively maintained
+crate rather than writing a custom implementation. A crate without recent
+maintenance is also acceptable if current `cargo-audit` and `cargo-deny` checks
+show no applicable security problems in it or its transitive dependencies.
+Follow the dependency security policy below when evaluating and adding crates.
+
 After module documentation and inner attributes, put module declarations (`mod name;`)
 first, then all module-wide imports and re-exports (`use`/`pub use`), then
 module-wide constants and statics. Order the remaining Rust items as follows:

@@ -5,8 +5,11 @@
 //! Session cookies contain opaque IDs, while authentication data stays in SQLite.
 //! Leptos server functions and ordinary Axum handlers use the same guards.
 //!
-//! These are foundations for the Google flow: saving or consuming login state
-//! does not itself verify a Google identity or grant administrator access.
+//! Google callbacks verify identity before establishing an approved session.
+//! Saving or consuming login state alone never grants administrator access.
+
+mod google;
+mod login;
 
 use crate::{database::DatabaseManager, server_config::ServerConfig};
 use axum::response::{IntoResponse, Response};
@@ -14,6 +17,7 @@ use http::{
     header::{CACHE_CONTROL, ORIGIN, REFERRER_POLICY},
     HeaderMap, StatusCode,
 };
+pub(crate) use login::routes as login_routes;
 use oauth2::{CsrfToken, PkceCodeChallenge, PkceCodeVerifier};
 use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
@@ -46,6 +50,14 @@ pub enum AuthError {
     /// HTTP 429: outstanding login transactions reached a browser or global limit.
     Busy,
 }
+
+impl std::fmt::Display for AuthError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("Authentication request failed")
+    }
+}
+
+impl std::error::Error for AuthError {}
 
 impl AuthError {
     /// Converts a guard failure for a Leptos server function without exposing details.
@@ -165,6 +177,8 @@ pub async fn establish(
     // Rotate the session ID and discard pre-login data to prevent session fixation.
     session.clear().await;
     session.cycle_id().await?;
+    // A prior unapproved login may have given this browser a shorter fixed expiry.
+    session.set_expiry(Some(Expiry::OnInactivity(Duration::seconds(IDLE_SECONDS))));
     let now = chrono::Utc::now().timestamp();
     session
         .insert(
@@ -262,8 +276,8 @@ pub async fn require_admin(
     // Reload approval so revocation takes effect even for an already loaded session.
     let administrator = database.administrator(authenticated.id).await?;
     let administrator = match administrator {
-        Some(admins) if admins.enabled && admins.session_generation == authenticated.generation => {
-            admins
+        Some(admin) if admin.enabled && admin.session_generation == authenticated.generation => {
+            admin
         }
         _ => {
             session.flush().await?;
@@ -290,25 +304,7 @@ pub async fn require_mutation(
     origin: &str,
 ) -> Result<Administrator, AuthError> {
     let administrator = require_admin(session, database).await?;
-    // Require unambiguous headers before comparing the browser's session-bound token.
-    if headers.get_all(ORIGIN).iter().count() != 1
-        || headers.get(ORIGIN).and_then(|value| value.to_str().ok()) != Some(origin)
-        || headers.get_all("x-csrf-token").iter().count() != 1
-    {
-        return Err(AuthError::Forbidden);
-    }
-    let supplied = headers
-        .get("x-csrf-token")
-        .ok_or(AuthError::Forbidden)?
-        .as_bytes();
-    let stored: AdminSession = session
-        .get(ADMIN_KEY)
-        .await?
-        .ok_or(AuthError::Unauthorized)?;
-    // A constant-time comparison avoids revealing a matching token prefix through timing.
-    if !bool::from(supplied.ct_eq(stored.csrf.as_bytes())) {
-        return Err(AuthError::Forbidden);
-    }
+    require_csrf(session, headers, origin).await?;
     Ok(administrator)
 }
 
@@ -407,7 +403,10 @@ pub async fn private_routes(
         || path == "/api/admin"
         || path.starts_with("/api/admin/");
     let private = admin || path == "/auth" || path.starts_with("/auth/");
-    let mut response = if admin {
+    // The HTML entry page renders its own login prompt; API namespaces still fail with 401.
+    let entry_page =
+        path == "/admin" && matches!(*request.method(), http::Method::GET | http::Method::HEAD);
+    let mut response = if admin && !entry_page {
         // Reads need approval; other methods additionally require Origin and CSRF checks.
         let access = if matches!(*request.method(), http::Method::GET | http::Method::HEAD) {
             require_admin(&session, &database).await
@@ -456,6 +455,34 @@ struct AdminSession {
 }
 
 // Internal policy and helpers.
+
+/// Checks mutation headers after the caller has established current administrator approval.
+async fn require_csrf(
+    session: &Session,
+    headers: &HeaderMap,
+    origin: &str,
+) -> Result<(), AuthError> {
+    // Require unambiguous headers before comparing the browser's session-bound token.
+    if headers.get_all(ORIGIN).iter().count() != 1
+        || headers.get(ORIGIN).and_then(|value| value.to_str().ok()) != Some(origin)
+        || headers.get_all("x-csrf-token").iter().count() != 1
+    {
+        return Err(AuthError::Forbidden);
+    }
+    let supplied = headers
+        .get("x-csrf-token")
+        .ok_or(AuthError::Forbidden)?
+        .as_bytes();
+    let stored: AdminSession = session
+        .get(ADMIN_KEY)
+        .await?
+        .ok_or(AuthError::Unauthorized)?;
+    // A constant-time comparison avoids revealing a matching token prefix through timing.
+    if !bool::from(supplied.ct_eq(stored.csrf.as_bytes())) {
+        return Err(AuthError::Forbidden);
+    }
+    Ok(())
+}
 
 /// Hashes high-entropy protocol bindings for login-transaction database lookups.
 fn hash(value: &str) -> String {

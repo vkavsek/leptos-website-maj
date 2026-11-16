@@ -66,6 +66,10 @@ tower-sessions = { version = "0.15", default-features = false, features = [
   "axum-core",
 ], optional = true }
 oauth2 = { version = "5", default-features = false, optional = true }
+openidconnect = { version = "4.1", default-features = false, optional = true }
+jsonwebtoken = { version = "12", default-features = false, features = ["aws_lc_rs", "use_pem"], optional = true }
+reqwest = { version = "0.13", default-features = false, features = ["rustls"], optional = true }
+http-cache-semantics = { version = "3", default-features = false, features = ["reqwest"], optional = true }
 sha2 = { version = "0.11", optional = true }
 subtle = { version = "2", optional = true }
 tempfile = { version = "3", optional = true }
@@ -97,6 +101,10 @@ ssr = [
   "dep:tower-sessions-sqlx-store",
   "dep:tower-sessions",
   "dep:oauth2",
+  "dep:openidconnect",
+  "dep:jsonwebtoken",
+  "dep:reqwest",
+  "dep:http-cache-semantics",
   "dep:sha2",
   "dep:subtle",
   "dep:tempfile",

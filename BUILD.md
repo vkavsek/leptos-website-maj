@@ -18,9 +18,9 @@ For native Linux builds, install:
 - A C/C++ build toolchain, Clang, and LLD. The x86_64 Linux linker configuration
   in `.cargo/config.toml` uses Clang with LLD.
 - OpenSSL development headers and `pkg-config` for Lettre's native TLS support.
-- CA certificates for dependency downloads and SMTP TLS certificate verification.
+- CA certificates for dependency downloads, SMTP TLS, and Google HTTPS verification.
 
-SQLx builds bundled SQLite with the C toolchain; no external database server or
+SQLx and the AWS-LC JWT/TLS backend use the C toolchain; no external database server or
 SQLite development package is needed. For creating migration files, install the
 matching SQLx CLI (0.9):
 
@@ -135,6 +135,8 @@ focused group, use `just test --lib FILTER` with one of these filters:
 | `database::tests` | Pooled connection settings, migrations/reopen, constraints, corruption, writer contention, and concurrent login limits across manager clones |
 | `cli::tests` | Clap validation, explicit approvals, idempotency, revocation, and generation overflow |
 | `auth::tests` | Cookie policy, expiry, revocation, CSRF/Origin, PKCE state binding/replay, and transaction bounds |
+| `auth::google::tests` | Locally signed ID tokens, claim failures, pinned metadata, HTTP bounds, and key-cache rotation/backoff |
+| `auth::login::tests` | Mocked callbacks, approval/enrollment isolation, sign-out, escaped pages, and login rate limits |
 | `content::tests` | YouTube validation, import rollback/repeat safety, private files, and checksummed backup/restore |
 
 Run the album HTTP regression test separately with:
@@ -223,8 +225,10 @@ just deny
 `just security` runs both commands. cargo-audit checks `Cargo.lock`; cargo-deny
 uses [deny.toml](deny.toml) with all features enabled for dependency graph analysis,
 without compiling `ssr` and `hydrate` together. Its selected checks are advisories,
-bans, and sources. Both commands retain their nonzero exit status on failure;
-no advisory exceptions are configured.
+bans, and sources. Both commands retain their nonzero exit status on failure.
+The sole exception, configured for both tools, is `RUSTSEC-2023-0071` for RSA
+public-key verification; see the
+[applicability assessment and review conditions](README.md#rsa-advisory-applicability).
 
 Normal runs need network access to refresh advisory data and dependency metadata.
 For an explicitly cached development check after the databases are populated,
