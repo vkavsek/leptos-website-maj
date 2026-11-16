@@ -10,6 +10,38 @@ test("native content forms publish and remove live records", async ({ page, cont
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/admin");
   await expect(page.getByRole("heading", { name: "Administration", exact: true })).toBeVisible();
+  const navigation = page.getByRole("navigation", { name: "Content editors" });
+  const select = async (kind: string) => {
+    const labels: Record<string, string> = { gallery: "Gallery", shows: "Shows", videos: "YouTube videos" };
+    const label = labels[kind];
+    await navigation.getByRole("link", { name: label, exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`section=${kind}$`));
+    await expect(navigation.getByRole("link", { name: label, exact: true })).toHaveAttribute("aria-current", "page");
+    await expect(page.locator("main section")).toHaveCount(1);
+    await expect(page.locator(`#${kind}`)).toBeVisible();
+  };
+  await expect(page.locator("main section")).toHaveCount(1);
+  await expect(page.locator("#gallery")).toBeVisible();
+  await select("shows");
+  await select("videos");
+  await page.goBack();
+  await expect(page.locator("#shows")).toBeVisible();
+  await page.goForward();
+  await expect(page.locator("#videos")).toBeVisible();
+  const publishedVideo = testInfo.project.name === "chromium" ? "RBwe-c9T5sY" : "73KJzjvW_1Q";
+  const publishedPhoto = `published_${testInfo.project.name}.jpg`;
+  // These records were imported before the browser signed in, rather than added by its forms.
+  for (const [kind, label] of [["shows", `Published ${testInfo.project.name}`], ["videos", publishedVideo], ["gallery", publishedPhoto]]) {
+    await select(kind);
+    const form = page.locator(`#${kind} li`).filter({ hasText: label }).getByRole("form");
+    await expect(form).toBeVisible();
+    await form.getByRole("checkbox", { name: "Confirm permanent removal" }).check();
+    await form.getByRole("button", { name: "Remove", exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`section=${kind}$`));
+    await expect(form).toHaveCount(0);
+  }
+  expect((await request.get(`/img/about_pics/${publishedPhoto}`)).status()).toBe(404);
+  await select("shows");
   const showName = `Browser ${testInfo.project.name} <script>literal</script>`;
   const show = page.getByRole("form", { name: "Shows", exact: true });
   await show.getByLabel("Date (required)").fill("2028-02-29");
@@ -20,12 +52,14 @@ test("native content forms publish and remove live records", async ({ page, cont
   await expect(page.locator("#shows")).toContainText(showName);
   expect(await (await request.get("/api/get_shows")).text()).toContain(showName);
 
+  await select("videos");
   const videoId = testInfo.project.name === "chromium" ? "3uh_Jc1prRQ" : "dQw4w9WgXcQ";
   await page.getByLabel("YouTube URL (required)").fill(`https://youtu.be/${videoId}`);
   await page.getByRole("button", { name: "Add video" }).click();
   await expect(page.locator("#videos")).toContainText(videoId);
   expect(await (await request.get("/api/get_media_videos")).text()).toContain(`/embed/${videoId}`);
 
+  await select("gallery");
   const photoName = `Browser ${testInfo.project.name}.PNG`;
   const normalizedName = `browser_${testInfo.project.name}.png`;
   const photo = await page.screenshot();
@@ -37,7 +71,9 @@ test("native content forms publish and remove live records", async ({ page, cont
   expect((await request.get(`/img/about_thumbnails/${normalizedName}.webp`)).status()).toBe(200);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 
+  await page.screenshot({ path: testInfo.outputPath("admin-published-gallery.png"), fullPage: true });
   for (const [kind, label] of [["shows", showName], ["videos", videoId], ["gallery", normalizedName]]) {
+    await select(kind);
     const form = page.locator(`#${kind} li`).filter({ hasText: label }).getByRole("form");
     const confirmation = form.getByRole("checkbox", { name: "Confirm permanent removal" });
     await expect(confirmation).not.toBeChecked();
@@ -47,6 +83,7 @@ test("native content forms publish and remove live records", async ({ page, cont
     await form.getByRole("button", { name: "Remove", exact: true }).click();
     await expect(form).toHaveCount(0);
   }
+  await page.screenshot({ path: testInfo.outputPath("admin-section.png"), fullPage: true });
   expect((await request.get(imageUrl)).status()).toBe(404);
   expect(await (await request.get("/api/get_shows")).text()).not.toContain(showName);
   expect(await (await request.get("/api/get_media_videos")).text()).not.toContain(videoId);

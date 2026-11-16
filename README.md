@@ -344,7 +344,11 @@ and the configured callback URL should also be checked manually before deploymen
 ## Content maintenance
 
 The administrator page at `/admin` adds/removes gallery photos, shows, and YouTube
-videos. Forms work without JavaScript. Removal requires checking the confirmation
+videos. Its navigation opens one editor at a time (`?section=gallery`, `shows`, or
+`videos`); Gallery opens by default. The Published list below each add form includes
+all current records, including content imported before the administrator signed in.
+Select the item's confirmation box, then Remove to unpublish it. Successful changes
+return to the same editor; ordinary browser Back/Forward also switches sections. Forms work without JavaScript. Removal requires checking the confirmation
 box for that item; a stale removal cannot delete a newly created item because IDs
 are never reused. Each successful submission redirects to a fresh catalog listing.
 Existing visitors see changes on their next page load/resource reload; there is no

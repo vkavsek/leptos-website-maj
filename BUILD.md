@@ -273,6 +273,10 @@ To test an existing development server, use
 `env PLAYWRIGHT_BASE_URL=http://127.0.0.1:8080 just e2e`.
 Direct Playwright invocations still use the configuration's default port 8080.
 Playwright does not start a server. Stop the test server with Ctrl+C when finished.
+Run `just test-shutdown` before `just test-server`, rather than concurrently: its
+plain Cargo build replaces the debug executable without cargo-leptos's compile-time
+bundle naming. `just test-server` rebuilds the matching server/WASM assets. If
+starting the binary manually after standalone Cargo checks, run `just build` first.
 Before testing public gallery/media/show pages against a fresh data directory,
 stop HTTP and seed that same directory with `just admin import-content --source public`.
 For the default `test-server` directory use

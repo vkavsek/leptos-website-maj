@@ -18,6 +18,7 @@ use axum::{
 };
 use http::{HeaderValue, StatusCode};
 use leptos::prelude::*;
+use serde::Deserialize;
 use std::{collections::BTreeMap, sync::Arc, time::Duration};
 use tokio::sync::Semaphore;
 use tower_sessions::Session;
@@ -31,14 +32,41 @@ pub(super) fn routes() -> Router<leptos::config::LeptosOptions> {
         .layer(DefaultBodyLimit::max(gallery::UPLOAD_BYTES + 16 * 1024))
 }
 
+/// Validated editor selection; normal links work without scripts and with browser history.
+#[derive(Clone, Copy, Default, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub(super) enum Section {
+    #[default]
+    Gallery,
+    Shows,
+    Videos,
+}
+
 /// Render current records and explicit removal confirmation without exposing stored filenames.
 pub(super) async fn content(
     database: &DatabaseManager,
     csrf: &str,
+    section: Section,
 ) -> Result<impl IntoView, AuthError> {
-    let photos = database.gallery().await?;
-    let shows = database.shows().await?;
-    let videos = database.videos().await?;
+    // Render and query only the selected catalog, including imported and older records.
+    let photos = if section == Section::Gallery {
+        database.gallery().await?
+    } else {
+        Vec::new()
+    };
+    let shows = if section == Section::Shows {
+        database.shows().await?
+    } else {
+        Vec::new()
+    };
+    let videos = if section == Section::Videos {
+        database.videos().await?
+    } else {
+        Vec::new()
+    };
+    let photo_count = photos.len();
+    let show_count = shows.len();
+    let video_count = videos.len();
 
     let gallery_items = photos
         .into_iter()
@@ -100,95 +128,132 @@ pub(super) async fn content(
 
     Ok(view! {
         <nav aria-label="Content editors">
-            <a href="#gallery">"Gallery"</a>
+            <a
+                href="/admin?section=gallery"
+                aria-current=(section == Section::Gallery).then_some("page")
+            >
+                "Gallery"
+            </a>
             " · "
-            <a href="#shows">"Shows"</a>
+            <a
+                href="/admin?section=shows"
+                aria-current=(section == Section::Shows).then_some("page")
+            >
+                "Shows"
+            </a>
             " · "
-            <a href="#videos">"YouTube videos"</a>
+            <a
+                href="/admin?section=videos"
+                aria-current=(section == Section::Videos).then_some("page")
+            >
+                "YouTube videos"
+            </a>
         </nav>
         <p>
             "Changes appear publicly on the next page load. Removal is permanent; confirm the item before removing it."
         </p>
-        <section id="gallery">
-            <h2 id="gallery-heading">"Gallery"</h2>
-            <form
-                action="/admin/content"
-                method="post"
-                enctype="multipart/form-data"
-                aria-labelledby="gallery-heading"
-            >
-                {fields(csrf, "gallery", "add")}
-                <label for="photo">"Photo (required)"</label>
-                <p id="photo-help">
-                    "JPEG, PNG or WebP; up to 10 MiB, 12 megapixels and 6000 pixels per side. Use letters, numbers, spaces, underscores or hyphens in the filename. Spaces become underscores and letters become lowercase. Duplicate names are rejected. JPEGs stay JPEG; other photos become PNG."
-                </p>
-                <input
-                    type="file"
-                    id="photo"
-                    name="photo"
-                    accept="image/jpeg,image/png,image/webp"
-                    required
-                    aria-describedby="photo-help"
-                />
-                <button type="submit">"Add photo"</button>
-            </form>
-            <ul>{gallery_items}</ul>
-        </section>
-        <section id="shows">
-            <h2 id="shows-heading">"Shows"</h2>
-            <form
-                action="/admin/content"
-                method="post"
-                enctype="multipart/form-data"
-                aria-labelledby="shows-heading"
-            >
-                {fields(csrf, "shows", "add")}
-                <label for="date">"Date (required)"</label>
-                <input
-                    type="date"
-                    id="date"
-                    name="date"
-                    min="0001-01-01"
-                    max="9999-12-31"
-                    required
-                />
-                <label for="name">"Event name (optional)"</label>
-                <input id="name" name="name" maxlength="500" />
-                <label for="club">"Venue (optional)"</label>
-                <input id="club" name="club" maxlength="500" />
-                <label for="location">"Location (optional)"</label>
-                <input id="location" name="location" maxlength="500" />
-                <button type="submit">"Add show"</button>
-            </form>
-            <ul>{show_items}</ul>
-        </section>
-        <section id="videos">
-            <h2 id="videos-heading">"YouTube videos"</h2>
-            <form
-                action="/admin/content"
-                method="post"
-                enctype="multipart/form-data"
-                aria-labelledby="videos-heading"
-            >
-                {fields(csrf, "videos", "add")}
-                <label for="url">"YouTube URL (required)"</label>
-                <p id="url-help">
-                    "Paste an HTTPS YouTube watch, short, live, embed or youtu.be link."
-                </p>
-                <input
-                    type="url"
-                    id="url"
-                    name="url"
-                    maxlength="2048"
-                    required
-                    aria-describedby="url-help"
-                    autocapitalize="none"
-                    spellcheck="false"
-                />
-                <button type="submit">"Add video"</button>
-            </form>
-            <ul>{video_items}</ul>
-        </section>
+        {(section == Section::Gallery)
+            .then(|| {
+                view! {
+                    <section id="gallery">
+                        <h2 id="gallery-heading">"Gallery"</h2>
+                        <form
+                            action="/admin/content"
+                            method="post"
+                            enctype="multipart/form-data"
+                            aria-labelledby="gallery-heading"
+                        >
+                            {fields(csrf, "gallery", "add")}
+                            <label for="photo">"Photo (required)"</label>
+                            <p id="photo-help">
+                                "JPEG, PNG or WebP; up to 10 MiB, 12 megapixels and 6000 pixels per side. Use letters, numbers, spaces, underscores or hyphens in the filename. Spaces become underscores and letters become lowercase. Duplicate names are rejected. JPEGs stay JPEG; other photos become PNG."
+                            </p>
+                            <input
+                                type="file"
+                                id="photo"
+                                name="photo"
+                                accept="image/jpeg,image/png,image/webp"
+                                required
+                                aria-describedby="photo-help"
+                            />
+                            <button type="submit">"Add photo"</button>
+                        </form>
+                        <h3>"Published photos ("{photo_count}")"</h3>
+                        {(photo_count == 0).then(|| view! { <p>"No published photos."</p> })}
+                        <ul>{gallery_items}</ul>
+                    </section>
+                }
+            })}
+        {(section == Section::Shows)
+            .then(|| {
+                view! {
+                    <section id="shows">
+                        <h2 id="shows-heading">"Shows"</h2>
+                        <form
+                            action="/admin/content"
+                            method="post"
+                            enctype="multipart/form-data"
+                            aria-labelledby="shows-heading"
+                        >
+                            {fields(csrf, "shows", "add")}
+                            <label for="date">"Date (required)"</label>
+                            <input
+                                type="date"
+                                id="date"
+                                name="date"
+                                min="0001-01-01"
+                                max="9999-12-31"
+                                required
+                            />
+                            <label for="name">"Event name (optional)"</label>
+                            <input id="name" name="name" maxlength="500" />
+                            <label for="club">"Venue (optional)"</label>
+                            <input id="club" name="club" maxlength="500" />
+                            <label for="location">"Location (optional)"</label>
+                            <input id="location" name="location" maxlength="500" />
+                            <button type="submit">"Add show"</button>
+                        </form>
+                        <h3>"Published shows ("{show_count}")"</h3>
+                        {(show_count == 0).then(|| view! { <p>"No published shows."</p> })}
+                        <ul>{show_items}</ul>
+                    </section>
+                }
+            })}
+        {(section == Section::Videos)
+            .then(|| {
+                view! {
+                    <section id="videos">
+                        <h2 id="videos-heading">"YouTube videos"</h2>
+                        <form
+                            action="/admin/content"
+                            method="post"
+                            enctype="multipart/form-data"
+                            aria-labelledby="videos-heading"
+                        >
+                            {fields(csrf, "videos", "add")}
+                            <label for="url">"YouTube URL (required)"</label>
+                            <p id="url-help">
+                                "Paste an HTTPS YouTube watch, short, live, embed or youtu.be link."
+                            </p>
+                            <input
+                                type="url"
+                                id="url"
+                                name="url"
+                                maxlength="2048"
+                                required
+                                aria-describedby="url-help"
+                                autocapitalize="none"
+                                spellcheck="false"
+                            />
+                            <button type="submit">"Add video"</button>
+                        </form>
+                        <h3>"Published YouTube videos ("{video_count}")"</h3>
+                        {(video_count == 0)
+                            .then(|| view! { <p>"No published YouTube videos."</p> })}
+                        <ul>{video_items}</ul>
+                    </section>
+                }
+            })}
     })
 }
 
@@ -405,7 +470,7 @@ async fn submit(
             content_id = id,
             "Content changed"
         );
-        Ok(Redirect::to(&format!("/admin#{kind}")).into_response())
+        Ok(Redirect::to(&format!("/admin?section={kind}")).into_response())
     }
     .await;
     result.unwrap_or_else(|response| response)
@@ -575,6 +640,10 @@ mod tests {
     async fn browser_content_workflows() {
         let _lock = TEST_LOCK.lock().await;
         let (root, database, _app, cookie, _csrf) = fixture().await;
+        let source = crate::test_support::content_source();
+        crate::content::import(&database, root.path(), source.path())
+            .await
+            .unwrap();
         let firefox = crate::auth::test_session(&database);
         crate::auth::establish(&firefox, &database, "issuer", "owner")
             .await
@@ -619,6 +688,105 @@ mod tests {
         let _ = server.await;
         database.close().await;
         assert!(result.unwrap().success(), "Browser workflow tests failed");
+    }
+
+    #[tokio::test]
+    async fn imported_records_remain_manageable_after_restart_and_each_section_lists_its_catalog() {
+        let _lock = TEST_LOCK.lock().await;
+        let (root, database, app, cookie, csrf) = fixture().await;
+        let source = crate::test_support::content_source();
+        crate::content::import(&database, root.path(), source.path())
+            .await
+            .unwrap();
+        // Reopen the same durable data, using the original saved browser session.
+        drop(app);
+        database.close().await;
+        let database = DatabaseManager::initialize(root.path()).await.unwrap();
+        let options = leptos::config::LeptosOptions::builder()
+            .output_name("test")
+            .build();
+        let app = crate::serve::router(
+            Vec::new(),
+            options,
+            crate::test_support::config(root.path()),
+            database.clone(),
+        );
+        let show = database.shows().await.unwrap()[0].id;
+        let video = database.videos().await.unwrap()[0].id;
+        let photo = database.gallery().await.unwrap().remove(0);
+        for (kind, id, marker) in [
+            ("shows", show, "Published chromium"),
+            ("videos", video, "RBwe-c9T5sY"),
+            ("gallery", photo.id, photo.public_name.as_str()),
+        ] {
+            let response = app
+                .clone()
+                .oneshot(
+                    Request::get(format!("/admin?section={kind}"))
+                        .header(COOKIE, &cookie)
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::OK);
+            let html = String::from_utf8(
+                to_bytes(response.into_body(), 100_000)
+                    .await
+                    .unwrap()
+                    .to_vec(),
+            )
+            .unwrap();
+            assert!(html.contains(marker));
+            assert_eq!(html.matches("<li>").count(), 2);
+            assert_eq!(html.matches("<section ").count(), 1);
+            assert!(html.contains(&format!("id=\"{kind}\"")));
+            assert!(html.contains(&format!("name=\"id\" value=\"{id}\"")));
+            let id = id.to_string();
+            let fields = [
+                ("csrf_token", csrf.as_str()),
+                ("kind", kind),
+                ("action", "remove"),
+                ("id", id.as_str()),
+                ("confirmed", "yes"),
+            ];
+            let response = post(&app, &cookie, "http://localhost:8080", &fields, None).await;
+            assert_eq!(response.status(), StatusCode::SEE_OTHER);
+            assert_eq!(
+                response.headers()[LOCATION],
+                format!("/admin?section={kind}")
+            );
+        }
+        assert_eq!(
+            get(
+                &app,
+                &crate::routes::about::gallery_image_url(&photo.public_name)
+            )
+            .await
+            .status(),
+            StatusCode::NOT_FOUND
+        );
+        for query in ["section=unknown", "section=shows&section=videos"] {
+            assert_eq!(
+                app.clone()
+                    .oneshot(
+                        Request::get(format!("/admin?{query}"))
+                            .header(COOKIE, &cookie)
+                            .body(Body::empty())
+                            .unwrap()
+                    )
+                    .await
+                    .unwrap()
+                    .status(),
+                StatusCode::BAD_REQUEST
+            );
+        }
+        database.close().await;
+        let reopened = DatabaseManager::initialize(root.path()).await.unwrap();
+        assert_eq!(reopened.shows().await.unwrap().len(), 1);
+        assert_eq!(reopened.videos().await.unwrap().len(), 1);
+        assert_eq!(reopened.gallery().await.unwrap().len(), 1);
+        reopened.close().await;
     }
 
     #[tokio::test]
@@ -703,7 +871,7 @@ mod tests {
         let html = app
             .clone()
             .oneshot(
-                Request::get("/admin")
+                Request::get("/admin?section=shows")
                     .header(COOKIE, &cookie)
                     .body(Body::empty())
                     .unwrap(),

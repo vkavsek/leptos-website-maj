@@ -1,36 +1,36 @@
 # Application architecture
 
 The application uses Leptos for server rendering and browser hydration, Axum on
-Tokio for HTTP, and Lettre for SMTP delivery. Public content comes from files;
-private SQLite storage holds approval and session tables. Build and
+Tokio for HTTP, and Lettre for SMTP delivery. SQLite holds the live gallery, shows,
+videos, approval and sessions; other static content remains in built assets. Build and
 test commands are in [BUILD.md](BUILD.md), and
-runtime configuration and maintenance are in [README.md](README.md).
+runtime configuration and maintenance are in [README.md](./README.md).
 
 ## Source organization
 
-| Location | Responsibility |
-| --- | --- |
-| `justfile` | Shared build/run/test, deployment, and content-maintenance commands |
-| `src/main.rs` | Logging, validated server/Leptos configuration, route generation, and TCP listener |
-| `src/server_config.rs` | Server-only origin/data-path validation and optional development Google credentials |
-| `src/storage.rs` | Private layout, ownership/mode validation, and public/data separation |
-| `src/database.rs`, `migrations/` | Shared SQLx pool settings, embedded application migrations, and session schema setup |
-| `src/cli.rs` | Clap operator interface, explicit approval/revocation, command dispatch |
-| `src/auth.rs` | SQLite sessions, browser-bound login transactions, shared authorization/CSRF guards |
-| `src/auth/google.rs` | Bounded Google metadata/key cache, OAuth2 code exchange, and RS256 ID-token validation |
-| `src/auth/editor.rs` | Native content forms with approval, Origin/CSRF checks and bounded uploads |
-| `src/content/gallery.rs` | Image decoding/staging, publication and catalog-gated serving |
-| `src/auth/login.rs` | Server-rendered sign-in, temporary identity, administrator landing, and logout routes |
-| `src/content.rs` | Shared validation, offline import and checksummed database/gallery backups |
-| `src/app.rs` | HTML shell, shared navigation/audio layout, routes, and dialog dismissal helper |
-| `src/lib.rs` | Browser hydration entry point and shared library exports |
-| `src/serve.rs` | Axum router, server functions, request tracing, compression, and response headers |
-| `src/fallback.rs` | Static file service and missing-file HTML fallback |
-| `src/routes/` | Pages, content loaders, and contact server function |
-| `src/audio/` | Audio player and browser media event handling |
-| `style/` | SCSS entry point and partials |
-| `public/` | Source images, fonts, music, and JSON content |
-| `tests/`, `end2end/tests/` | Rust integration fixtures/tests and Playwright browser tests |
+| Location                         | Responsibility                                                                         |
+| -------------------------------- | -------------------------------------------------------------------------------------- |
+| `justfile`                       | Shared build/run/test, deployment, and content-maintenance commands                    |
+| `src/main.rs`                    | Logging, validated server/Leptos configuration, route generation, and TCP listener     |
+| `src/server_config.rs`           | Server-only origin/data-path validation and optional development Google credentials    |
+| `src/storage.rs`                 | Private layout, ownership/mode validation, and public/data separation                  |
+| `src/database.rs`, `migrations/` | Shared SQLx pool settings, embedded application migrations, and session schema setup   |
+| `src/cli.rs`                     | Clap operator interface, explicit approval/revocation, command dispatch                |
+| `src/auth.rs`                    | SQLite sessions, browser-bound login transactions, shared authorization/CSRF guards    |
+| `src/auth/google.rs`             | Bounded Google metadata/key cache, OAuth2 code exchange, and RS256 ID-token validation |
+| `src/auth/editor.rs`             | Native content forms with approval, Origin/CSRF checks and bounded uploads             |
+| `src/content/gallery.rs`         | Image decoding/staging, publication and catalog-gated serving                          |
+| `src/auth/login.rs`              | Server-rendered sign-in, temporary identity, administrator landing, and logout routes  |
+| `src/content.rs`                 | Shared validation, offline import and checksummed database/gallery backups             |
+| `src/app.rs`                     | HTML shell, shared navigation/audio layout, routes, and dialog dismissal helper        |
+| `src/lib.rs`                     | Browser hydration entry point and shared library exports                               |
+| `src/serve.rs`                   | Axum router, server functions, request tracing, compression, and response headers      |
+| `src/fallback.rs`                | Static file service and missing-file HTML fallback                                     |
+| `src/routes/`                    | Pages, content loaders, and contact server function                                    |
+| `src/audio/`                     | Audio player and browser media event handling                                          |
+| `style/`                         | SCSS entry point and partials                                                          |
+| `public/`                        | Source images, fonts, music, and JSON content                                          |
+| `tests/`, `end2end/tests/`       | Rust integration fixtures/tests and Playwright browser tests                           |
 
 ## Rendering and request flow
 
@@ -156,7 +156,10 @@ Show dates use ISO storage and the existing public day.month.year display, with
 chronological sorting. Blocking Leptos resources allow failures to set HTTP 500
 before streaming, without exposing database diagnostics.
 
-The `/admin` landing page reads the same catalogs. `POST /admin/content` accepts
+The `/admin` landing page reads the selected catalog via an allowlisted
+`?section=gallery|shows|videos` query (Gallery by default). Navigation uses normal
+links with `aria-current` and renders one editor at a time. Published lists include
+all imported and subsequently added records. `POST /admin/content` accepts
 native multipart forms: the first field is the session CSRF token, checked before
 reading file data. Middleware verifies approval and exact Origin before parsing;
 the handler rechecks approval after IO and before publication. Other admin mutations
@@ -184,11 +187,11 @@ photo only when opened. Biography remains Rust content with no editor or mutatio
 The `SendMail` server function in `src/routes/home.rs` trims surrounding whitespace,
 then validates the submission before reserving a sending slot or contacting SMTP.
 
-| Field | Requirement |
-| --- | --- |
-| Name | Optional; at most 100 characters |
-| Email | Required; valid address syntax and at most 254 UTF-8 bytes |
-| Subject | Required; 1–200 characters on a single line |
+| Field   | Requirement                                                 |
+| ------- | ----------------------------------------------------------- |
+| Name    | Optional; at most 100 characters                            |
+| Email   | Required; valid address syntax and at most 254 UTF-8 bytes  |
+| Subject | Required; 1–200 characters on a single line                 |
 | Message | Required; 1–10,000 characters; line breaks and tabs allowed |
 
 Text lengths use UTF-16 code units to match browser `maxlength` behavior.

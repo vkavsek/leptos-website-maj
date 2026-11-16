@@ -78,7 +78,6 @@ pub(super) fn login_failure(error: AuthError) -> Response {
 
 /// Renders a script-free HTML response with a restrictive content security policy.
 /// The surrounding `private_routes` middleware supplies cache/referrer privacy headers.
-/// FIX: format
 pub(super) fn page(status: StatusCode, title: &'static str, body: impl IntoView) -> Response {
     // Leptos escapes all dynamic text/attributes. No tokens or provider diagnostics enter scripts.
     let html = view! {
@@ -89,7 +88,61 @@ pub(super) fn page(status: StatusCode, title: &'static str, body: impl IntoView)
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
                 <title>{title}" - Maj Kavšek"</title>
                 <style>
-                    "body { font-family: system-ui, sans-serif; line-height: 1.5; margin: 1rem; } main { max-width: 45rem; margin-inline: auto; } code, li { overflow-wrap: anywhere; } button, input { font: inherit; min-height: 48px; padding: .5rem; box-sizing: border-box; max-width: 100%; } input:not([type=hidden]):not([type=checkbox]) { display: block; width: 100%; margin-block-end: 1rem; } input[type=checkbox] { min-height: auto; } label { display: inline-block; padding-block: .5rem; } form, section { margin-block: 1.5rem; } fieldset { min-width: 0; } a { display: inline-block; padding-block: .75rem; } img { max-width: 100%; height: auto; } :focus-visible { outline: 3px solid #1656b8; outline-offset: 3px; }"
+                    r#"
+                    body {
+                        font-family: system-ui, sans-serif;
+                        line-height: 1.5;
+                        margin: 1rem;
+                    }
+                    main {
+                        max-width: 45rem;
+                        margin-inline: auto;
+                    }
+                    code, li {
+                        overflow-wrap: anywhere;
+                    }
+                    button, input {
+                        font: inherit;
+                        min-height: 48px;
+                        padding: .5rem;
+                        box-sizing: border-box;
+                        max-width: 100%;
+                    }
+                    input:not([type=hidden]):not([type=checkbox]) {
+                        display: block;
+                        width: 100%;
+                        margin-block-end: 1rem;
+                    }
+                    input[type=checkbox] {
+                        min-height: auto;
+                    }
+                    label {
+                        display: inline-block;
+                        padding-block: .5rem;
+                    }
+                    form, section {
+                        margin-block: 1.5rem;
+                    }
+                    fieldset {
+                        min-width: 0;
+                    }
+                    a {
+                        display: inline-block;
+                        padding-block: .75rem;
+                    }
+                    img {
+                        max-width: 100%;
+                        height: auto;
+                    }
+                    [aria-current=page] {
+                        font-weight: bold;
+                        text-decoration-thickness: .2em;
+                    }
+                    :focus-visible {
+                        outline: 3px solid #1656b8;
+                        outline-offset: 3px;
+                    }
+                    "#
                 </style>
             </head>
             <body>
@@ -99,8 +152,23 @@ pub(super) fn page(status: StatusCode, title: &'static str, body: impl IntoView)
                 </main>
             </body>
         </html>
-    }.to_html();
-    (status, [(http::header::CONTENT_SECURITY_POLICY, "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'")], Html(html)).into_response()
+    }
+    .to_html();
+
+    (
+        status,
+        [(
+            http::header::CONTENT_SECURITY_POLICY,
+            "default-src 'none'; \
+             img-src 'self'; \
+             style-src 'unsafe-inline'; \
+             form-action 'self'; \
+             frame-ancestors 'none'; \
+             base-uri 'none'",
+        )],
+        Html(html),
+    )
+        .into_response()
 }
 
 /// Process-local provider and admission limits shared by every login request.
@@ -109,6 +177,13 @@ struct LoginService {
     provider: OnceCell<GoogleProvider>,
     /// Sliding windows: index 0 is login starts, index 1 is callbacks.
     attempts: Mutex<[VecDeque<Instant>; 2]>,
+}
+
+/// The editor name is allowlisted; arbitrary query strings never select a handler or path.
+#[derive(Default, Deserialize)]
+struct AdminQuery {
+    #[serde(default)]
+    section: super::editor::Section,
 }
 
 /// Untrusted callback fields; state is checked even when Google reports cancellation.
@@ -363,6 +438,7 @@ async fn admin(
     session: Session,
     Extension(database): Extension<DatabaseManager>,
     Extension(service): Extension<Arc<LoginService>>,
+    query: Result<Query<AdminQuery>, QueryRejection>,
 ) -> Response {
     match super::require_admin(&session, &database).await {
         Ok(administrator) => {
@@ -370,7 +446,20 @@ async fn admin(
                 Ok(Some(data)) => data,
                 _ => return login_failure(AuthError::Unavailable),
             };
-            let editors = match super::editor::content(&database, &data.csrf).await {
+            let section = match query {
+                Ok(Query(query)) => query.section,
+                Err(_) => {
+                    return page(
+                        StatusCode::BAD_REQUEST,
+                        "Unknown content section",
+                        view! {
+                            <p>"Choose Gallery, Shows or YouTube videos."</p>
+                            <a href="/admin">"Return to administration"</a>
+                        },
+                    )
+                }
+            };
+            let editors = match super::editor::content(&database, &data.csrf, section).await {
                 Ok(editors) => editors,
                 Err(error) => return login_failure(error),
             };

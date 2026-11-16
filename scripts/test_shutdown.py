@@ -217,7 +217,7 @@ class ShutdownTests(unittest.TestCase):
                     FROM _sqlx_migrations
                     """
                 ).fetchone()[0],
-                2,
+                len(list((ROOT / "migrations").glob("*.sql"))),
             )
 
     def admin(self, *arguments, environment=None):

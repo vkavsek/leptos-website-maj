@@ -121,7 +121,8 @@ test("larger text does not shrink gallery photos or hide album captions", async 
   await page.evaluate(() => { document.documentElement.style.fontSize = "32px"; });
   for (const link of await page.locator(".discography-link").all()) {
     await link.scrollIntoViewIfNeeded();
-    await expect(link).toBeInViewport({ ratio: 1 });
+    // Match the other caption check's tolerance for subpixel intersection rounding at zoom.
+    await expect(link).toBeInViewport({ ratio: 0.99 });
   }
 });
 
