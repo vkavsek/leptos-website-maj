@@ -10,6 +10,8 @@ kill_timeout = '30s'
 
 [env]
 PRIMARY_REGION = 'ams'
+MAJ_APP_ORIGIN = 'https://majkavsek.com'
+MAJ_DATA_DIR = '/data'
 GOOGLE_CLIENT_ID = '774712125801-lljgocauoic4un01lt1ml1hg27l10tep.apps.googleusercontent.com'
 
 [[services]]
@@ -35,3 +37,8 @@ soft_limit = 20
 interval = '15s'
 timeout = '2s'
 grace_period = '1s'
+
+[[mounts]]
+source = 'maj_data'
+destination = '/data'
+processes = ['app']

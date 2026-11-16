@@ -1,128 +1,64 @@
-# Audit
+What this repo does: This is Maj Kavšek’s portfolio, built with Leptos and Axum. Google sign-in protects an editor for gallery photos, shows, and YouTube videos; SQLite and private image files hold the published content. This audit assumes one region, one Machine, one volume, one or two administrators, and modest public traffic that includes bots.
 
-What this repo does: A public portfolio built with Leptos and Axum, serving photos, music, videos, show dates, and contact email. I assumed modest public traffic, several simultaneous visitors, and occasional automated abuse. I treated the documented per-process mail limit and content caching as intentional decisions.
+Audit date: 2026-11-16. Reviewed commit `d58ea93` and the existing staged `fly.toml` changes. The report replaces the previous audit; it does not change application code or deployment configuration.
 
-## **Must fix**
+**Must fix**
 
-All four items below are resolved. The original findings are retained for reference.
+1. **An in-flight request can restore a session after logout** (`src/auth/login.rs:403`, `src/auth.rs:250`, `src/auth/editor.rs:261`)
 
-1. **ZIP imports can publish files outside the public directory** — [update_json.sh:23](/home/vkav/Work/RUST/leptos-website-maj/scripts/update_json.sh:23).
-   - **What this is:** The maintenance script extracts a ZIP and copies everything into publicly served content.
-   - **Problem:** A ZIP containing a symbolic link—a file pointing elsewhere—exposed a dummy private file over HTTP in my test. Malformed JSON also replaced valid content while the script reported success.
-   - **Fix:** Accept only expected, regular JSON files; reject links and validate their contents before replacing existing files.
-   - **Resolution:** Imports now allow only top-level `shows.json` and `yt_videos.json`, reject links and unexpected or duplicate entries, validate record fields and show dates, and stage the entire archive before replacing files. Python regression checks cover safe and unsafe imports.
-   - **If we skip it:** Importing an unsafe or incorrect archive can expose readable files or break content pages. This requires an operator to import the archive; there is no public upload endpoint.
+   - **What this is:** Each HTTP request loads its own session record, and the session middleware saves changed records after the handler finishes.
+   - **Problem:** Start a slow authenticated upload, log out in another request, then let the upload finish: logout deletes the stored session, but the upload retains its cached authentication and can save the same session ID again. The installed SQL session store recreates missing records on save; a local SQL reproduction confirmed this mechanism, while the complete HTTP race remains untested.
+   - **Fix:** Advance that administrator’s `session_generation` before flushing the logout session, so records saved by older requests fail the existing authorization check. Document that logout signs out all sessions for that account, and add a regression test that pauses a request across logout and then tries the old cookie again.
+   - **If we skip it:** A cookie that should have been invalidated can become usable again, and a delayed upload can pass the post-upload authorization check after logout.
 
-2. **External tabs can redirect the original tab** — [home.rs:112](/home/vkav/Work/RUST/leptos-website-maj/src/routes/home.rs:112).
-   - **What this is:** The external-link dialog opens another website with `window.open()`.
-   - **Problem:** The new page retains `window.opener`. A controlled external-page fixture successfully navigated the original portfolio tab.
-   - **Fix:** Open with `_blank` and the `noopener` feature. [MDN documentation](https://developer.mozilla.org/en-US/docs/Web/API/Window/open#noopener)
-   - **Resolution:** The shared link dialog uses `_blank` with `noopener`. A browser regression checks that the opened page has no `window.opener`.
-   - **If we skip it:** A hostile external page can replace the original tab with another destination.
+2. **The bundled SQLite dependency still fails the security audit** (`Cargo.lock:2495`, `Cargo.toml:57`)
 
-3. **Video loading errors leave Media blank** — [media.rs:19](/home/vkav/Work/RUST/leptos-website-maj/src/routes/media.rs:19).
-   - **What this is:** Media renders the result of its video loader inside `Suspense`.
-   - **Problem:** It has no `ErrorBoundary`. With malformed video JSON, the page displayed only “Media,” without videos or an error message.
-   - **Fix:** Wrap the result in the existing `ErrorBoundary`/`ErrorTemplate` pattern used by Shows and About.
-   - **Resolution:** Media uses the shared error boundary and template. Rust and browser regressions cover missing content and invalid video responses.
-   - **If we skip it:** Missing or invalid video content silently removes the page’s main content.
+   - **What this is:** SQLx’s `sqlite` feature bundles the database engine through `libsqlite3-sys 0.37.0`.
+   - **Problem:** Fresh `cargo audit` reports [RUSTSEC-2026-0459](https://rustsec.org/advisories/RUSTSEC-2026-0459.html): opening a crafted database and companion write-ahead log can expose process memory. This requires less-trusted local files; private storage reduces exposure, and no public HTTP path for supplying such a pair was identified.
+   - **Fix:** Use a supported dependency update that permits patched `libsqlite3-sys >=0.39.0`, or explicitly link and verify a patched system SQLite. SQLx 0.9 currently requires `<0.38.0`, so a simple lockfile bump cannot resolve this; keep the advisory unsuppressed and rerun `just security` after the dependency change.
+   - **If we skip it:** The release audit remains unsuccessful, and opening an attacker-supplied database/log pair remains unsafe.
 
-4. **The show list becomes unreadable at high zoom** — [\_shows.scss:9](/home/vkav/Work/RUST/leptos-website-maj/style/_shows.scss:9).
-   - **What this is:** Shows divides a fixed-height page between its heading, navigation, and scrolling event list.
-   - **Problem:** At a 320×180 CSS viewport, equivalent to 400% zoom on 1280×720, the event list gets only about six pixels of visible height. Scrolling cannot reveal a readable row.
-   - **Fix:** Allow the Shows page to scroll when its heading and controls no longer fit, rather than clipping the list into the remaining strip.
-   - **Resolution:** Shows allows page overflow to scroll and gives its content a minimum height in rem units. Browser checks cover first and last event cells at small viewports and doubled text size.
-   - **If we skip it:** Visitors using high magnification cannot read the concert listings.
+**Should fix**
 
-## **Should fix**
+3. **Missing-page logging includes private query parameters** (`src/fallback.rs:30`)
 
-All six items below are resolved.
+   - **What this is:** The fallback handler logs the method and complete URI when a static file is missing.
+   - **Problem:** A request such as `/missing?private=canary` writes the query value into production logs; a misspelled OAuth callback URL can similarly carry a temporary login code. The normal request tracing uses only the path, but this fallback bypasses that protection.
+   - **Fix:** Log `parts.uri.path()` instead of the complete URI, and add a log-capture test using a harmless query marker.
+   - **If we skip it:** Unmatched requests can copy private URL values into logs and retain them beyond the request.
 
-1. **Content error pages still return HTTP `200`** — [shows.rs:117](/home/vkav/Work/RUST/leptos-website-maj/src/routes/shows.rs:117), [error.rs:39](/home/vkav/Work/RUST/leptos-website-maj/src/routes/error.rs:39).
-   - **What this is:** `ErrorTemplate` sets an error status after asynchronous content loading.
-   - **Problem:** The response has already started streaming. With malformed show data, `/shows/past` displayed “500 Internal Server Error” but returned `200`; its JSON endpoint correctly returned `500`.
-   - **Fix:** Use blocking resources for content whose failure determines the page status, and test the actual HTTP status. [Leptos rendering guidance](https://book.leptos.dev/ssr/23_ssr_modes.html#blocking-resources)
-   - **Resolution:** Shows, Media, and the gallery use blocking resources. HTTP regressions check `500` for malformed shows/videos and missing gallery content, and `200` for valid content pages.
-   - **If we skip it:** Monitoring and crawlers can treat broken pages as successful responses.
+4. **The contact API returns raw SMTP failures** (`src/routes/home.rs:478`)
 
-2. **The gallery treats every directory entry as a usable image URL** — [about.rs:329](/home/vkav/Work/RUST/leptos-website-maj/src/routes/about.rs:329).
-   - **What this is:** The loader lists directory entries and places their names directly into URLs.
-   - **Problem:** A text file and subdirectory appeared as gallery entries. A valid `photo#1.jpg` failed because the browser interpreted `#1.jpg` as a URL fragment; the encoded URL worked.
-   - **Fix:** Filter supported regular image files and encode filenames as URL path segments.
-   - **Resolution:** The gallery accepts supported regular image files, ignores links and non-images, and percent-encodes UTF-8 filename segments. Tests cover directories, text files, links, uppercase extensions, spaces, Unicode, `#`, `?`, and `%`.
-   - **If we skip it:** Ordinary content updates can create broken images and unusable gallery buttons.
+   - **What this is:** The public contact endpoint sends mail through SMTP, the protocol used to deliver email.
+   - **Problem:** `ServerFnError::from` forwards the mail provider’s error text to the caller, even though the page displays a generic failure message. A provider authentication or recipient rejection therefore exposes backend diagnostics to anyone calling the endpoint directly; this audit did not demonstrate password disclosure.
+   - **Fix:** Return a fixed public delivery error for provider failures while keeping the existing safe delivery-status logs. Add a simulated transport failure and assert that its diagnostic marker is absent from the response.
+   - **If we skip it:** The API’s error details remain dependent on what an external mail server returns.
 
-3. **Similar filenames can trap gallery navigation** — [about.rs:196](/home/vkav/Work/RUST/leptos-website-maj/src/routes/about.rs:196).
-   - **What this is:** Next and Previous find the current image using substring matching.
-   - **Problem:** For a valid list ordered as `portrait.jpg.webp`, then `portrait.jpg`, Next from the second image selects that same image again.
-   - **Fix:** Use exact equality in both searches.
-   - **Resolution:** Both directions compare complete URLs. A browser regression covers colliding filenames and wraparound in both directions.
-   - **If we skip it:** Some filename combinations make navigation repeat or skip photos.
+5. **The production build can change the dependency lockfile** (`Dockerfile:27`, `justfile:32`)
 
-4. **Two icon controls have incorrect or missing names** — [head.rs:65](/home/vkav/Work/RUST/leptos-website-maj/src/head.rs:65), [about.rs:160](/home/vkav/Work/RUST/leptos-website-maj/src/routes/about.rs:160).
-   - **What this is:** These are the Discography navigation icon and biography text-color button.
-   - **Problem:** The accessibility tree exposes two links named “Shows” and none named “Discography.” The color-change control is an unnamed button.
-   - **Fix:** Correct the navigation image’s alternative text and label the color-change button; mark its decorative arrow with `alt=""`.
-   - **Resolution:** Discography has the correct alternative text. The biography color button has an accessible name and its arrow has empty alternative text. Browser checks verify the names and keyboard activation.
-   - **If we skip it:** Screen-reader and voice-control users cannot reliably identify these actions.
+   - **What this is:** Local build recipes use `--cargo-locked` to enforce the exact dependency versions recorded in `Cargo.lock`.
+   - **Problem:** The Docker build omits this flag, so a manifest/lockfile mismatch can resolve new dependencies inside the image instead of failing. That can ship a dependency graph different from the checked-in lockfile inspected by the security tools; a consistent lockfile is not automatically upgraded on every build.
+   - **Fix:** Add `--cargo-locked` to the Docker `cargo leptos build` command and verify that a deliberately stale lockfile stops the build.
+   - **If we skip it:** Local validation and production packaging can disagree about which dependency versions are allowed.
 
-5. **Missing SMTP configuration becomes an empty password** — [home.rs:448](/home/vkav/Work/RUST/leptos-website-maj/src/routes/home.rs:448).
-   - **What this is:** Password loading uses `unwrap_or_default()` after reserving a mail attempt.
-   - **Problem:** An absent password becomes an empty credential and reaches SMTP. Each submission consumes an allowance slot, while logs provide only a generic delivery failure.
-   - **Fix:** Reject absent or empty credentials before reserving an attempt, and log a static configuration error without the credential value.
-   - **Resolution:** Missing or empty credentials produce HTTP `500` and a static configuration log before reserving an attempt or contacting SMTP. The handler regression checks both cases without sending email.
-   - **If we skip it:** A missing deployment secret causes repeated delivery failures and misleading rate-limit errors.
+6. **The unmaintained `paste` dependency remains unresolved** (`Cargo.lock:3002`, `deny.toml:7`)
 
-6. **Deployment shutdown interrupts active requests immediately** — [serve.rs:88](/home/vkav/Work/RUST/leptos-website-maj/src/serve.rs:88), [fly.toml:8](/home/vkav/Work/RUST/leptos-website-maj/fly.toml:8).
-   - **What this is:** Fly sends `SIGINT`, but the server has no graceful shutdown handler.
-   - **Problem:** A temporary server exited in roughly one millisecond during an active image transfer, truncating it. An in-progress SMTP request can also be interrupted.
-   - **Fix:** Handle the configured signal with Axum’s graceful shutdown and allow bounded in-flight work to finish within the deployment timeout. [Axum documentation](https://docs.rs/axum/latest/axum/serve/struct.Serve.html#method.with_graceful_shutdown)
-   - **Resolution:** SIGINT and SIGTERM stop new connections and drain active requests for up to 25 seconds. SMTP delivery is bounded to 20 seconds, and Fly allows 30 seconds for shutdown. Native process tests cover complete downloads under both signals and a stalled connection reaching the drain deadline.
-   - **If we skip it:** Deployments can interrupt downloads and contact submissions.
+   - **What this is:** `paste 1.0.15` is a transitive macro dependency used during compilation.
+   - **Problem:** Fresh `cargo audit` still reports [RUSTSEC-2024-0436](https://rustsec.org/advisories/RUSTSEC-2024-0436.html), and the repository’s deny policy includes unmaintained dependencies. There is no patched `paste` release; this is a maintenance finding, not a demonstrated runtime vulnerability.
+   - **Fix:** Move the owning upstream dependency to a compatible release that removes or replaces `paste` when available. If that path is unavailable, record a specific, justified maintenance-risk decision with a review date under the existing dependency policy rather than broadly disabling checks.
+   - **If we skip it:** The maintenance warning remains unresolved, and the security checks cannot be reported as fully clean.
 
-## **Nice to have**
+7. **The largest accepted uploads have no successful memory-budget test** (`src/content/gallery.rs:86`, `src/content/gallery.rs:298`, `src/content/gallery.rs:442`, `README.md:397`)
 
-All three items below are resolved.
+   - **What this is:** Uploads allow up to 12 million pixels, with a 96 MiB decoder allocation limit and one processing job at a time.
+   - **Problem:** Successful image fixtures are tiny, while the large-image tests exercise rejection; they do not establish that an accepted 4000×3000 image fits the intended Machine’s memory. Rotation, pixel conversion, and encoding allocate beyond the decoder limit, and the README already records production memory measurement as unfinished.
+   - **Fix:** Add successful boundary-size fixtures, including orientation and transparency, and measure peak resident memory on the intended Machine. Use the measurement to confirm or lower the pixel limit, or increase Machine memory.
+   - **If we skip it:** A valid administrator upload could exhaust memory and interrupt public browsing on the single Machine; this audit has not demonstrated that failure.
 
-1. **Background framing does not follow browser history** — [head.rs:16](/home/vkav/Work/RUST/leptos-website-maj/src/head.rs:16).
-   - **What this is:** Navigation click handlers manually change the background position.
-   - **Problem:** About → Media → browser Back returns to About while retaining Media’s background position. Reloading produces another position.
-   - **Fix:** Derive the background position from the current route and remove the individual click handlers.
-   - **Resolution:** The shared page layout derives its background from the router location. The five navigation click handlers and background node reference are removed. Browser checks cover Back/Forward, reloads, and nested URLs.
-   - **If we skip it:** The same page looks different depending on how visitors reach it.
+Validation performed: source review traced startup/storage checks, Google login and session guards, public content reads, editor writes, import/backup, mail delivery, and deployment commands. An isolated in-memory SQLite check used the installed session store’s exact save statement: save a session, cache its data, delete the row, then save the cached data; the deleted row returned.
 
-2. **Unused event mutators include an incorrect getter** — [shows.rs:68](/home/vkav/Work/RUST/leptos-website-maj/src/routes/shows.rs:68).
-   - **What this is:** Two public methods expose mutable event lists.
-   - **Problem:** Neither has callers in the repository, and `get_desc_mut()` incorrectly returns the ascending list.
-   - **Fix:** Delete both unused mutators.
-   - **Resolution:** Both mutators are removed; no callers needed changes.
-   - **If we skip it:** Maintainers retain an unnecessary API containing misleading behavior.
+Fresh `cargo audit --json` exited with status 1: one vulnerability (`libsqlite3-sys`) and one unmaintained warning (`paste`), using advisory data updated on 2026-11-15. The existing scoped RSA exception was reviewed as an existing decision and was not counted as a new finding; `cargo-deny` was not rerun during this audit.
 
-3. **Retired music adds 47.7 MB to deployments** — [public/music](/home/vkav/Work/RUST/leptos-website-maj/public/music).
-   - **What this is:** Every file under `public/` is copied into the built site and Docker image.
-   - **Problem:** Four tracks have no application, content, or test references. Together they occupy 47,656,089 bytes; only the Minor Flaw promo and `audio-promo_small.mp3` test fixture are referenced.
-   - **Fix:** Remove those four tracks from the shipped directory, or archive them outside `public/`.
-   - **Resolution:** The four unused tracks are removed from `public/music`, reducing shipped assets by 47,656,089 bytes. The active Minor Flaw promo and audio regression fixture remain. The removed tracks are recoverable from Git history.
-   - **If we skip it:** Builds and deployment images continue carrying unnecessary audio.
+Verdict: Fix logout invalidation first, resolve the SQLite release blocker, then close the logging, error-response, build, and upload-validation gaps. The assumed single-Machine setup does not require database replication to address these findings.
 
-Original audit validation passed: **21 Rust tests, 50 Chromium/Firefox checks, formatting, strict SSR/hydration Clippy, and the server/WASM build**. The lockfile advisory check returned only an informational notice for transitive `paste` being unmaintained. [RustSec notice](https://rustsec.org/advisories/RUSTSEC-2024-0436.html)
-
-The original audit also checked Modern Web Guidance’s icon and accessibility guides. It changed no repository files, and all temporary audit servers were stopped.
-
-Must fix resolution validation passed: **22 Rust tests, 3 Python import tests,
-56 Chromium/Firefox checks, formatting, strict SSR/hydration Clippy, and the
-server/WASM build**. Import checks also accepted the current source JSON files in
-an isolated temporary directory. No email was sent.
-
-Remaining recommendation validation passed: **23 Rust tests, 3 Python import
-tests, 2 native shutdown tests, and 62 Chromium/Firefox checks**, plus the
-server/WASM build, formatting, and strict SSR/hydration Clippy. The browser run
-passed 60 checks, then the two history checks passed after their expectations were
-corrected to accept the browser's CSS serialization of zero. Native shutdown tests
-verified full 16 MB downloads under SIGINT/SIGTERM and the 25-second drain limit.
-Generated site assets also contain only the active promo and audio test fixture.
-No email was sent; Fly deployment and live SMTP were not exercised.
-
-**Verdict:** All recommendations in this audit are resolved.
-**Lean:** Removed the six unused mutator lines, five background click handlers, and 47.7 MB of shipped audio.
-**Not checked:** Live SMTP, Fly/Docker deployment, WebKit, physical screen-reader testing, or Git history.
+Not checked: no fresh application build, Rust test suite, coverage run, browser tests, Docker build, or production memory measurement. The logout finding has a storage-level reproduction, not a complete concurrent HTTP test; live Google/SMTP behavior, deployed Fly settings, backup restoration on Fly, JavaScript dependency advisories, and a full visual/accessibility review were not tested.
