@@ -21,12 +21,17 @@ const IMAGE_BYTES: u64 = 20 * 1024 * 1024;
 const JSON_BYTES: u64 = 2 * 1024 * 1024;
 
 /// Safe errors for editor responses; never expose filesystem or database diagnostics.
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub(crate) enum ContentError {
+    #[error("{0}")]
     Invalid(&'static str),
+    #[error("Content already exists")]
     Conflict,
+    #[error("Content exceeds the size limit")]
     TooLarge,
+    #[error("Another content submission is processing")]
     Busy,
+    #[error("Content is temporarily unavailable")]
     Unavailable,
 }
 

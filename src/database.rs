@@ -316,7 +316,7 @@ impl DatabaseManager {
         sqlx::query_as(
             "SELECT id, date, name, club, location
              FROM shows
-             ORDER BY date, id",
+             ORDER BY date DESC, id ASC",
         )
         .fetch_all(&self.pool)
         .await
@@ -378,7 +378,7 @@ impl DatabaseManager {
     pub async fn gallery(&self) -> sqlx::Result<Vec<GalleryImage>> {
         sqlx::query_as(
             "SELECT id, public_name, original_file, thumbnail_file
-             FROM gallery_images ORDER BY public_name, id",
+             FROM gallery_images ORDER BY public_name DESC, id ASC",
         )
         .fetch_all(&self.pool)
         .await

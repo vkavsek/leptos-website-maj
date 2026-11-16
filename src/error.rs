@@ -2,12 +2,17 @@ use http::status::StatusCode;
 use leptos::server_fn::error::FromServerFnError;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, thiserror::Error)]
 pub enum MajServerError {
+    #[error("Internal")]
     Internal,
+    #[error("NotFound")]
     NotFound,
+    #[error("Io({0:?})")]
     Io(String),
+    #[error("SerdeJson({0:?})")]
     SerdeJson(String),
+    #[error("LeptosServerFnError({0:?})")]
     LeptosServerFnError(String),
 }
 
@@ -51,17 +56,33 @@ impl From<serde_json::Error> for MajServerError {
     }
 }
 
+// Keep owned strings at the serialized server-function boundary rather than retaining sources.
 impl From<std::io::Error> for MajServerError {
     fn from(value: std::io::Error) -> Self {
         Self::Io(value.to_string())
     }
 }
 
-// Error Boilerplate
-impl core::fmt::Display for MajServerError {
-    fn fmt(&self, fmt: &mut core::fmt::Formatter) -> core::result::Result<(), core::fmt::Error> {
-        write!(fmt, "{self:?}")
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn derived_errors_preserve_display_serialization_and_http_status() {
+        // These errors cross the server-function boundary; keep their existing representation.
+        for error in [
+            MajServerError::Internal,
+            MajServerError::NotFound,
+            MajServerError::Io("path with \"quotes\"\nand Unicode é".into()),
+            MajServerError::SerdeJson("invalid JSON".into()),
+            MajServerError::LeptosServerFnError("server function failed".into()),
+        ] {
+            assert_eq!(error.to_string(), format!("{error:?}"));
+            let encoded = serde_json::to_string(&error).unwrap();
+            let decoded: MajServerError = serde_json::from_str(&encoded).unwrap();
+            assert_eq!(decoded.to_string(), error.to_string());
+            assert_eq!(decoded.status_code(), error.status_code());
+            assert!(std::error::Error::source(&error).is_none());
+        }
     }
 }
-
-impl std::error::Error for MajServerError {}

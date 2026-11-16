@@ -40,7 +40,8 @@ const ABSOLUTE_SECONDS: i64 = 8 * 60 * 60;
 /// Public authorization failures with fixed HTTP statuses and generic messages.
 /// Database and session errors are deliberately reduced to `Unavailable` so
 /// responses cannot expose stored authentication data or backend diagnostics.
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
+#[error("Authentication request failed")]
 pub enum AuthError {
     /// HTTP 401: no administrator session, or invalid/expired session timestamps.
     Unauthorized,
@@ -51,14 +52,6 @@ pub enum AuthError {
     /// HTTP 429: outstanding login transactions reached a browser or global limit.
     Busy,
 }
-
-impl std::fmt::Display for AuthError {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter.write_str("Authentication request failed")
-    }
-}
-
-impl std::error::Error for AuthError {}
 
 impl AuthError {
     /// Converts a guard failure for a Leptos server function without exposing details.
@@ -883,6 +876,9 @@ mod tests {
 
     #[tokio::test]
     async fn database_errors_fail_closed_and_private_errors_do_not_leak_details() {
+        let error = AuthError::from(sqlx::Error::Protocol("private backend diagnostic".into()));
+        assert_eq!(error.to_string(), "Authentication request failed");
+        assert!(std::error::Error::source(&error).is_none());
         let (_root, database) = crate::test_support::database().await;
         let session = test_session(&database);
         database
