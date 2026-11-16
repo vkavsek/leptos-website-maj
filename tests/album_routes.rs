@@ -17,11 +17,35 @@ async fn album_routes_return_not_found_only_for_unknown_albums() {
         .output_name("leptos-website-maj")
         .site_root("tests/fixtures/site")
         .build();
+    let root = tempfile::tempdir().unwrap();
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(root.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
+    }
+    leptos_website_maj::storage::prepare(root.path(), &[]).unwrap();
+    let database = leptos_website_maj::database::DatabaseManager::initialize(root.path())
+        .await
+        .unwrap();
+    database.add_video("3uh_Jc1prRQ").await.unwrap();
+    database
+        .add_show("2024-02-29", Some("Configured database"), None, None)
+        .await
+        .unwrap();
+    database
+        .add_gallery("gallery-test.png", "fixture.png", "fixture.webp", || Ok(()))
+        .await
+        .unwrap();
+    let context_database = database.clone();
     let app = Router::new()
-        .leptos_routes(&options, leptos_axum::generate_route_list(App), {
-            let options = options.clone();
-            move || app_shell(options.clone())
-        })
+        .leptos_routes_with_context(
+            &options,
+            leptos_axum::generate_route_list(App),
+            move || leptos::prelude::provide_context(context_database.clone()),
+            {
+                let options = options.clone();
+                move || app_shell(options.clone())
+            },
+        )
         .with_state(options);
     for (path, status, marker) in [
         (
@@ -32,10 +56,10 @@ async fn album_routes_return_not_found_only_for_unknown_albums() {
         ("/discography/minorflaw", StatusCode::OK, "Minor Flaw"),
         ("/discography/galaterna", StatusCode::OK, "Galaterna"),
         ("/discography", StatusCode::OK, "Discography"),
-        ("/media", StatusCode::OK, "configured-root-test"),
-        ("/shows/past", StatusCode::OK, "Configured site root"),
+        ("/media", StatusCode::OK, "3uh_Jc1prRQ"),
+        ("/shows/past", StatusCode::OK, "Configured database"),
         ("/shows/future", StatusCode::OK, "no events"),
-        ("/about_me", StatusCode::OK, "gallery-test.svg.webp"),
+        ("/about_me", StatusCode::OK, "gallery-test.png.webp"),
         (
             "/discography/another-missing-album",
             StatusCode::NOT_FOUND,

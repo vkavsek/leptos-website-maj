@@ -136,6 +136,7 @@ pub fn router(
         )
         .route("/health-check", get(health))
         .merge(login_routes)
+        .merge(crate::content::gallery::routes())
         .layer(
             // Adding tower_http services (except CompressionLayer)
             ServiceBuilder::new()
@@ -154,6 +155,7 @@ pub fn router(
         .layer(tower_http::compression::CompressionLayer::new())
         // Add Cache-Control without changing file-service responses.
         .layer(middleware::map_response(midware::response_mapper_midware))
+        .layer(middleware::from_fn(midware::editable_content_cache))
         .layer(middleware::from_fn(crate::auth::private_routes))
         .layer(Extension(server_config))
         .layer(Extension(database))
@@ -191,6 +193,32 @@ mod midware {
     use axum::response::Response;
     use http::header::CACHE_CONTROL;
     use tracing::debug;
+
+    /// Editable resources must see committed changes on their next page/resource load.
+    pub async fn editable_content_cache(
+        request: axum::extract::Request,
+        next: axum::middleware::Next,
+    ) -> Response {
+        let path = request.uri().path();
+        let editable = matches!(
+            path,
+            "/about_me"
+                | "/media"
+                | "/shows"
+                | "/shows/past"
+                | "/shows/future"
+                | "/api/get_image_files"
+                | "/api/get_shows"
+                | "/api/get_media_videos"
+        );
+        let mut response = next.run(request).await;
+        if editable {
+            response
+                .headers_mut()
+                .insert(CACHE_CONTROL, "no-store".parse().unwrap());
+        }
+        response
+    }
 
     /// Adds Cache-Control without replacing the file service's status, headers, or body.
     pub async fn response_mapper_midware(res: Response) -> Response {
@@ -358,30 +386,53 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn json_content_apis_use_the_site_root_from_router_state() {
+    async fn json_content_apis_read_live_database_and_disable_caching() {
+        let (root, database) = crate::test_support::database().await;
         let options = LeptosOptions::builder()
             .output_name("leptos-website-maj")
-            .site_root(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/site"))
             .build();
-        let app = Router::new()
-            .leptos_routes(&options, Vec::new(), || ())
-            .with_state(options);
-        for (path, marker) in [
-            ("/api/get_shows", "Configured site root"),
-            ("/api/get_media_videos", "configured-root-test"),
-        ] {
-            let response = app
-                .clone()
-                .oneshot(Request::get(path).body(Body::empty()).unwrap())
-                .await
-                .unwrap();
-            assert_eq!(response.status(), StatusCode::OK);
-            let body = to_bytes(response.into_body(), 4096).await.unwrap();
-            assert!(
-                std::str::from_utf8(&body).unwrap().contains(marker),
-                "{path}"
-            );
+        let app = router(
+            Vec::new(),
+            options,
+            crate::test_support::config(root.path()),
+            database.clone(),
+        );
+        let show = database
+            .add_show("2024-02-29", Some("Live database"), None, None)
+            .await
+            .unwrap();
+        let video = database.add_video("3uh_Jc1prRQ").await.unwrap();
+        let photo = database
+            .add_gallery("photo é.png", "private.png", "private.webp", || Ok(()))
+            .await
+            .unwrap();
+        for removed in [false, true] {
+            if removed {
+                database.remove_show(show).await.unwrap();
+                database.remove_video(video).await.unwrap();
+                database.remove_gallery(photo).await.unwrap();
+            }
+            for (path, marker) in [
+                ("/api/get_shows", "Live database"),
+                ("/api/get_media_videos", "3uh_Jc1prRQ"),
+                ("/api/get_image_files", "photo%20%C3%A9.png"),
+            ] {
+                let response = app
+                    .clone()
+                    .oneshot(Request::get(path).body(Body::empty()).unwrap())
+                    .await
+                    .unwrap();
+                assert_eq!(response.status(), StatusCode::OK);
+                assert_eq!(response.headers()[CACHE_CONTROL], "no-store");
+                let body = to_bytes(response.into_body(), 4096).await.unwrap();
+                assert_eq!(
+                    std::str::from_utf8(&body).unwrap().contains(marker),
+                    !removed,
+                    "{path}"
+                );
+            }
         }
+        database.close().await;
     }
 
     const AUDIO: &str = "/music/audio-promo_small.mp3";

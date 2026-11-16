@@ -8,6 +8,7 @@
 //! Google callbacks verify identity before establishing an approved session.
 //! Saving or consuming login state alone never grants administrator access.
 
+mod editor;
 mod google;
 mod login;
 
@@ -386,9 +387,11 @@ pub async fn consume_login(
 /// Guards `/admin` and `/api/admin` namespaces and marks private responses uncacheable.
 ///
 /// GET/HEAD requests require current approval; other methods also require Origin
-/// and CSRF checks. `/auth` requests pass through for future login handlers, which
+/// and CSRF checks. The native editor POST checks Origin here and its first multipart
+/// CSRF field in the handler, before reading file data. `/auth` requests pass through for future login handlers, which
 /// must perform their own protocol checks. All three namespaces receive no-store,
-/// no-referrer, and Vary: Cookie headers, including errors and redirects.
+/// no-referrer, and Vary: Cookie headers, including errors and redirects. The
+/// authenticated entry page uses same-origin referrers so native POST Origin is not null.
 /// This middleware must run inside session middleware and the required extensions.
 pub async fn private_routes(
     session: Session,
@@ -398,17 +401,26 @@ pub async fn private_routes(
     next: axum::middleware::Next,
 ) -> Response {
     let path = request.uri().path();
+
     let admin = path == "/admin"
         || path.starts_with("/admin/")
         || path == "/api/admin"
         || path.starts_with("/api/admin/");
     let private = admin || path == "/auth" || path.starts_with("/auth/");
+
     // The HTML entry page renders its own login prompt; API namespaces still fail with 401.
     let entry_page =
         path == "/admin" && matches!(*request.method(), http::Method::GET | http::Method::HEAD);
     let mut response = if admin && !entry_page {
         // Reads need approval; other methods additionally require Origin and CSRF checks.
-        let access = if matches!(*request.method(), http::Method::GET | http::Method::HEAD) {
+        // The native editor checks its first multipart CSRF field before reading file data.
+        let editor_form = path == "/admin/content" && *request.method() == http::Method::POST;
+        let access = if editor_form {
+            match require_origin(request.headers(), &config.app_origin) {
+                Ok(()) => require_admin(&session, &database).await,
+                Err(error) => Err(error),
+            }
+        } else if matches!(*request.method(), http::Method::GET | http::Method::HEAD) {
             require_admin(&session, &database).await
         } else {
             require_mutation(&session, &database, request.headers(), &config.app_origin).await
@@ -420,14 +432,22 @@ pub async fn private_routes(
     } else {
         next.run(request).await
     };
+
     // Apply privacy headers after downstream handling, including errors and redirects.
     if private {
         response
             .headers_mut()
             .insert(CACHE_CONTROL, "no-store".parse().unwrap());
+        // no-referrer makes native forms send Origin: null. Keep exact Origin checks
+        // by allowing same-origin referrers only on the authenticated form page.
+        let policy = if entry_page && response.status().is_success() {
+            "same-origin"
+        } else {
+            "no-referrer"
+        };
         response
             .headers_mut()
-            .insert(REFERRER_POLICY, "no-referrer".parse().unwrap());
+            .insert(REFERRER_POLICY, policy.parse().unwrap());
         response
             .headers_mut()
             .append(http::header::VARY, "Cookie".parse().unwrap());
@@ -463,10 +483,8 @@ async fn require_csrf(
     origin: &str,
 ) -> Result<(), AuthError> {
     // Require unambiguous headers before comparing the browser's session-bound token.
-    if headers.get_all(ORIGIN).iter().count() != 1
-        || headers.get(ORIGIN).and_then(|value| value.to_str().ok()) != Some(origin)
-        || headers.get_all("x-csrf-token").iter().count() != 1
-    {
+    require_origin(headers, origin)?;
+    if headers.get_all("x-csrf-token").iter().count() != 1 {
         return Err(AuthError::Forbidden);
     }
     let supplied = headers
@@ -479,6 +497,16 @@ async fn require_csrf(
         .ok_or(AuthError::Unauthorized)?;
     // A constant-time comparison avoids revealing a matching token prefix through timing.
     if !bool::from(supplied.ct_eq(stored.csrf.as_bytes())) {
+        return Err(AuthError::Forbidden);
+    }
+    Ok(())
+}
+
+/// Reject cross-origin native forms before consuming any submitted content.
+fn require_origin(headers: &HeaderMap, origin: &str) -> Result<(), AuthError> {
+    if headers.get_all(ORIGIN).iter().count() != 1
+        || headers.get(ORIGIN).and_then(|value| value.to_str().ok()) != Some(origin)
+    {
         return Err(AuthError::Forbidden);
     }
     Ok(())

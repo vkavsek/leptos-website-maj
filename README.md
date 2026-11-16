@@ -53,7 +53,7 @@ first rebuild; it does not replace checking free space during long sessions.
 | Variable | Purpose |
 | --- | --- |
 | `PORKMAIL_PWD` | Optional SMTP password, loaded once at startup into `ServerConfig` as a `SecretString`; supply through the environment or hosting secrets |
-| `LEPTOS_SITE_ROOT` | Directory containing built assets and content; defaults to `target/site` for local builds |
+| `LEPTOS_SITE_ROOT` | Directory containing built assets and import sources; defaults to `target/site` for local builds |
 | `LEPTOS_SITE_ADDR` | Server bind address; defaults to `0.0.0.0:8080` |
 | `RUST_LOG` | Required logging filter for release binaries; use `info` for normal operation |
 | `APP_ENVIRONMENT` | `development` (loopback origin only) or `production`; defaults to development in debug builds and production in release builds |
@@ -64,8 +64,8 @@ first rebuild; it does not replace checking free space during long sessions.
 
 Never commit credentials or generated secret configuration. Builds and automated
 tests do not need SMTP or Google credentials. Google sign-in, local approval,
-logout, and private operator commands are available; the content-editing UI is
-still pending. Missing or invalid production settings
+logout, gallery uploads/removals, show/video editors, and private operator commands
+are available. Missing or invalid production settings
 stop startup without logging their values. Local development may omit both
 Google credentials; a partial or placeholder pair is rejected.
 
@@ -76,8 +76,9 @@ use mode `0700` and the database file mode `0600`. A process creation mask of
 setup requires Unix filesystem permissions. SQLite contains the administrator
 approval, login-transaction, shows, videos, gallery, import-marker, and session
 tables. New databases have zero approved
-administrators. Login and editing are still to implement; public content continues
-loading from `LEPTOS_SITE_ROOT`.
+administrators and empty content catalogs. Public shows, videos and gallery listings
+read SQLite directly. Import the bundled content once before switching an existing
+site to this build; an empty database intentionally displays empty content.
 
 Existing data is preserved. Startup rejects incorrect ownership, non-private
 directory/database permissions, symlinked managed subdirectories, and database
@@ -99,9 +100,10 @@ build context as well as the public trees.
 `LEPTOS_SITE_ROOT` remains the built asset directory (`/app/site` in Docker).
 Data and public roots may not overlap, including through aliases. Public asset
 trees must be symlink-free; startup rejects even dangling links that could expose
-data created later. Keep built assets immutable while the server runs. No handler
-serves private storage; gallery publication through controlled lookups remains to
-implement. Biography updates still require editing Rust and releasing.
+data created later. Keep built assets immutable while the server runs. Dedicated
+gallery handlers serve only files referenced by a published database record; bundled
+gallery files cannot bypass these lookups. Biography updates still require editing
+Rust and releasing.
 
 Database initialization uses SQLx with foreign keys, WAL, `synchronous=FULL`, and
 a five-second busy timeout on every connection. Embedded versioned migrations and
@@ -167,9 +169,9 @@ allow additional memory for the process and input/output buffers. Import handles
 one image at a time. JSON files are limited to 2 MiB, with at most 10000 shows,
 1000 videos, and 1000 photos. Source symlinks, malformed data, and existing catalogs
 are rejected. Files receive opaque stored names; public filenames remain in the
-database for the later gallery handlers. Failed publication can leave private
+database for the catalog-gated gallery handlers. Failed publication can leave private
 orphans after a crash, but must not expose partially imported records. Public
-pages still read built content until the editing workflows are implemented.
+pages now read the live database; no restart is needed after online edits.
 
 Backup does **not** run pending schema migrations. Provision its parent directory
 privately, keep it outside public trees and the Docker build context, and choose
@@ -194,7 +196,10 @@ The server shares `DatabaseManager`, validated configuration, and session contex
 with Axum handlers and Leptos server functions. `src/auth.rs` provides shared
 administrator and mutation guards; every future mutation must use them too.
 Private `/admin`, `/api/admin`, and `/auth` responses retain `no-store` and
-`Referrer-Policy: no-referrer`, including errors and redirects.
+`Referrer-Policy: no-referrer`, including errors and redirects. The authenticated
+`/admin` page uses `same-origin` so native forms send a usable Origin header;
+cross-site referrers remain suppressed and exact Origin/CSRF checks stay required.
+See the [Fetch Origin rules](https://fetch.spec.whatwg.org/#append-a-request-origin-header).
 
 Visit `/admin` using the exact `MAJ_APP_ORIGIN` browser origin to sign in;
 `localhost` and `127.0.0.1` have different cookies and Origin headers.
@@ -203,8 +208,8 @@ unapproved Google account is redirected to `/auth/identity`, which shows only
 that browser's verified issuer and subject, returns HTTP 403, and expires after
 five minutes. Share those values privately with the operator. Run the approval
 command against the same data directory, then sign in again. The protected admin
-landing page currently provides account status and sign-out; content editors
-remain a later step.
+landing page provides Gallery, Shows and YouTube video forms, account status,
+and sign-out. Biography remains a source-code edit.
 
 | Route | Purpose |
 | --- | --- |
@@ -213,6 +218,7 @@ remain a later step.
 | `GET /auth/identity` | Temporarily show the current browser's unapproved, verified identity |
 | `POST /auth/logout` | Verify Origin/CSRF, delete the local session, and clear its cookie |
 | `GET /admin` | Show the sign-in prompt or the approved administrator landing page |
+| `POST /admin/content` | Add/remove a photo, show or video after approval, Origin and multipart CSRF checks |
 
 Production sessions use `__Host-maj_admin`, Secure, HttpOnly, SameSite=Lax, Path=/,
 and no Domain; loopback development uses `maj_admin_dev` without Secure. Guards
@@ -309,7 +315,8 @@ The production Google client ID is configured in `fly.toml`. Before deploying
 the configuration changes, provide `MAJ_APP_ORIGIN` and `MAJ_DATA_DIR` as ordinary
 runtime settings, and install `GOOGLE_CLIENT_SECRET` through Fly secrets. The production secret is
 still pending. Production volume provisioning, real Google sign-in verification,
-and the content editors still require completion before an administration release.
+and upload memory measurements on the production Machine still require completion
+before an administration release.
 
 The server handles Ctrl+C (`SIGINT`) and `SIGTERM` by stopping new connections and
 allowing active requests up to 25 seconds to finish. SMTP delivery has a 20-second
@@ -336,60 +343,83 @@ and the configured callback URL should also be checked manually before deploymen
 
 ## Content maintenance
 
-Edit source assets in `public/` and styles in `style/`. Rebuild to copy source
-assets into the default `target/site/` directory. Deploy or restart the server
-after content changes: content loaders cache both successes and failures for the
-life of the process.
+The administrator page at `/admin` adds/removes gallery photos, shows, and YouTube
+videos. Forms work without JavaScript. Removal requires checking the confirmation
+box for that item; a stale removal cannot delete a newly created item because IDs
+are never reused. Each successful submission redirects to a fresh catalog listing.
+Existing visitors see changes on their next page load/resource reload; there is no
+live push. Editable pages, APIs and gallery images use `Cache-Control: no-store`.
 
-The configured site root must contain:
-
-- `data_json/shows.json`: show records. Every record needs a real calendar date in
-  day.month.year format, such as `29.02.2024`. Missing, null, empty, malformed, or
-  impossible dates reject the whole file.
-- `data_json/yt_videos.json`: video records.
-- `img/about_pics/`: original gallery photos. Regular AVIF, GIF, JPEG (`.jpg` or
-  `.jpeg`), PNG, SVG, and WebP files are listed, regardless of extension case.
-  Links, subdirectories, other files, and filenames that are not valid UTF-8 are ignored.
-- `img/about_thumbnails/`: generated WebP thumbnails for the gallery.
-- `img/albums/`: album artwork and its smaller display versions.
-
-Picture filenames use lowercase letters and underscores in place of spaces.
-Gallery thumbnails retain the original filename with `.webp` appended. Future
-uploads must normalize names on the server before storage.
-
-Correct a failed content file and restart or redeploy to clear its cached error.
-Changing `LEPTOS_SITE_ROOT` also requires a restart.
-
-### Importing show and video content
-
-With Python 3 installed, run from the repository root:
+Before first use, stop the HTTP server and import the existing catalog into the
+same `MAJ_DATA_DIR` used by the server:
 
 ```sh
-just import-content /path/to/content.zip
+just admin import-content --source public
 ```
 
-The ZIP must contain `shows.json`, `yt_videos.json`, or both at its top level.
-Only regular files are accepted; links, directories, unexpected paths, and duplicate
-names are rejected. Every file is validated before existing content is replaced:
-shows need valid dates and string-or-null fields; videos need URL strings.
-Invalid archives leave existing content unchanged. Each accepted file is replaced
-atomically. Rebuild and restart or redeploy after importing.
+Import refuses to overwrite an initialized catalog. Empty catalogs stay empty;
+there is no automatic filesystem fallback. Back up an existing database before
+upgrading: the content ID migration preserves rows while preventing ID reuse.
 
-### Gallery thumbnails
+### Gallery uploads and removal
 
-After adding or replacing original photos, install ImageMagick with WebP support
-and the `convert` command, then run from the repository root:
+Upload one JPEG, PNG or WebP at a time. Limits are **10 MiB per file**, **12 million
+pixels**, and **6000 pixels per side**, with a 96 MiB decoder allocation limit.
+The multipart request allows an additional 16 KiB for form framing; each text
+field is bounded separately. A process-wide slot covers receiving and decoding,
+with a 30-second body deadline and immediate rejection while another submission
+is processing. Decoding runs on a blocking worker; disconnecting does not release
+its slot while the decoder is still working.
 
-```sh
-just thumbnails
-```
+The server inspects actual bytes, applies EXIF orientation, and writes pixels only,
+removing metadata. Full-size JPEGs are re-encoded as JPEG; PNG/WebP become 8-bit PNG
+(preserving transparency). Thumbnails are center-cropped 480×270 WebP. Upload names
+use lowercase letters with spaces replaced by underscores; letters, numbers,
+underscores and hyphens are accepted in the stem. Client paths are rejected.
+The output format determines the extension. A duplicate normalized name returns
+409 without overwriting existing files. Rename the source file before retrying.
 
-The script applies EXIF orientation, crops to 480×270, and strips thumbnail metadata.
-Originals stay unchanged. Commit thumbnails alongside their source photos. When
-deleting an original, delete its matching `<original filename>.webp` thumbnail.
-A Rust test checks that every original has a smaller WebP thumbnail.
-Gallery URLs encode filenames, so spaces, Unicode, `#`, `?`, and `%` are supported.
-Next and Previous compare complete filenames and wrap at either end.
+Both outputs are completed and synced in private staging before atomic no-replace
+publication and database commit. Removal deletes the row first, then the files.
+Failed cleanup or an ambiguous commit can leave an unreferenced private file; it
+is never listed or served. Cleanup failures are logged without file contents.
+Do not delete suspected orphans while a server/import is writing; compare against
+catalog references under an offline maintenance lock and retain a backup first.
+
+Gallery URLs retain `/img/about_pics/<name>` and
+`/img/about_thumbnails/<name>.webp`, including encoded imported names. Every request
+checks publication. Deleted URLs return 404 even if an older built asset exists.
+
+These limits are conservative starting values, **not a measured production memory
+guarantee**. Image transformations allocate beyond the decoder's buffer limit.
+Measure peak RSS with the largest supported photos on the intended Fly Machine
+before deployment; reduce the pixel limit or increase memory if needed. Keep one
+processing job per server and monitor volume capacity.
+
+### Shows and YouTube videos
+
+Shows require a real calendar date. Event name, venue and location remain optional,
+with a 500-byte limit per text field and no control characters. Dates are stored as
+ISO dates and displayed in the existing day.month.year format, sorted chronologically.
+YouTube forms accept recognized HTTPS watch, short, live, embed and `youtu.be`
+URLs. The server validates exact hosts and the 11-character ID, stores that ID,
+and builds the public embed URL. It never fetches a submitted URL or accepts iframe HTML.
+Duplicate video IDs return 409. Server validation is authoritative; browser checks
+only help the administrator complete the form.
+
+### Bundled assets and seed content
+
+Biography, album artwork, styles, music and other static assets remain source
+changes in Rust, `public/` and `style/` and require rebuilding/releasing. The JSON
+files and gallery photos under `public/` are now **one-time import sources**, not
+live content. Editing them does not change an initialized database.
+
+`just import-content /path/to/content.zip` still validates/replaces the bundled
+show/video JSON; use it only to prepare a fresh import source. `just thumbnails`
+still uses ImageMagick to prepare 480×270 WebP thumbnails for bundled originals.
+Online uploads generate their own thumbnails and need no ImageMagick. Keep source
+picture names lowercase with underscores, album art in `public/img/albums/`, and
+matching `<original filename>.webp` names for bundled gallery thumbnails.
 
 ## Keyboard controls and dialogs
 

@@ -144,6 +144,10 @@ e2e-setup:
 e2e *args:
     cd end2end && PLAYWRIGHT_BASE_URL="${PLAYWRIGHT_BASE_URL:-http://127.0.0.1:8082}" npx playwright test "$@"
 
+# Exercise authenticated content forms in isolated storage with Chromium and Firefox.
+test-admin-browser:
+    just test --lib auth::editor::tests::browser_content_workflows -- --ignored --nocapture
+
 # Build the Docker image.
 docker-build:
     docker build -t maj-web .

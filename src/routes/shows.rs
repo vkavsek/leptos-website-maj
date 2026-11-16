@@ -97,9 +97,13 @@ impl Event {
 
 #[cfg(feature = "ssr")]
 pub(crate) fn parse_shows(json: &str) -> Result<EventsSorted, MajServerError> {
-    use std::cmp::Reverse;
+    let shows: EventsDeser = serde_json::from_str(json)?;
+    sort_shows(shows)
+}
 
-    let mut shows: EventsDeser = serde_json::from_str(json)?;
+#[cfg(feature = "ssr")]
+fn sort_shows(mut shows: EventsDeser) -> Result<EventsSorted, MajServerError> {
+    use std::cmp::Reverse;
     for (index, show) in shows.0.iter().enumerate() {
         if show.get_date().is_none() {
             return Err(MajServerError::SerdeJson(format!(
@@ -221,34 +225,34 @@ fn RenderShows(selector: EventSelector) -> impl IntoView {
     }
 }
 
-// ###################################
-// ->   SERVER
-// ###################################
-
-/// Uses `OnceCell` to deserialize, validate dates, and sort `Shows` from JSON.
-/// Can return an Error if reading, parsing, or date validation fails.
-/// Only reads the files, deserializes and sorts them on the initial call.
-/// Further calls just return a clone of `Shows`.
+/// Read live records, preserving the existing public date format and chronological ordering.
 #[server(GetShows, "/api", "GetJson", "get_shows")]
 async fn get_shows() -> Result<EventsSorted, MajServerError> {
-    use tokio::sync::OnceCell;
-
-    let options = use_context::<leptos::config::LeptosOptions>().ok_or(MajServerError::Internal)?;
-    static SHOWS_INIT: OnceCell<Result<EventsSorted, MajServerError>> = OnceCell::const_new();
-
-    tracing::debug!("Retrieving SHOWS");
-    SHOWS_INIT
-        .get_or_init(|| load_shows(&options.site_root))
-        .await
-        .clone()
+    let database =
+        use_context::<crate::database::DatabaseManager>().ok_or(MajServerError::Internal)?;
+    load_shows(&database).await
 }
 
 #[cfg(feature = "ssr")]
-async fn load_shows(site_root: &str) -> Result<EventsSorted, MajServerError> {
-    let path = std::path::Path::new(site_root).join("data_json/shows.json");
-    tracing::info!("Initializing SHOWS");
-    let show_json = tokio::fs::read_to_string(path).await?;
-    parse_shows(&show_json)
+async fn load_shows(
+    database: &crate::database::DatabaseManager,
+) -> Result<EventsSorted, MajServerError> {
+    let rows = database
+        .shows()
+        .await
+        .map_err(|_| MajServerError::Internal)?;
+    let mut events = Vec::with_capacity(rows.len());
+    for row in rows {
+        let date = NaiveDate::parse_from_str(&row.date, "%Y-%m-%d")
+            .map_err(|_| MajServerError::Internal)?;
+        events.push(Event {
+            date: Some(date.format("%d.%m.%Y").to_string()),
+            name: row.name,
+            club: row.club,
+            location: row.location,
+        });
+    }
+    sort_shows(EventsDeser(events))
 }
 
 #[cfg(all(test, feature = "ssr"))]
@@ -256,22 +260,23 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn show_loader_uses_configured_roots_and_reports_missing_files() {
-        for root in [
-            concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/site"),
-            "tests/fixtures/site",
-        ] {
-            let shows = load_shows(root).await.unwrap();
-            assert_eq!(shows.get_asc().len(), 1);
-            assert_eq!(
-                shows.get_asc()[0].name.as_deref(),
-                Some("Configured site root")
-            );
-        }
-        assert!(matches!(
-            load_shows("tests/fixtures/missing-site").await,
-            Err(MajServerError::Io(_))
-        ));
+    async fn show_loader_reads_live_data_and_sorts_real_dates() {
+        let (_root, database) = crate::test_support::database().await;
+        let id = database
+            .add_show("2027-01-01", None, Some("Venue"), None)
+            .await
+            .unwrap();
+        database
+            .add_show("2024-02-29", Some("Leap day"), None, None)
+            .await
+            .unwrap();
+        let shows = load_shows(&database).await.unwrap();
+        assert_eq!(shows.get_asc()[0].date.as_deref(), Some("29.02.2024"));
+        assert_eq!(shows.get_desc()[0].club.as_deref(), Some("Venue"));
+        database.remove_show(id).await.unwrap();
+        assert_eq!(load_shows(&database).await.unwrap().get_asc().len(), 1);
+        database.close().await;
+        assert!(load_shows(&database).await.is_err());
     }
 
     #[test]

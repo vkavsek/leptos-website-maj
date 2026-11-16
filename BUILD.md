@@ -126,10 +126,10 @@ focused group, use `just test --lib FILTER` with one of these filters:
 | Filter | Coverage |
 | --- | --- |
 | `routes::home::tests` | Validation, rolling expiry, concurrent attempts, rejected HTTP requests |
-| `serve::tests` | File responses and content APIs using the configured site root |
-| `routes::shows::tests` | Calendar dates, sorting, and content loading |
+| `serve::tests` | Static file responses plus uncached content APIs using the live database |
+| `routes::shows::tests` | Calendar dates, chronological sorting, and live database loading |
 | `routes::about::tests` | Gallery loading, error rendering, and thumbnail assets |
-| `routes::media::tests` | Video content loading |
+| `routes::media::tests` | Live video additions/removals and constructed embed URLs |
 | `server_config::tests` | Origin/path validation, required production credentials, local operation without Google, and private errors |
 | `storage::tests` | Private modes/layout, preservation of data, public path separation, and rejection of unsafe links |
 | `database::tests` | Pooled connection settings, migrations/reopen, constraints, corruption, writer contention, and concurrent login limits across manager clones |
@@ -137,6 +137,8 @@ focused group, use `just test --lib FILTER` with one of these filters:
 | `auth::tests` | Cookie policy, expiry, revocation, CSRF/Origin, PKCE state binding/replay, and transaction bounds |
 | `auth::google::tests` | Locally signed ID tokens, claim failures, pinned metadata, HTTP bounds, and key-cache rotation/backoff |
 | `auth::login::tests` | Mocked callbacks, approval/enrollment isolation, sign-out, escaped pages, and login rate limits |
+| `auth::editor::tests` | Native content forms, authorization/CSRF, confirmations, collisions and catalog-gated files |
+| `content::gallery::tests` | Image limits, re-encoding, staging, publication failures and cleanup |
 | `content::tests` | YouTube validation, import rollback/repeat safety, private files, and checksummed backup/restore |
 
 Run the album HTTP regression test separately with:
@@ -271,6 +273,24 @@ To test an existing development server, use
 `env PLAYWRIGHT_BASE_URL=http://127.0.0.1:8080 just e2e`.
 Direct Playwright invocations still use the configuration's default port 8080.
 Playwright does not start a server. Stop the test server with Ctrl+C when finished.
+Before testing public gallery/media/show pages against a fresh data directory,
+stop HTTP and seed that same directory with `just admin import-content --source public`.
+For the default `test-server` directory use
+`env MAJ_DATA_DIR="$HOME/.local/share/maj-admin-test" just admin import-content --source public`.
+A completed import is not repeated.
+
+To exercise authenticated add/remove forms without Google credentials or a
+separately running server:
+
+```sh
+just test-admin-browser
+```
+
+This ignored Rust test creates isolated private storage and a test session, starts
+an ephemeral loopback server, runs `end2end/tests/admin-content.spec.ts` in Chromium
+and Firefox, then stops the server and removes its data. Install Playwright first
+with `just e2e-setup`. It never authorizes a real account or changes the normal
+application's login rules. Ordinary `just e2e` runs skip this fixture-only test.
 
 Tests cover the homepage, keyboard and dialog focus behavior, photo navigation,
 portrait sizing, thumbnail loading, audio event synchronization, rejected playback,

@@ -23,10 +23,10 @@ async fn content_failures_return_internal_server_error_before_streaming() {
         })
         .with_state(options);
     for (path, error) in [
-        ("/media", "SerdeJson("),
-        ("/shows/past", "SerdeJson("),
-        ("/shows/future", "SerdeJson("),
-        ("/about_me", "Io("),
+        ("/media", "Internal"),
+        ("/shows/past", "Internal"),
+        ("/shows/future", "Internal"),
+        ("/about_me", "Internal"),
     ] {
         let response = app
             .clone()

@@ -39,6 +39,27 @@ pub async fn static_file_and_err_handler(
 }
 
 async fn get_static_file(req: Request<Body>, root: &str) -> Result<Response, MajServerError> {
+    // ServeDir decodes and normalizes paths. Block aliases as well as direct paths
+    // so bundled gallery files can never resurrect an unpublished catalog entry.
+    let decoded = percent_encoding::percent_decode_str(req.uri().path())
+        .decode_utf8()
+        .map_err(|_| MajServerError::NotFound)?;
+    let mut segments = Vec::new();
+    for segment in decoded.split('/') {
+        match segment {
+            "" | "." => {}
+            ".." => {
+                segments.pop();
+            }
+            part => segments.push(part),
+        }
+    }
+    if matches!(
+        segments.as_slice(),
+        ["img", "about_pics" | "about_thumbnails", ..]
+    ) {
+        return Ok(StatusCode::NOT_FOUND.into_response());
+    }
     // `ServeDir` implements `tower::Service` so we can call it with `tower::ServiceExt::oneshot`
     // This path is relative to the cargo root
     match ServeDir::new(root)

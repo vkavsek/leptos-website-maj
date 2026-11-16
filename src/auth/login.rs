@@ -49,6 +49,60 @@ pub(crate) fn routes(config: Arc<ServerConfig>) -> Router<leptos::config::Leptos
     }))
 }
 
+/// Maps internal failure categories to fixed messages without provider diagnostics or secrets.
+pub(super) fn login_failure(error: AuthError) -> Response {
+    let (status, message) = match error {
+        AuthError::Unauthorized => (StatusCode::UNAUTHORIZED, "Sign in to continue."),
+        AuthError::Forbidden => (
+            StatusCode::FORBIDDEN,
+            "Sign-in could not be verified. Start again to retry.",
+        ),
+        AuthError::Unavailable => (
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Google sign-in is temporarily unavailable. Please try again later.",
+        ),
+        AuthError::Busy => (
+            StatusCode::TOO_MANY_REQUESTS,
+            "Too many sign-in attempts. Please wait a minute before trying again.",
+        ),
+    };
+    page(
+        status,
+        "Sign-in",
+        view! {
+            <p>{message}</p>
+            <a href="/admin">"Return to sign-in"</a>
+        },
+    )
+}
+
+/// Renders a script-free HTML response with a restrictive content security policy.
+/// The surrounding `private_routes` middleware supplies cache/referrer privacy headers.
+/// FIX: format
+pub(super) fn page(status: StatusCode, title: &'static str, body: impl IntoView) -> Response {
+    // Leptos escapes all dynamic text/attributes. No tokens or provider diagnostics enter scripts.
+    let html = view! {
+        <!DOCTYPE html>
+        <html lang="en">
+            <head>
+                <meta charset="utf-8" />
+                <meta name="viewport" content="width=device-width, initial-scale=1" />
+                <title>{title}" - Maj Kavšek"</title>
+                <style>
+                    "body { font-family: system-ui, sans-serif; line-height: 1.5; margin: 1rem; } main { max-width: 45rem; margin-inline: auto; } code, li { overflow-wrap: anywhere; } button, input { font: inherit; min-height: 48px; padding: .5rem; box-sizing: border-box; max-width: 100%; } input:not([type=hidden]):not([type=checkbox]) { display: block; width: 100%; margin-block-end: 1rem; } input[type=checkbox] { min-height: auto; } label { display: inline-block; padding-block: .5rem; } form, section { margin-block: 1.5rem; } fieldset { min-width: 0; } a { display: inline-block; padding-block: .75rem; } img { max-width: 100%; height: auto; } :focus-visible { outline: 3px solid #1656b8; outline-offset: 3px; }"
+                </style>
+            </head>
+            <body>
+                <main>
+                    <h1>{title}</h1>
+                    {body}
+                </main>
+            </body>
+        </html>
+    }.to_html();
+    (status, [(http::header::CONTENT_SECURITY_POLICY, "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'")], Html(html)).into_response()
+}
+
 /// Process-local provider and admission limits shared by every login request.
 struct LoginService {
     config: Arc<ServerConfig>,
@@ -122,6 +176,7 @@ fn router(service: Arc<LoginService>) -> Router<leptos::config::LeptosOptions> {
         .route("/admin", get(admin))
         .layer(DefaultBodyLimit::max(2048))
         .layer(Extension(service))
+        .merge(super::editor::routes())
 }
 
 /// Persists state, nonce and PKCE before exposing the authorization redirect.
@@ -248,9 +303,19 @@ async fn identity(session: Session) -> Response {
             return Err(AuthError::Unauthorized);
         }
         Ok(page(StatusCode::FORBIDDEN, "Account approval required", view! {
-            <p>"Google verified this account, but it is not approved for administration. Share these values privately with the site operator, then sign in again after approval."</p>
-            <dl><dt>"Issuer"</dt><dd><code>{recent.issuer}</code></dd>
-                <dt>"Subject"</dt><dd><code>{recent.subject}</code></dd></dl>
+            <p>
+                "Google verified this account, but it is not approved for administration. Share these values privately with the site operator, then sign in again after approval."
+            </p>
+            <dl>
+                <dt>"Issuer"</dt>
+                <dd>
+                    <code>{recent.issuer}</code>
+                </dd>
+                <dt>"Subject"</dt>
+                <dd>
+                    <code>{recent.subject}</code>
+                </dd>
+            </dl>
             <p>"This identity display expires five minutes after verification."</p>
             <a href="/auth/google/start">"Sign in again"</a>
         }))
@@ -305,17 +370,23 @@ async fn admin(
                 Ok(Some(data)) => data,
                 _ => return login_failure(AuthError::Unavailable),
             };
+            let editors = match super::editor::content(&database, &data.csrf).await {
+                Ok(editors) => editors,
+                Err(error) => return login_failure(error),
+            };
             page(
                 StatusCode::OK,
                 "Administration",
                 view! {
                     <p>"Signed in as "{administrator.label}"."</p>
-                    <p>"Content editing will be available here."</p>
+                    {editors}
                     <form action="/auth/logout" method="post">
                         <input type="hidden" name="csrf_token" value=data.csrf />
                         <button type="submit">"Sign out"</button>
                     </form>
-                    <p><a href="/">"Back to the portfolio"</a></p>
+                    <p>
+                        <a href="/">"Back to the portfolio"</a>
+                    </p>
                 },
             )
         }
@@ -328,54 +399,28 @@ async fn admin(
             },
             "Administration sign-in",
             view! {
-                {if service.config.google.is_some() { view! {<p><a href="/auth/google/start">"Sign in with Google"</a></p>}.into_any() }
-                    else { view! {<p>"Google sign-in is unavailable on this server."</p>}.into_any() }}
-                <p><a href="/">"Back to the portfolio"</a></p>
+                {if service.config.google.is_some() {
+                    view! {
+                        <p>
+                            <a href="/auth/google/start">"Sign in with Google"</a>
+                        </p>
+                    }
+                        .into_any()
+                } else {
+                    view! { <p>"Google sign-in is unavailable on this server."</p> }.into_any()
+                }}
+                <p>
+                    <a href="/">"Back to the portfolio"</a>
+                </p>
             },
         ),
         Err(error) => login_failure(error),
     }
 }
 
-/// Maps internal failure categories to fixed messages without provider diagnostics or secrets.
-fn login_failure(error: AuthError) -> Response {
-    let (status, message) = match error {
-        AuthError::Unauthorized => (StatusCode::UNAUTHORIZED, "Sign in to continue."),
-        AuthError::Forbidden => (
-            StatusCode::FORBIDDEN,
-            "Sign-in could not be verified. Start again to retry.",
-        ),
-        AuthError::Unavailable => (
-            StatusCode::SERVICE_UNAVAILABLE,
-            "Google sign-in is temporarily unavailable. Please try again later.",
-        ),
-        AuthError::Busy => (
-            StatusCode::TOO_MANY_REQUESTS,
-            "Too many sign-in attempts. Please wait a minute before trying again.",
-        ),
-    };
-    page(
-        status,
-        "Sign-in",
-        view! {<p>{message}</p><a href="/admin">"Return to sign-in"</a>},
-    )
-}
-
-/// Renders a script-free HTML response with a restrictive content security policy.
-/// The surrounding `private_routes` middleware supplies no-store and no-referrer headers.
-fn page(status: StatusCode, title: &'static str, body: impl IntoView) -> Response {
-    // Leptos escapes all dynamic text/attributes. No tokens or provider diagnostics enter scripts.
-    let html = view! {
-        <!DOCTYPE html>
-        <html lang="en"><head><meta charset="utf-8" />
-            <meta name="viewport" content="width=device-width, initial-scale=1" />
-            <title>{title}" - Maj Kavšek"</title>
-            <style>"body { font-family: system-ui, sans-serif; line-height: 1.5; margin: 2rem; } main { max-width: 45rem; margin-inline: auto; } code { overflow-wrap: anywhere; } button { font: inherit; min-height: 48px; padding: .5rem 1rem; } a { display: inline-block; padding-block: .75rem; }"</style>
-        </head><body><main><h1>{title}</h1>{body}</main></body></html>
-    }.to_html();
-    (status, [(http::header::CONTENT_SECURITY_POLICY, "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'")], Html(html)).into_response()
-}
-
+// ###################################
+// ->     TESTS
+// ###################################
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -556,7 +601,8 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::OK);
-        private(&response);
+        assert_eq!(response.headers()[CACHE_CONTROL], "no-store");
+        assert_eq!(response.headers()[REFERRER_POLICY], "same-origin");
         let html = body(response).await;
         assert!(html.contains("Owner &lt;safe&gt;"));
         let csrf = html

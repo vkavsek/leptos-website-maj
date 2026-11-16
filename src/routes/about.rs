@@ -312,44 +312,32 @@ impl Color {
 // ->   SERVER
 // ###################################
 
+/// Only published catalog entries are visible; an empty catalog is an empty gallery.
 #[server(ReadImageFiles, "/api", "GetJson", "get_image_files")]
 async fn read_image_files() -> Result<Vec<String>, MajServerError> {
-    use tokio::sync::OnceCell;
-    let options = use_context::<leptos::config::LeptosOptions>().ok_or(MajServerError::Internal)?;
-    static INIT: OnceCell<Result<Vec<String>, MajServerError>> = OnceCell::const_new();
-    INIT.get_or_init(|| load_image_files(&options.site_root))
+    let database =
+        use_context::<crate::database::DatabaseManager>().ok_or(MajServerError::Internal)?;
+    load_image_files(&database).await
+}
+
+#[cfg(feature = "ssr")]
+async fn load_image_files(
+    database: &crate::database::DatabaseManager,
+) -> Result<Vec<String>, MajServerError> {
+    database
+        .gallery()
         .await
-        .clone()
+        .map(|photos| {
+            photos
+                .iter()
+                .map(|photo| gallery_image_url(&photo.public_name))
+                .collect()
+        })
+        .map_err(|_| MajServerError::Internal)
 }
 
 #[cfg(feature = "ssr")]
-async fn load_image_files(site_root: &str) -> Result<Vec<String>, MajServerError> {
-    let path = std::path::Path::new(site_root).join("img/about_pics");
-    let mut files = tokio::fs::read_dir(path).await?;
-    let mut res = Vec::new();
-    while let Some(file) = files.next_entry().await? {
-        if !file.file_type().await?.is_file() {
-            continue;
-        }
-        let name = file.file_name();
-        let Some(name) = name.to_str() else { continue };
-        let extension = std::path::Path::new(name)
-            .extension()
-            .and_then(|ext| ext.to_str());
-        if extension.is_some_and(|ext| {
-            matches!(
-                ext.to_ascii_lowercase().as_str(),
-                "avif" | "gif" | "jpg" | "jpeg" | "png" | "svg" | "webp"
-            )
-        }) {
-            res.push(gallery_image_url(name));
-        }
-    }
-    Ok(res)
-}
-
-#[cfg(feature = "ssr")]
-fn gallery_image_url(name: &str) -> String {
+pub(crate) fn gallery_image_url(name: &str) -> String {
     use std::fmt::Write;
 
     let mut url = String::from("/img/about_pics/");
@@ -370,14 +358,10 @@ mod tests {
     #[tokio::test]
     async fn every_gallery_original_has_a_smaller_webp_thumbnail() {
         let root = concat!(env!("CARGO_MANIFEST_DIR"), "/public");
-        let images = load_image_files(root).await.unwrap();
         for original in std::fs::read_dir(format!("{root}/img/about_pics")).unwrap() {
             let original = original.unwrap();
             let name = original.file_name();
             let Some(name) = name.to_str() else { continue };
-            if !images.contains(&gallery_image_url(name)) {
-                continue;
-            }
             let thumbnail =
                 std::fs::read(format!("{root}/img/about_thumbnails/{name}.webp")).unwrap();
             let original_size = original.metadata().unwrap().len();
@@ -387,57 +371,23 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn gallery_ignores_non_images_and_encodes_filename_segments() {
-        let root = std::env::temp_dir().join(format!(
-            "maj-gallery-{}-{}",
-            std::process::id(),
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-        ));
-        let directory = root.join("img/about_pics");
-        std::fs::create_dir_all(directory.join("directory.jpg")).unwrap();
-        for name in ["portrait.JPG", "photo#1? 100%é.png", "notes.txt"] {
-            std::fs::write(directory.join(name), b"fixture").unwrap();
-        }
-        #[cfg(unix)]
-        {
-            use std::os::unix::ffi::OsStringExt;
-            std::os::unix::fs::symlink(
-                directory.join("portrait.JPG"),
-                directory.join("linked.jpg"),
-            )
+    async fn gallery_lists_only_live_records_and_encodes_filename_segments() {
+        let (_root, database) = crate::test_support::database().await;
+        assert!(load_image_files(&database).await.unwrap().is_empty());
+        let id = database
+            .add_gallery("photo#1? 100%é.png", "private.png", "private.webp", || {
+                Ok(())
+            })
+            .await
             .unwrap();
-            let invalid_name = std::ffi::OsString::from_vec(b"invalid-\xff.jpg".to_vec());
-            std::fs::write(directory.join(invalid_name), b"fixture").unwrap();
-        }
-        let result = load_image_files(root.to_str().unwrap()).await;
-        std::fs::remove_dir_all(root).unwrap();
-        let mut images = result.unwrap();
-        images.sort();
         assert_eq!(
-            images,
-            [
-                "/img/about_pics/photo%231%3F%20100%25%C3%A9.png",
-                "/img/about_pics/portrait.JPG"
-            ]
+            load_image_files(&database).await.unwrap(),
+            ["/img/about_pics/photo%231%3F%20100%25%C3%A9.png"]
         );
-    }
-
-    #[tokio::test]
-    async fn gallery_loader_uses_configured_roots_and_keeps_public_urls() {
-        for root in [
-            concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/site"),
-            "tests/fixtures/site",
-        ] {
-            let images = load_image_files(root).await.unwrap();
-            assert_eq!(images, ["/img/about_pics/gallery-test.svg"]);
-        }
-        assert!(matches!(
-            load_image_files("tests/fixtures/missing-site").await,
-            Err(MajServerError::Io(_))
-        ));
+        database.remove_gallery(id).await.unwrap();
+        assert!(load_image_files(&database).await.unwrap().is_empty());
+        database.close().await;
+        assert!(load_image_files(&database).await.is_err());
     }
 
     #[tokio::test]
@@ -470,6 +420,6 @@ mod tests {
         let body = to_bytes(response.into_body(), 100_000).await.unwrap();
         let html = std::str::from_utf8(&body).unwrap();
         assert!(html.contains("error-wrap"));
-        assert!(html.contains("Io("));
+        assert!(html.contains("Internal"));
     }
 }

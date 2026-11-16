@@ -2247,6 +2247,7 @@ dependencies = [
  "oauth2",
  "openidconnect",
  "parking_lot 0.13.0",
+ "percent-encoding",
  "reqwest",
  "secrecy",
  "serde",

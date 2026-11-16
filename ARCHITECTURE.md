@@ -18,8 +18,10 @@ runtime configuration and maintenance are in [README.md](README.md).
 | `src/cli.rs` | Clap operator interface, explicit approval/revocation, command dispatch |
 | `src/auth.rs` | SQLite sessions, browser-bound login transactions, shared authorization/CSRF guards |
 | `src/auth/google.rs` | Bounded Google metadata/key cache, OAuth2 code exchange, and RS256 ID-token validation |
+| `src/auth/editor.rs` | Native content forms with approval, Origin/CSRF checks and bounded uploads |
+| `src/content/gallery.rs` | Image decoding/staging, publication and catalog-gated serving |
 | `src/auth/login.rs` | Server-rendered sign-in, temporary identity, administrator landing, and logout routes |
-| `src/content.rs` | Validated offline import and checksummed database/gallery backups |
+| `src/content.rs` | Shared validation, offline import and checksummed database/gallery backups |
 | `src/app.rs` | HTML shell, shared navigation/audio layout, routes, and dialog dismissal helper |
 | `src/lib.rs` | Browser hydration entry point and shared library exports |
 | `src/serve.rs` | Axum router, server functions, request tracing, compression, and response headers |
@@ -56,7 +58,7 @@ an absolute data path, and paired Google OAuth credentials. Explicit loopback
 development can omit both credentials; it does not grant administrator access.
 The secret uses `SecretString` and configuration has no `Debug` implementation.
 No auth configuration is serialized to the browser. Google login is implemented;
-the content-editing UI remains pending. Storage contains `admin.sqlite3`
+the content editors use native server-rendered forms. Storage contains `admin.sqlite3`
 with mode `0600`, plus original/thumbnail and staging directories with
 mode `0700`. Existing files are retained; unsafe ownership, modes, links, or public
 path overlap stops startup. Gallery/staging share the data root's filesystem for
@@ -80,7 +82,9 @@ exits. Fly startup also requires a separate filesystem mounted at `/data`.
 SQLite session middleware wraps private namespace guards. Axum receives the manager
 and configuration through extensions; Leptos receives the same values through
 additional server context and extracts the same session from request parts.
-Private response cache/referrer headers survive release-mode mapping. Guards
+Private response cache/referrer headers survive release-mode mapping. Authenticated
+`/admin` uses `same-origin` referrers so native forms retain their Origin; other
+private responses use `no-referrer`. Guards
 enforce idle/absolute expiry and current approval/generation; mutation guards add
 Origin and constant-time CSRF checks. Login transaction consumption is an atomic
 browser-bound delete/return operation. A scoped cleanup task removes expired
@@ -118,8 +122,7 @@ and rolls back rows; ambiguous commit failure retains files to avoid breaking an
 committed references. Backup opens the database without applying pending migrations,
 uses `VACUUM INTO`, copies matching gallery
 files, and writes SHA-256 manifest/completion files. Startup never imports bundled
-content automatically. Public loaders still use built files until the later
-content workflow change.
+content automatically. Public loaders now query the live database; bundled files are import sources only.
 
 SIGINT and SIGTERM initiate Axum's graceful shutdown. Active connections get up to
 25 seconds to drain; remaining connections close when that deadline expires. Fly's
@@ -135,7 +138,8 @@ Only missing files render the app's HTML `404` page. Redirects, failed precondit
 unsatisfiable ranges, and other file-service responses pass through.
 
 Development responses use `no-store, no-cache, must-revalidate, proxy-revalidate`;
-release responses use `max-age=3600, must-revalidate`.
+release responses otherwise use `max-age=3600, must-revalidate`. Editable pages,
+content APIs and catalog-gated gallery responses override these defaults with `no-store`.
 
 ### Album URLs
 
@@ -145,27 +149,35 @@ The discography index remains available at `/discography`.
 
 ## Content loading and state
 
-Shows, videos, and gallery filenames load from `LeptosOptions.site_root`, the same
-directory used for static files. Gallery URLs remain `/img/about_pics/<filename>`.
-The default local root is `target/site`, populated from `public/` by cargo-leptos.
+Shows, videos and gallery listings query `DatabaseManager` on each resource load,
+with no process-lifetime cache. An empty catalog stays empty; bundled JSON/images
+are import sources only. Static assets still use `LeptosOptions.site_root`.
+Show dates use ISO storage and the existing public day.month.year display, with
+chronological sorting. Blocking Leptos resources allow failures to set HTTP 500
+before streaming, without exposing database diagnostics.
 
-Each loader uses Tokio's async `OnceCell` to cache its result, including errors,
-for the life of the server process. Initialization awaits file I/O. The cache is
-not keyed by site root: the process uses one configured root. See
-[content maintenance](README.md#content-maintenance) for reload requirements.
+The `/admin` landing page reads the same catalogs. `POST /admin/content` accepts
+native multipart forms: the first field is the session CSRF token, checked before
+reading file data. Middleware verifies approval and exact Origin before parsing;
+the handler rechecks approval after IO and before publication. Other admin mutations
+retain the normal header-based CSRF guard. Successful writes redirect to a fresh
+catalog; deletion requires explicit confirmation and non-reused local IDs.
 
-Show dates are validated before sorting or caching any records. An invalid date
-rejects the whole file. Shows, Media, and the gallery use blocking resources so
-their error boundaries can set HTTP `500` before the response headers are sent.
-Successful pages keep HTTP `200`.
+One process-wide semaphore bounds body reception/decoding. A blocking worker
+prepares orientation-corrected, metadata-free JPEG/PNG originals and 480×270 WebP
+thumbnails in private staging. The request, fields, dimensions and decoder memory
+are bounded; see [upload limits](README.md#gallery-uploads-and-removal). No-replace
+hard links publish completed files before the database commits their record.
+Publication failures remove new links; ambiguous commit failures retain files.
+Removal deletes the catalog row before cleaning up files, so crashes leave private
+orphans rather than published broken references.
 
-The gallery lists supported regular image files and percent-encodes each UTF-8
-filename as a URL path segment. It ignores links, directories, and unsupported
-files. Viewer navigation uses exact URL equality.
-
-The gallery initially requests 480×270 WebP thumbnails. The first four load eagerly;
-the rest use native lazy loading. An original photo is requested only when the
-viewer opens.
+Dedicated handlers look up each original/thumbnail in the live catalog before
+serving its known private filename. Static fallback also rejects normalized/encoded
+aliases into the bundled gallery directories. Gallery URL shapes and encoded
+imported names are preserved. The viewer uses exact URL equality, initially loads
+480×270 thumbnails (first four eagerly, remaining lazily), and fetches a full-size
+photo only when opened. Biography remains Rust content with no editor or mutation API.
 
 ## Contact form protections
 

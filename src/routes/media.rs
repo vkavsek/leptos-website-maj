@@ -62,29 +62,30 @@ pub struct YoutubeUrl {
 // ###################################
 // ->   Server
 // ###################################
+/// Read the current catalog on each resource load; never retain editable data process-wide.
 #[server(GetMediaVideos, "/api", "GetJson", "get_media_videos")]
 async fn get_youtube_videos() -> Result<Vec<YoutubeUrl>, crate::MajServerError> {
-    use tokio::sync::OnceCell;
-
-    let options =
-        use_context::<leptos::config::LeptosOptions>().ok_or(crate::MajServerError::Internal)?;
-    static VIDEOS_INIT: OnceCell<Result<Vec<YoutubeUrl>, crate::MajServerError>> =
-        OnceCell::const_new();
-
-    tracing::debug!("Retrieving Yt Videos");
-    VIDEOS_INIT
-        .get_or_init(|| load_youtube_videos(&options.site_root))
-        .await
-        .clone()
+    let database =
+        use_context::<crate::database::DatabaseManager>().ok_or(crate::MajServerError::Internal)?;
+    load_youtube_videos(&database).await
 }
 
 #[cfg(feature = "ssr")]
-async fn load_youtube_videos(site_root: &str) -> Result<Vec<YoutubeUrl>, crate::MajServerError> {
-    let path = std::path::Path::new(site_root).join("data_json/yt_videos.json");
-    tracing::info!("Initializing YT videos");
-    let videos_json = tokio::fs::read_to_string(path).await?;
-    tracing::debug!("videos_json: {videos_json}");
-    Ok(serde_json::from_str(&videos_json)?)
+async fn load_youtube_videos(
+    database: &crate::database::DatabaseManager,
+) -> Result<Vec<YoutubeUrl>, crate::MajServerError> {
+    database
+        .videos()
+        .await
+        .map(|videos| {
+            videos
+                .into_iter()
+                .map(|video| YoutubeUrl {
+                    url: format!("https://www.youtube-nocookie.com/embed/{}", video.video_id),
+                })
+                .collect()
+        })
+        .map_err(|_| crate::MajServerError::Internal)
 }
 
 #[cfg(all(test, feature = "ssr"))]
@@ -92,21 +93,17 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn video_loader_uses_configured_roots_and_reports_missing_files() {
-        for root in [
-            concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/site"),
-            "tests/fixtures/site",
-        ] {
-            let videos = load_youtube_videos(root).await.unwrap();
-            assert_eq!(videos.len(), 1);
-            assert_eq!(
-                videos[0].url,
-                "https://www.youtube.com/embed/configured-root-test"
-            );
-        }
-        assert!(matches!(
-            load_youtube_videos("tests/fixtures/missing-site").await,
-            Err(crate::MajServerError::Io(_))
-        ));
+    async fn video_loader_reflects_additions_and_removals() {
+        let (_root, database) = crate::test_support::database().await;
+        assert!(load_youtube_videos(&database).await.unwrap().is_empty());
+        let id = database.add_video("3uh_Jc1prRQ").await.unwrap();
+        assert_eq!(
+            load_youtube_videos(&database).await.unwrap()[0].url,
+            "https://www.youtube-nocookie.com/embed/3uh_Jc1prRQ"
+        );
+        database.remove_video(id).await.unwrap();
+        assert!(load_youtube_videos(&database).await.unwrap().is_empty());
+        database.close().await;
+        assert!(load_youtube_videos(&database).await.is_err());
     }
 }

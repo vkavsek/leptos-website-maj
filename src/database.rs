@@ -311,6 +311,125 @@ impl DatabaseManager {
         Ok(occupied != 0)
     }
 
+    /// Queries editable content on every request; ties retain their insertion order.
+    pub async fn shows(&self) -> sqlx::Result<Vec<Show>> {
+        sqlx::query_as(
+            "SELECT id, date, name, club, location
+             FROM shows
+             ORDER BY date, id",
+        )
+        .fetch_all(&self.pool)
+        .await
+    }
+
+    /// Adds a previously validated calendar date and optional text fields.
+    pub async fn add_show(
+        &self,
+        date: &str,
+        name: Option<&str>,
+        club: Option<&str>,
+        location: Option<&str>,
+    ) -> sqlx::Result<i64> {
+        sqlx::query_scalar(
+            "INSERT INTO shows (date, name, club, location)
+             VALUES (?, ?, ?, ?)
+             RETURNING id",
+        )
+        .bind(date)
+        .bind(name)
+        .bind(club)
+        .bind(location)
+        .fetch_one(&self.pool)
+        .await
+    }
+
+    pub async fn remove_show(&self, id: i64) -> sqlx::Result<bool> {
+        Ok(sqlx::query("DELETE FROM shows WHERE id = ?")
+            .bind(id)
+            .execute(&self.pool)
+            .await?
+            .rows_affected()
+            == 1)
+    }
+
+    pub async fn videos(&self) -> sqlx::Result<Vec<Video>> {
+        sqlx::query_as("SELECT id, video_id FROM videos ORDER BY id")
+            .fetch_all(&self.pool)
+            .await
+    }
+
+    /// The unique constraint rejects duplicate videos, including concurrent submissions.
+    pub async fn add_video(&self, video_id: &str) -> sqlx::Result<i64> {
+        sqlx::query_scalar("INSERT INTO videos (video_id) VALUES (?) RETURNING id")
+            .bind(video_id)
+            .fetch_one(&self.pool)
+            .await
+    }
+
+    pub async fn remove_video(&self, id: i64) -> sqlx::Result<bool> {
+        Ok(sqlx::query("DELETE FROM videos WHERE id = ?")
+            .bind(id)
+            .execute(&self.pool)
+            .await?
+            .rows_affected()
+            == 1)
+    }
+
+    pub async fn gallery(&self) -> sqlx::Result<Vec<GalleryImage>> {
+        sqlx::query_as(
+            "SELECT id, public_name, original_file, thumbnail_file
+             FROM gallery_images ORDER BY public_name, id",
+        )
+        .fetch_all(&self.pool)
+        .await
+    }
+
+    /// Only published names resolve; filesystem-only orphans are invisible to visitors.
+    pub async fn gallery_image(&self, name: &str) -> sqlx::Result<Option<GalleryImage>> {
+        sqlx::query_as(
+            "SELECT id, public_name, original_file, thumbnail_file
+             FROM gallery_images WHERE public_name = ?",
+        )
+        .bind(name)
+        .fetch_optional(&self.pool)
+        .await
+    }
+
+    /// Publish both completed files before committing the row. On ambiguous commit
+    /// failure keep the files: an orphan is safer than a committed broken reference.
+    pub async fn add_gallery(
+        &self,
+        name: &str,
+        original: &str,
+        thumbnail: &str,
+        publish: impl FnOnce() -> std::io::Result<()>,
+    ) -> sqlx::Result<i64> {
+        let mut transaction = self.pool.begin().await?;
+        let id = sqlx::query_scalar(
+            "INSERT INTO gallery_images (public_name, original_file, thumbnail_file)
+             VALUES (?, ?, ?) RETURNING id",
+        )
+        .bind(name)
+        .bind(original)
+        .bind(thumbnail)
+        .fetch_one(&mut *transaction)
+        .await?;
+        publish()?;
+        transaction.commit().await?;
+        Ok(id)
+    }
+
+    /// Unpublish first and return exactly the files that may now be cleaned up.
+    pub async fn remove_gallery(&self, id: i64) -> sqlx::Result<Option<GalleryImage>> {
+        sqlx::query_as(
+            "DELETE FROM gallery_images WHERE id = ?
+             RETURNING id, public_name, original_file, thumbnail_file",
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
+    }
+
     /// Inserts validated records, publishes their files, and only then commits the catalog.
     /// The caller holds the exclusive storage lock. Publication failure must remove its
     /// new links; returning an error here drops the transaction and rolls back its rows.
@@ -404,6 +523,32 @@ impl DatabaseManager {
     }
 }
 
+/// A show with a non-reusable local ID and an ISO calendar date.
+#[derive(sqlx::FromRow)]
+pub struct Show {
+    pub id: i64,
+    pub date: String,
+    pub name: Option<String>,
+    pub club: Option<String>,
+    pub location: Option<String>,
+}
+
+/// Only a validated YouTube identifier is stored; embed URLs are built by the server.
+#[derive(sqlx::FromRow)]
+pub struct Video {
+    pub id: i64,
+    pub video_id: String,
+}
+
+/// Published image pair; filesystem names are private and never supplied by a URL.
+#[derive(sqlx::FromRow)]
+pub struct GalleryImage {
+    pub id: i64,
+    pub public_name: String,
+    pub original_file: String,
+    pub thumbnail_file: String,
+}
+
 #[cfg(test)]
 impl DatabaseManager {
     /// Allows independent fixture setup and assertions without exposing runtime SQL access.
@@ -421,6 +566,68 @@ mod tests {
         path::PathBuf,
         sync::atomic::{AtomicU64, Ordering},
     };
+
+    #[tokio::test]
+    async fn content_migration_preserves_records_and_never_reuses_deleted_ids() {
+        let fixture = Fixture::new();
+        let database = DatabaseManager::open(&fixture.0).await.unwrap();
+        sqlx::migrate!("./migrations")
+            .run_to(202611130002, &database.pool)
+            .await
+            .unwrap();
+        let show = database
+            .add_show("2024-02-29", Some("Existing"), None, None)
+            .await
+            .unwrap();
+        let video = database.add_video("3uh_Jc1prRQ").await.unwrap();
+        let photo = database
+            .add_gallery("old.jpg", "old.jpg", "old.webp", || Ok(()))
+            .await
+            .unwrap();
+        sqlx::migrate!("./migrations")
+            .run(&database.pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            database.shows().await.unwrap()[0].name.as_deref(),
+            Some("Existing")
+        );
+        assert_eq!(database.videos().await.unwrap()[0].id, video);
+        assert_eq!(database.gallery().await.unwrap()[0].id, photo);
+        database.remove_show(show).await.unwrap();
+        database.remove_video(video).await.unwrap();
+        database.remove_gallery(photo).await.unwrap();
+        assert!(
+            database
+                .add_show("2026-01-01", None, None, None)
+                .await
+                .unwrap()
+                > show
+        );
+        assert!(database.add_video("3uh_Jc1prRQ").await.unwrap() > video);
+        assert!(
+            database
+                .add_gallery("old.jpg", "new.jpg", "new.webp", || Ok(()))
+                .await
+                .unwrap()
+                > photo
+        );
+        assert!(!database.remove_show(show).await.unwrap());
+        assert!(!database.remove_video(video).await.unwrap());
+        assert!(database.remove_gallery(photo).await.unwrap().is_none());
+        assert!(database
+            .add_gallery("failure.jpg", "failure.jpg", "failure.webp", || Err(
+                std::io::Error::other("publication failed")
+            ))
+            .await
+            .is_err());
+        assert!(database
+            .gallery_image("failure.jpg")
+            .await
+            .unwrap()
+            .is_none());
+        database.close().await;
+    }
 
     struct Fixture(PathBuf);
     impl Fixture {

@@ -1,4 +1,7 @@
-//! Offline content import and coordinated backups; callers hold the exclusive storage lock.
+//! Content validation, offline import and coordinated backups.
+//! Import/backup callers hold the exclusive storage lock; online edits use database transactions.
+
+pub(crate) mod gallery;
 
 use crate::database::DatabaseManager;
 use crate::routes::{media::YoutubeUrl, shows::parse_shows};
@@ -16,6 +19,35 @@ use std::{
 
 const IMAGE_BYTES: u64 = 20 * 1024 * 1024;
 const JSON_BYTES: u64 = 2 * 1024 * 1024;
+
+/// Safe errors for editor responses; never expose filesystem or database diagnostics.
+#[derive(Debug)]
+pub(crate) enum ContentError {
+    Invalid(&'static str),
+    Conflict,
+    TooLarge,
+    Busy,
+    Unavailable,
+}
+
+impl From<sqlx::Error> for ContentError {
+    fn from(error: sqlx::Error) -> Self {
+        if error
+            .as_database_error()
+            .is_some_and(|error| error.is_unique_violation())
+        {
+            Self::Conflict
+        } else {
+            Self::Unavailable
+        }
+    }
+}
+
+impl From<std::io::Error> for ContentError {
+    fn from(_: std::io::Error) -> Self {
+        Self::Unavailable
+    }
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct BackupManifest {
@@ -259,6 +291,36 @@ pub fn youtube_id(input: &str) -> Result<String, Box<dyn Error>> {
         return Err("Invalid YouTube video ID".into());
     }
     Ok(id)
+}
+
+/// Accept a real ISO date from a native date input, retaining the optional show fields.
+pub(crate) fn validate_show(
+    date: &str,
+    name: &str,
+    club: &str,
+    location: &str,
+) -> Result<(), ContentError> {
+    let parsed = chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d")
+        .map_err(|_| ContentError::Invalid("Choose a real calendar date."))?;
+    if parsed.format("%Y-%m-%d").to_string() != date || date.len() != 10 {
+        return Err(ContentError::Invalid(
+            "Use a date between years 0001 and 9999.",
+        ));
+    }
+    if date.starts_with("0000") {
+        return Err(ContentError::Invalid(
+            "Use a date between years 0001 and 9999.",
+        ));
+    }
+    if [name, club, location]
+        .iter()
+        .any(|value| value.len() > 500 || value.chars().any(char::is_control))
+    {
+        return Err(ContentError::Invalid(
+            "Show fields must be at most 500 bytes without control characters.",
+        ));
+    }
+    Ok(())
 }
 
 fn read_file(path: &Path, limit: u64) -> Result<Vec<u8>, Box<dyn Error>> {
