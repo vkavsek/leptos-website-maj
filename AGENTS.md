@@ -4,7 +4,7 @@
 
 - `src/app.rs` defines the application shell and routes; `src/routes/` contains pages and `src/audio/` contains the audio player.
 - `src/main.rs`, `src/serve.rs`, and `src/fallback.rs` handle the Axum server; `src/lib.rs` exposes browser hydration.
-- `style/main.scss` loads SCSS partials. `public/` holds images, fonts, music, and content in `public/data_json/`.
+- `style/main.scss` loads SCSS partials. `public/` holds served images, fonts and music; `seed/` holds offline import JSON and gallery originals/thumbnails.
 - `end2end/tests/` contains Playwright tests. See `BUILD.md`, `Dockerfile`, and `fly.toml` for container builds and deployment.
 
 ## Build, Test, and Development Commands

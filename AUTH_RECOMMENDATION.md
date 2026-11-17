@@ -433,7 +433,7 @@ is at least 3.54.0; the SQLite advisory is not suppressed. The exact Git source,
 review deadline, and return-to-stable plan are in
 [README.md](README.md#patched-sqlite-dependency). Paste's maintenance risk has a
 separate documented temporary exception. Fresh checks now also flag unmaintained
-Chrono; that remains a release blocker with no exception.
+Chrono; its maintenance advisory now has a narrowly scoped temporary decision in README.md and deny.toml (review by 2026-12-17).
 
 Use `just db-migrate` for local schema administration (defaults to the development
 data directory, or respects `MAJ_DATA_DIR`). It invokes the existing executable's
@@ -798,8 +798,7 @@ navigation. Keep path-segment encoding for imported filenames.
 ### Shows and videos
 
 Give each database record a stable local ID for deletion. Preserve the existing
-optional show fields and validate real calendar dates using the existing Chrono
-approach. Store dates consistently and retain chronological public sorting.
+optional show fields and validate real calendar dates using Jiff civil dates. Store dates consistently and retain chronological public sorting.
 
 For videos, accept recognized YouTube URL forms, extract and validate the video
 ID, and construct the embed URL on the server. Match allowed hostnames exactly;
@@ -824,7 +823,7 @@ Production setup stays pending until sections 10–11. Before starting the HTTP 
 perform the one-time content import using the same `MAJ_DATA_DIR`:
 
 ```bash
-just admin import-content --source public
+just admin import-content --source seed
 ```
 
 Skip this command for a catalog already imported; it intentionally refuses to
@@ -906,7 +905,7 @@ If `just security` stops at cargo-audit, run `just deny` separately as well. A f
 security check is not a successful release gate. The 2026-11-17 dependency follow-up
 fixed SQLite through pinned upstream SQLx and recorded temporary acceptance of
 Paste's maintenance risk; cargo-audit retains the Paste warning. The refreshed
-database also flags unmaintained Chrono, which still fails cargo-deny. See
+database also flags unmaintained transitive Chrono, now temporarily accepted under the dated maintenance decision in README.md; cargo-audit retains its warning. See
 [the individual dependency decisions](README.md#coverage-and-dependency-checks);
 the RSA exception remains limited to public-key verification. Do not add exceptions
 merely to get a green status.
@@ -1083,7 +1082,8 @@ Keep built assets separate from persistent runtime paths:
 
 | Location | Contents | Release behaviour |
 | --- | --- | --- |
-| `/app/site` | Built CSS/WASM, music, fonts, and initial source content | Replaced with the image |
+| `/app/site` | Built CSS/WASM, music, fonts, and served assets | Replaced with the image |
+| `/app/seed` | Offline initial catalog and image pairs; never served | Replaced with the image |
 | `/data/admin.sqlite3` | Approved identities, sessions, and editable records | Retained on the volume; migrated in place |
 | `/data/gallery/originals` and `/data/gallery/thumbnails` | Published image files | Retained on the volume |
 | `/data/staging` | Incomplete uploads/imports | Private working space on the same volume |
@@ -1379,8 +1379,7 @@ following gates are still open:
   stable Leptos still requires it, so only that maintenance advisory is accepted
   temporarily in cargo-deny, with rationale and review deadline 2026-12-17.
   Cargo-audit keeps its warning visible; the crate remains unmaintained.
-- [ ] Resolve the newly reported `chrono 0.4.45` maintenance advisory
-  `RUSTSEC-2026-0543` before deployment. It remains unexcepted and fails cargo-deny.
+- [x] Record the transitive `chrono 0.4.45` / `RUSTSEC-2026-0543` maintenance decision: latest stable OAuth2/OIDC still requires it. Only this maintenance advisory is temporarily accepted, with review due 2026-12-17 and on dependency/advisory changes. Cargo-audit retains its warning.
 - [x] Docker now uses `cargo leptos build --release --cargo-locked -vv`, matching
   the Just build recipes. Running that command against a deliberately stale
   lockfile failed without changing the file; dependency changes must be reviewed.
@@ -1397,10 +1396,10 @@ following gates are still open:
   results as evidence for later code.
 
 The fresh dependency review reports `bans ok` and `sources ok`, but
-`advisories FAILED` for Chrono. The earlier Docker review ran cargo-deny separately
+`advisories ok` under the scoped Paste/Chrono maintenance decisions. The earlier Docker review ran cargo-deny separately
 because cargo-audit then stopped the combined recipe on SQLite. The subsequent
 dependency fix now reaches both checks: SQLite is fixed, Paste has its documented
-maintenance exception, and Chrono remains open. The Dockerfile lock enforcement
+maintenance exception, and transitive Chrono has a separate scoped maintenance decision. The Dockerfile lock enforcement
 and isolated local upload memory check are complete.
 
 After fixing the relevant code/configuration, run:
@@ -1416,7 +1415,7 @@ just test-admin-browser
 Run public browser tests as described in BUILD.md and coverage when changing
 non-trivial Rust logic. Keep credentials out of automated tests. Review the other
 new findings appended to AUDIT.md before launch. The SMTP error disclosure is fixed;
-the Chrono security-policy gate remains open. Stop here if any release gate fails.
+fresh security checks now pass under the documented, dated dependency decisions. Stop here if any release gate fails.
 
 ### 11.2. Confirm the production target and staged configuration
 
@@ -1480,10 +1479,10 @@ should contain the Google or SMTP secret.
   docker image inspect --format '{{json .RepoDigests}}' "$maj_release_image"
   docker run --rm --network none "$maj_release_image" admin --help
   docker run --rm --network none --entrypoint /bin/sh "$maj_release_image" -ec '
-    test -s /app/site/data_json/shows.json
-    test -s /app/site/data_json/yt_videos.json
-    test -d /app/site/img/about_pics
-    test -d /app/site/img/about_thumbnails
+    test -s /app/seed/data_json/shows.json
+    test -s /app/seed/data_json/yt_videos.json
+    test -d /app/seed/img/about_pics
+    test -d /app/seed/img/about_thumbnails
     test -d /app/site/pkg
     ls /app/site/pkg
   '
@@ -1564,7 +1563,7 @@ ls -la /data
 - [ ] Import the bundled public catalog once:
 
   ```sh
-  MAJ_DATA_DIR=/data /app/leptos-website-maj admin import-content --source /app/site
+  MAJ_DATA_DIR=/data /app/leptos-website-maj admin import-content --source /app/seed
   ```
 
   Record the imported show/video/photo counts and compare with the intended source

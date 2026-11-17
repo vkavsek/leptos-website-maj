@@ -89,6 +89,19 @@ pub async fn import(
     if shows.get_asc().len() > 10000 || videos.len() > 1000 {
         return Err("Content record limit exceeded".into());
     }
+    // Seed imports obey the same calendar and text rules as online edits.
+    for show in shows.get_asc() {
+        validate_show(
+            &show
+                .get_date()
+                .ok_or("Missing show date")?
+                .strftime("%Y-%m-%d")
+                .to_string(),
+            show.name.as_deref().unwrap_or(""),
+            show.club.as_deref().unwrap_or(""),
+            show.location.as_deref().unwrap_or(""),
+        )?;
+    }
     let video_ids = videos
         .iter()
         .map(|video| youtube_id(&video.url))
@@ -305,9 +318,9 @@ pub(crate) fn validate_show(
     club: &str,
     location: &str,
 ) -> Result<(), ContentError> {
-    let parsed = chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d")
+    let parsed = jiff::civil::Date::strptime("%Y-%m-%d", date)
         .map_err(|_| ContentError::Invalid("Choose a real calendar date."))?;
-    if parsed.format("%Y-%m-%d").to_string() != date || date.len() != 10 {
+    if parsed.strftime("%Y-%m-%d").to_string() != date || date.len() != 10 {
         return Err(ContentError::Invalid(
             "Use a date between years 0001 and 9999.",
         ));
@@ -606,11 +619,19 @@ mod tests {
 
     #[tokio::test]
     async fn invalid_imports_publish_no_partial_catalog_or_gallery() {
-        for invalid in ["date", "thumbnail", "duplicate", "symlink", "oversized"] {
+        for invalid in [
+            "date",
+            "fields",
+            "thumbnail",
+            "duplicate",
+            "symlink",
+            "oversized",
+        ] {
             let (root, database) = crate::test_support::database().await;
             let source = source();
             match invalid {
                 "date" => fs::write(source.path().join("data_json/shows.json"), r#"[{"date":"31.02.2026"}]"#).unwrap(),
+                "fields" => fs::write(source.path().join("data_json/shows.json"), serde_json::to_vec(&serde_json::json!([{"date":"01.01.2026","name":"x".repeat(501)}])).unwrap()).unwrap(),
                 "thumbnail" => fs::write(source.path().join("img/about_thumbnails/photo é.jpg.webp"), b"<svg/>").unwrap(),
                 "duplicate" => fs::write(source.path().join("data_json/yt_videos.json"), r#"[{"url":"https://youtu.be/3uh_Jc1prRQ"},{"url":"https://youtu.be/3uh_Jc1prRQ"}]"#).unwrap(),
                 "symlink" => {

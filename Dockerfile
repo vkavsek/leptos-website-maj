@@ -43,6 +43,8 @@ RUN apt-get update -y \
 COPY --from=builder /app/target/release/leptos-website-maj /app/leptos-website-maj
 # /target/site contains our JS/WASM/CSS, etc.
 COPY --from=builder /app/target/site /app/site
+# Initial offline import sources are shipped separately from served assets.
+COPY --from=builder /app/seed /app/seed
 COPY --from=builder /app/Cargo.toml /app/Cargo.toml
 
 # Set any required env variables and

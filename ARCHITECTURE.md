@@ -156,8 +156,9 @@ The discography index remains available at `/discography`.
 ## Content loading and state
 
 Shows, videos and gallery listings query `DatabaseManager` on each resource load,
-with no process-lifetime cache. An empty catalog stays empty; bundled JSON/images
-are import sources only. Static assets still use `LeptosOptions.site_root`.
+with no process-lifetime cache. An empty catalog stays empty; JSON/images in `seed/`
+are import sources only, copied separately to `/app/seed` in Docker. They are not
+Leptos public assets; fallback also denies legacy `/data_json/` paths. Static assets still use `LeptosOptions.site_root`.
 Show dates use ISO storage and the existing public day.month.year display, with
 chronological sorting. Blocking Leptos resources allow failures to set HTTP 500
 before streaming, without exposing database diagnostics.

@@ -263,9 +263,9 @@ class ShutdownTests(unittest.TestCase):
         self.assertEqual(len(users), 1)
         self.assertEqual(users[0]["session_generation"], 3)
         self.assertTrue(users[0]["enabled"])
-        result = self.admin("import-content", "--source", str(ROOT / "public"))
+        result = self.admin("import-content", "--source", str(ROOT / "seed"))
         self.assertEqual(result.returncode, 0, result.stderr)
-        result = self.admin("import-content", "--source", str(ROOT / "public"))
+        result = self.admin("import-content", "--source", str(ROOT / "seed"))
         self.assertNotEqual(result.returncode, 0)
         output = Path(self.temp.name) / "backup"
         result = self.admin("backup", "--output", str(output))
@@ -310,7 +310,7 @@ class ShutdownTests(unittest.TestCase):
             output = Path(self.temp.name) / "busy-backup"
             for arguments in [
                 ("backup", "--output", str(output)),
-                ("import-content", "--source", str(ROOT / "public")),
+                ("import-content", "--source", str(ROOT / "seed")),
             ]:
                 result = self.admin(*arguments)
                 self.assertNotEqual(result.returncode, 0)

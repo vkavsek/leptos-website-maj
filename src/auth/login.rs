@@ -352,7 +352,7 @@ async fn callback(
                         RecentIdentity {
                             issuer: ISSUER.into(),
                             subject,
-                            verified_at: chrono::Utc::now().timestamp(),
+                            verified_at: jiff::Timestamp::now().as_second(),
                         },
                     )
                     .await?;
@@ -372,7 +372,7 @@ async fn callback(
 async fn identity(session: Session) -> Response {
     let result = async {
         let recent = session.get::<RecentIdentity>(RECENT_IDENTITY).await?.ok_or(AuthError::Unauthorized)?;
-        let now = chrono::Utc::now().timestamp();
+        let now = jiff::Timestamp::now().as_second();
         if recent.verified_at < 0 || recent.verified_at > now || now - recent.verified_at >= 300 {
             session.remove::<RecentIdentity>(RECENT_IDENTITY).await?;
             return Err(AuthError::Unauthorized);
@@ -1138,7 +1138,7 @@ mod tests {
         let recent = RecentIdentity {
             issuer: ISSUER.into(),
             subject: "expired-user".into(),
-            verified_at: chrono::Utc::now().timestamp() - 300,
+            verified_at: jiff::Timestamp::now().as_second() - 300,
         };
         let session = super::super::test_session(&database);
         session.insert(RECENT_IDENTITY, recent).await.unwrap();

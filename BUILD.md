@@ -47,6 +47,7 @@ cargo install cargo-leptos --locked
 cargo install just --locked
 ```
 
+Docker ships the offline import tree at `/app/seed`, separately from served `/app/site`.
 Docker builds require a running Docker daemon; the builder image installs Rust
 build tools itself. Browser tests additionally require Node.js 20 or newer and npm.
 
@@ -300,9 +301,9 @@ plain Cargo build replaces the debug executable without cargo-leptos's compile-t
 bundle naming. `just test-server` rebuilds the matching server/WASM assets. If
 starting the binary manually after standalone Cargo checks, run `just build` first.
 Before testing public gallery/media/show pages against a fresh data directory,
-stop HTTP and seed that same directory with `just admin import-content --source public`.
+stop HTTP and seed that same directory with `just admin import-content --source seed`.
 For the default `test-server` directory use
-`env MAJ_DATA_DIR="$HOME/.local/share/maj-admin-test" just admin import-content --source public`.
+`env MAJ_DATA_DIR="$HOME/.local/share/maj-admin-test" just admin import-content --source seed`.
 A completed import is not repeated.
 
 To exercise authenticated add/remove forms without Google credentials or a

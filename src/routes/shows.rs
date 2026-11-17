@@ -1,4 +1,4 @@
-use chrono::prelude::*;
+use jiff::civil::Date;
 use leptos::prelude::*;
 use leptos_meta::{Link, Title};
 use leptos_router::components::{Outlet, A};
@@ -81,19 +81,9 @@ pub struct Event {
     pub(crate) location: Option<String>,
 }
 impl Event {
-    pub fn get_date(&self) -> Option<DateTime<Utc>> {
-        // TODO: Do I like this implementation ?
-        self.date.as_ref().map(|date| {
-            NaiveDate::parse_from_str(date, "%d.%m.%Y")
-                .map(|date| {
-                    date.and_time(
-                        NaiveTime::from_hms_milli_opt(0, 0, 0, 0)
-                            .expect("Unexpected error creating 0000 NaiveTime"),
-                    )
-                    .and_utc()
-                })
-                .ok()
-        })?
+    /// Show dates are calendar days, independent of timezone or time of day.
+    pub fn get_date(&self) -> Option<Date> {
+        Date::strptime("%d.%m.%Y", self.date.as_deref()?).ok()
     }
 }
 
@@ -137,13 +127,10 @@ enum EventSelector {
 #[component]
 fn RenderShows(selector: EventSelector) -> impl IntoView {
     let shows_resource = Resource::new_blocking(|| (), |_| async move { get_shows().await });
-    let pivot_date = Utc::now()
-        .with_time(
-            NaiveTime::from_hms_milli_opt(0, 0, 0, 0)
-                .expect("Unexpected error creating 0000 NaiveTime"),
-        )
-        .single()
-        .unwrap_or(Utc::now());
+    // Preserve the existing UTC day boundary on both server and browser.
+    let pivot_date = jiff::Timestamp::now()
+        .to_zoned_datetime(jiff::tz::TimeZone::UTC)
+        .date();
 
     view! {
         <Link rel="icon" href="/img/nota.svg" type_="image/svg" />
@@ -245,10 +232,9 @@ async fn load_shows(
         .map_err(|_| MajServerError::Internal)?;
     let mut events = Vec::with_capacity(rows.len());
     for row in rows {
-        let date = NaiveDate::parse_from_str(&row.date, "%Y-%m-%d")
-            .map_err(|_| MajServerError::Internal)?;
+        let date = Date::strptime("%Y-%m-%d", &row.date).map_err(|_| MajServerError::Internal)?;
         events.push(Event {
-            date: Some(date.format("%d.%m.%Y").to_string()),
+            date: Some(date.strftime("%d.%m.%Y").to_string()),
             name: row.name,
             club: row.club,
             location: row.location,
@@ -291,6 +277,8 @@ mod tests {
             r#"{"date":"29.02.2025"}"#,
             r#"{"date":"00.12.2026"}"#,
             r#"{"date":"01.13.2026"}"#,
+            r#"{"date":"01.02"}"#,
+            r#"{"date":"01.02.2026.extra"}"#,
             r#"{"date":"2026-11-10"}"#,
         ] {
             let json = format!(r#"[{{"date":"10.11.2026"}},{invalid}]"#);
@@ -322,7 +310,7 @@ mod tests {
 
     #[test]
     fn current_show_file_and_empty_list_are_valid() {
-        let json = include_str!("../../public/data_json/shows.json");
+        let json = include_str!("../../seed/data_json/shows.json");
         let expected: EventsDeser = serde_json::from_str(json).unwrap();
         let shows = parse_shows(json).unwrap();
         assert_eq!(shows.get_asc().len(), expected.0.len());

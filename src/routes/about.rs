@@ -357,7 +357,7 @@ mod tests {
 
     #[tokio::test]
     async fn every_gallery_original_has_a_smaller_webp_thumbnail() {
-        let root = concat!(env!("CARGO_MANIFEST_DIR"), "/public");
+        let root = concat!(env!("CARGO_MANIFEST_DIR"), "/seed");
         for original in std::fs::read_dir(format!("{root}/img/about_pics")).unwrap() {
             let original = original.unwrap();
             let name = original.file_name();

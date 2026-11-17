@@ -30,7 +30,6 @@ Commands and tool installation are documented in [BUILD.md](BUILD.md).
   content loading, and contact form protections.
 - [MAINTENANCE.md](MAINTENANCE.md): routine operations, migrations, backups,
   restores, deployments, rollback, and administrator access.
-- [AUDIT.md](AUDIT.md): audit findings and their resolution history.
 
 ## Development disk usage
 
@@ -62,17 +61,17 @@ first rebuild; it does not replace checking free space during long sessions.
 
 ## Runtime configuration
 
-| Variable | Purpose |
-| --- | --- |
-| `PORKMAIL_PWD` | Optional SMTP password, loaded once at startup into `ServerConfig` as a `SecretString`; supply through the environment or hosting secrets |
-| `LEPTOS_SITE_ROOT` | Directory containing built assets and import sources; defaults to `target/site` for local builds |
-| `LEPTOS_SITE_ADDR` | Server bind address; defaults to `0.0.0.0:8080` |
-| `RUST_LOG` | Required logging filter for release binaries; use `info` for normal operation |
-| `APP_ENVIRONMENT` | `development` (loopback origin only) or `production`; defaults to development in debug builds and production in release builds |
-| `MAJ_APP_ORIGIN` | Required canonical browser origin, without a trailing slash; production requires a public HTTPS hostname |
-| `MAJ_DATA_DIR` | Required absolute private data path outside public assets; startup prepares storage and migrates SQLite before listening |
-| `GOOGLE_CLIENT_ID` | OAuth client ID, paired with the client secret; required in production |
-| `GOOGLE_CLIENT_SECRET` | Server-only OAuth secret; use hosting secrets in production or the interactive development launcher |
+| Variable               | Purpose                                                                                                                                   |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORKMAIL_PWD`         | Optional SMTP password, loaded once at startup into `ServerConfig` as a `SecretString`; supply through the environment or hosting secrets |
+| `LEPTOS_SITE_ROOT`     | Directory containing served build assets (import sources are in `seed/`); defaults to `target/site` for local builds                                          |
+| `LEPTOS_SITE_ADDR`     | Server bind address; defaults to `0.0.0.0:8080`                                                                                           |
+| `RUST_LOG`             | Required logging filter for release binaries; use `info` for normal operation                                                             |
+| `APP_ENVIRONMENT`      | `development` (loopback origin only) or `production`; defaults to development in debug builds and production in release builds            |
+| `MAJ_APP_ORIGIN`       | Required canonical browser origin, without a trailing slash; production requires a public HTTPS hostname                                  |
+| `MAJ_DATA_DIR`         | Required absolute private data path outside public assets; startup prepares storage and migrates SQLite before listening                  |
+| `GOOGLE_CLIENT_ID`     | OAuth client ID, paired with the client secret; required in production                                                                    |
+| `GOOGLE_CLIENT_SECRET` | Server-only OAuth secret; use hosting secrets in production or the interactive development launcher                                       |
 
 Never commit credentials or generated secret configuration. Builds and automated
 tests do not need SMTP or Google credentials. Google sign-in, local approval,
@@ -149,15 +148,15 @@ to operate on another directory. Deployed binaries accept the same `admin ...`
 arguments without Cargo/Just, provider credentials, or HTTP-origin configuration.
 Command results go to stdout and diagnostics to stderr; `list-users` emits JSON.
 
-| Command | Behaviour |
-| --- | --- |
-| `just admin migrate` | Prepare storage and migrate schemas; also available as `just db-migrate` |
-| `just admin list-users` | List explicit identity approvals, labels, enabled flags, and generations |
+| Command                                                                                                 | Behaviour                                                                                     |
+| ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `just admin migrate`                                                                                    | Prepare storage and migrate schemas; also available as `just db-migrate`                      |
+| `just admin list-users`                                                                                 | List explicit identity approvals, labels, enabled flags, and generations                      |
 | `just admin grant-google --issuer https://accounts.google.com --subject VERIFIED_SUBJECT --label owner` | Approve the exact verified subject; repeat grants keep an enabled user's generation unchanged |
-| `just admin revoke-google --issuer https://accounts.google.com --subject VERIFIED_SUBJECT` | Disable the identity and advance its generation |
-| `just admin revoke-all-sessions` | Advance all generations and remove browser sessions/login transactions |
-| `just admin import-content --source public` | Import the bundled catalog once; stop HTTP first |
-| `just admin backup --output /absolute/private/backup-name` | Snapshot database/gallery into a new directory; stop HTTP first |
+| `just admin revoke-google --issuer https://accounts.google.com --subject VERIFIED_SUBJECT`              | Disable the identity and advance its generation                                               |
+| `just admin revoke-all-sessions`                                                                        | Advance all generations and remove browser sessions/login transactions                        |
+| `just admin import-content --source seed`                                                             | Import the bundled catalog once; stop HTTP first                                              |
+| `just admin backup --output /absolute/private/backup-name`                                              | Snapshot database/gallery into a new directory; stop HTTP first                               |
 
 An approval is a local access decision, not identity verification. Copy the issuer
 and subject from `/auth/identity` after Google sign-in; an email address or Google
@@ -223,14 +222,14 @@ command against the same data directory, then sign in again. The protected admin
 landing page provides Gallery, Shows and YouTube video forms, account status,
 and sign-out. Biography remains a source-code edit.
 
-| Route | Purpose |
-| --- | --- |
-| `GET /auth/google/start` | Persist browser-bound state and redirect to Google with PKCE and the `openid` scope |
-| `GET /auth/google/callback` | Consume state once, exchange the code, verify identity, and check local approval |
-| `GET /auth/identity` | Temporarily show the current browser's unapproved, verified identity |
-| `POST /auth/logout` | Verify Origin/CSRF, revoke all sessions for this administrator, and clear this browser's session/cookie |
-| `GET /admin` | Show the sign-in prompt or the approved administrator landing page |
-| `POST /admin/content` | Add/remove a photo, show or video after approval, Origin and multipart CSRF checks |
+| Route                       | Purpose                                                                                                 |
+| --------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `GET /auth/google/start`    | Persist browser-bound state and redirect to Google with PKCE and the `openid` scope                     |
+| `GET /auth/google/callback` | Consume state once, exchange the code, verify identity, and check local approval                        |
+| `GET /auth/identity`        | Temporarily show the current browser's unapproved, verified identity                                    |
+| `POST /auth/logout`         | Verify Origin/CSRF, revoke all sessions for this administrator, and clear this browser's session/cookie |
+| `GET /admin`                | Show the sign-in prompt or the approved administrator landing page                                      |
+| `POST /admin/content`       | Add/remove a photo, show or video after approval, Origin and multipart CSRF checks                      |
 
 Production sessions use `__Host-maj_admin`, Secure, HttpOnly, SameSite=Lax, Path=/,
 and no Domain; loopback development uses `maj_admin_dev` without Secure. Guards
@@ -373,7 +372,7 @@ Before first use, stop the HTTP server and import the existing catalog into the
 same `MAJ_DATA_DIR` used by the server:
 
 ```sh
-just admin import-content --source public
+just admin import-content --source seed
 ```
 
 Import refuses to overwrite an initialized catalog. Empty catalogs stay empty;
@@ -437,7 +436,7 @@ only help the administrator complete the form.
 
 Biography, album artwork, styles, music and other static assets remain source
 changes in Rust, `public/` and `style/` and require rebuilding/releasing. The JSON
-files and gallery photos under `public/` are now **one-time import sources**, not
+files and gallery photos under `seed/` are **one-time import sources**, not
 live content. Editing them does not change an initialized database.
 
 `just import-content /path/to/content.zip` still validates/replaces the bundled
@@ -483,12 +482,27 @@ execution and the script tests; coverage should improve through useful tests for
 changed behaviour, without an initial percentage gate.
 
 `just security` runs cargo-audit and cargo-deny with current advisory data.
-The 2026-11-17 follow-up fixed the SQLite advisory and documented temporary
-acceptance of `paste` maintenance risk below. The refreshed database also reports
-unmaintained `chrono` 0.4.45
-([RUSTSEC-2026-0543](https://rustsec.org/advisories/RUSTSEC-2026-0543.html));
-cargo-deny still fails on that separate release blocker. Cargo-audit reports the
-two maintenance warnings; bans and sources checks pass. There is no Chrono exception.
+The 2026-11-17 follow-up fixed SQLite and documented narrow maintenance-risk
+acceptance for Paste and transitive Chrono. Cargo-audit retains both warnings;
+cargo-deny permits only the named advisories under the documented review policy.
+
+### Transitive Chrono maintenance-risk acceptance
+
+Reviewed **2026-11-17**, with review due **2026-12-17** and on every dependency or
+advisory change. Application dates use Jiff, but the latest stable `oauth2 5.0.0`
+and `openidconnect 4.1.0` still require `chrono 0.4.45` for protocol timestamp
+serialization, expiry and claim verification. No compatible stable Chrono-free
+upgrade is available. Replacing tested authentication libraries solely to remove
+this maintenance dependency would introduce a larger authentication change.
+
+Only the unmaintained advisory `RUSTSEC-2026-0543` is temporarily accepted in
+cargo-deny. It reports no known vulnerability; future vulnerability advisories
+remain enforced. This is not a claim that Chrono is maintained or that its inputs
+are all trusted: it still parses provider timestamp claims. Cargo-audit keeps the
+warning visible. Remove the exception when compatible maintained upstream versions
+replace Chrono, and rerun authentication/expiry tests and fresh security checks.
+Do not extend this decision to other advisories or add new direct Chrono usage.
+
 See [BUILD.md](BUILD.md#dependency-security-checks) for commands and prerequisites.
 
 ### Patched SQLite dependency

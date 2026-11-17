@@ -404,8 +404,7 @@ See [Fly release command behavior](https://fly.io/docs/reference/configuration/#
    appropriate to the change; use `just coverage --jobs 2` for non-trivial native
    logic. A failed advisory fetch is not a clean audit. Resolve release blockers
    rather than suppressing them. SQLite now uses the pinned upstream fix and Paste
-   has a reviewed temporary maintenance exception; the new Chrono advisory still
-   blocks release. Recheck the Git pin and advisory review deadlines in README.md.
+   has a reviewed temporary maintenance exception; transitive Chrono has a separate temporary maintenance exception (review by 2026-12-17). Recheck the Git pin and advisory review deadlines in README.md.
    After image-library, upload-limit or processing changes, also run
    `just test-upload-memory` on Linux with GNU time. It checks a 192 MiB isolated
    upload allowance within a 256 MiB budget; it does not measure the full server
@@ -456,7 +455,7 @@ is permanent from the editor; recover individual data through an isolated backup
 restore and re-entry/re-upload if necessary. Biography, discography, audio, and
 other static changes still require source edits and a release.
 
-`admin import-content --source /app/site` is an **initial, offline, one-time import**
+`admin import-content --source /app/seed` is an **initial, offline, one-time import**
 into an empty catalog, not a recurring sync. It rejects initialized content.
 Likewise, `just import-content ARCHIVE.zip` updates bundled source JSON; it does
 not update the live database. Never re-import on every boot or release.

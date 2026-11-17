@@ -173,7 +173,7 @@ pub async fn establish(
     session.cycle_id().await?;
     // A prior unapproved login may have given this browser a shorter fixed expiry.
     session.set_expiry(Some(Expiry::OnInactivity(Duration::seconds(IDLE_SECONDS))));
-    let now = chrono::Utc::now().timestamp();
+    let now = jiff::Timestamp::now().as_second();
     session
         .insert(
             ADMIN_KEY,
@@ -255,7 +255,7 @@ pub async fn require_admin(
         .get(ADMIN_KEY)
         .await?
         .ok_or(AuthError::Unauthorized)?;
-    let now = chrono::Utc::now().timestamp();
+    let now = jiff::Timestamp::now().as_second();
     // Reject inconsistent timestamps before subtraction, then enforce both expiry limits.
     if authenticated.created_at < 0
         || authenticated.created_at > authenticated.last_seen
@@ -660,7 +660,7 @@ mod tests {
             .await
             .unwrap();
         let session = test_session(&database);
-        let now = chrono::Utc::now().timestamp();
+        let now = jiff::Timestamp::now().as_second();
         for (created, seen) in [
             (now - 3600, now - IDLE_SECONDS),
             (now - ABSOLUTE_SECONDS, now),

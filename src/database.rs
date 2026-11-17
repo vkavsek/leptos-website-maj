@@ -480,7 +480,7 @@ impl DatabaseManager {
             .bind(
                 show.get_date()
                     .ok_or("Missing show date")?
-                    .format("%Y-%m-%d")
+                    .strftime("%Y-%m-%d")
                     .to_string(),
             )
             .bind(&show.name)

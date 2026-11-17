@@ -12,7 +12,6 @@
 
 use super::{AuthError, LoginTransaction, PendingLogin};
 use crate::server_config::ServerConfig;
-use chrono::Utc;
 use http::{header::CACHE_CONTROL, HeaderValue};
 use http_cache_semantics::{CacheOptions, CachePolicy};
 use jsonwebtoken::{
@@ -394,7 +393,7 @@ fn verify(
         .map_err(|_| AuthError::Forbidden)?;
 
     // Keep application policy beyond the library's signature, issuer, audience, expiry and nonce checks.
-    let now = Utc::now().timestamp();
+    let now = jiff::Timestamp::now().as_second();
     let issued_at = claims.issue_time().timestamp();
     let expires_at = claims.expiration().timestamp();
     let subject = claims.subject().as_str();

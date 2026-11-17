@@ -38,7 +38,7 @@ pub async fn static_file_and_err_handler(
 
 async fn get_static_file(req: Request<Body>, root: &str) -> Result<Response, MajServerError> {
     // ServeDir decodes and normalizes paths. Block aliases as well as direct paths
-    // so bundled gallery files can never resurrect an unpublished catalog entry.
+    // so stale seed files cannot bypass the live catalog.
     let decoded = percent_encoding::percent_decode_str(req.uri().path())
         .decode_utf8()
         .map_err(|_| MajServerError::NotFound)?;
@@ -52,10 +52,12 @@ async fn get_static_file(req: Request<Body>, root: &str) -> Result<Response, Maj
             part => segments.push(part),
         }
     }
-    if matches!(
-        segments.as_slice(),
-        ["img", "about_pics" | "about_thumbnails", ..]
-    ) {
+    if segments.first() == Some(&"data_json")
+        || matches!(
+            segments.as_slice(),
+            ["img", "about_pics" | "about_thumbnails", ..]
+        )
+    {
         return Ok(StatusCode::NOT_FOUND.into_response());
     }
     // `ServeDir` implements `tower::Service` so we can call it with `tower::ServiceExt::oneshot`
@@ -76,6 +78,30 @@ mod tests {
     use super::*;
     use leptos_axum::LeptosRoutes;
     use tracing::instrument::WithSubscriber;
+
+    #[tokio::test]
+    async fn seed_json_is_never_served_even_from_stale_builds_or_aliases() {
+        let root = tempfile::tempdir().unwrap();
+        std::fs::create_dir(root.path().join("data_json")).unwrap();
+        std::fs::write(
+            root.path().join("data_json/shows.json"),
+            b"private-seed-canary",
+        )
+        .unwrap();
+        for path in [
+            "/data_json/shows.json",
+            "/%64ata_json/shows.json",
+            "/other/../data_json/shows.json",
+        ] {
+            let response = get_static_file(
+                Request::get(path).body(Body::empty()).unwrap(),
+                root.path().to_str().unwrap(),
+            )
+            .await
+            .unwrap();
+            assert_eq!(response.status(), StatusCode::NOT_FOUND, "{path}");
+        }
+    }
 
     #[tokio::test]
     async fn missing_page_logs_the_path_without_private_query_values() {
