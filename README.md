@@ -310,10 +310,11 @@ already-set host variable.
 ## Deployment
 
 Install the Fly.io CLI (`flyctl`) and authenticate to the configured application
-before deploying. For the first administration release, follow the
-[first deployment checklist](AUTH_RECOMMENDATION.md#11-first-production-administration-deployment-checklist)
-to verify the image and populate the volume before starting public HTTP.
-For subsequent releases after that setup, from the repository root:
+before deploying. The first administration release is deployed; follow
+[the remaining production setup](AUTH_RECOMMENDATION.md) to approve the first
+administrator and verify production access, persistence, and recovery.
+For subsequent releases, use [the release checklist](MAINTENANCE.md#release-checklist).
+The deployment command, from the repository root, is:
 
 ```sh
 just deploy --ha=false
@@ -324,13 +325,12 @@ Docker. The app and service settings are in `fly.toml`; the service forwards tra
 to port 8080 and redirects HTTP to HTTPS. Supply `PORKMAIL_PWD` through Fly secrets,
 never through tracked configuration.
 
-The production Google client ID is configured in `fly.toml`. Before deploying
-the configuration changes, provide `MAJ_APP_ORIGIN` and `MAJ_DATA_DIR` as ordinary
-runtime settings, and install `GOOGLE_CLIENT_SECRET` through Fly secrets. The owner
-has completed production Google setup and staged the secret; deployment is pending.
-Production volume verification and real production Google sign-in still require
-completion before an administration release. Uploads have been measured locally
-against a 256 MiB budget; full-server memory on Fly remains unverified.
+The production Google client ID, `MAJ_APP_ORIGIN`, and `MAJ_DATA_DIR` are ordinary
+runtime settings in `fly.toml`; `GOOGLE_CLIENT_SECRET` is supplied through Fly
+secrets. Production Google setup and deployment are complete, with no approved
+production administrators yet. Production sign-in, persistence, and recovery
+acceptance remain pending. Uploads have been measured locally against a 256 MiB
+budget; full-server memory on Fly remains unverified.
 
 The server handles Ctrl+C (`SIGINT`) and `SIGTERM` by stopping new connections and
 allowing active requests up to 25 seconds to finish. SMTP delivery has a 20-second

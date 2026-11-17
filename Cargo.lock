@@ -1963,10 +1963,12 @@ dependencies = [
  "jiff-core 1.0.0",
  "jiff-static 1.0.0",
  "jiff-tzdb-platform 1.0.0",
+ "js-sys",
  "log",
  "portable-atomic",
  "portable-atomic-util",
  "serde_core",
+ "wasm-bindgen",
  "windows-link",
 ]
 

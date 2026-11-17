@@ -1,5 +1,35 @@
 import { test, expect, type Page } from "@playwright/test";
 
+test("portrait player buttons follow player height on phones and large screens", async ({ page }) => {
+  for (const size of [
+    { width: 390, height: 700, font: 16 },
+    { width: 1080, height: 1920, font: 16 },
+    { width: 2160, height: 3840, font: 16 },
+    { width: 1080, height: 1920, font: 24 },
+  ]) {
+    await page.setViewportSize(size);
+    await ready(page, "/");
+    await page.addStyleTag({ content: `html { font-size: ${size.font}px; }` });
+    await page.mouse.move(0, 0);
+    const player = page.locator(".audio-player");
+    await player.evaluate(element => Promise.all(element.getAnimations({ subtree: true }).map(animation => animation.finished)));
+    const panel = (await player.boundingBox())!;
+    for (const [name, fraction] of [["Play", 0.8], ["Mute", 0.5]] as const) {
+      const button = page.getByRole("button", { name, exact: true });
+      const bounds = (await button.boundingBox())!;
+      expect(bounds.height / panel.height).toBeCloseTo(fraction, 2);
+      expect(bounds.width).toBeCloseTo(bounds.height, 0);
+      await button.hover();
+      await button.evaluate(element => Promise.all(element.getAnimations().map(animation => animation.finished)));
+      const hovered = (await button.boundingBox())!;
+      expect(hovered.y).toBeGreaterThanOrEqual(panel.y);
+      expect(hovered.y + hovered.height).toBeLessThanOrEqual(panel.y + panel.height);
+      await page.mouse.move(0, 0);
+    }
+    expect(await page.locator(".time").evaluate(element => parseFloat(getComputedStyle(element).marginBottom))).toBeGreaterThan(0);
+  }
+});
+
 async function ready(page: Page, path: string) {
   await page.goto(path);
   await expect.poll(() => page.locator("audio").evaluate(audio => (audio as HTMLAudioElement).volume)).toBe(0.5);

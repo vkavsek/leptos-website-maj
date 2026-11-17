@@ -92,7 +92,8 @@ image = { version = "0.25", default-features = false, features = [
 clap = { version = "4", features = ["derive"], optional = true }
 
 [features]
-hydrate = ["leptos/hydrate", "dep:console_error_panic_hook", "dep:wasm-bindgen"]
+# Browser current-time reads need Jiff's JavaScript clock instead of std::SystemTime.
+hydrate = ["leptos/hydrate", "dep:console_error_panic_hook", "dep:wasm-bindgen", "jiff/js"]
 ssr = [
   "leptos/ssr",
   "leptos_meta/ssr",

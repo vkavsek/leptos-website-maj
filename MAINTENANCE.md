@@ -4,8 +4,8 @@ This is the operating guide for the portfolio and its private administration
 pages. Build dependencies and test setup are in [BUILD.md](BUILD.md), runtime
 variables are in [README.md](README.md#runtime-configuration), and application
 design is in [ARCHITECTURE.md](ARCHITECTURE.md). Use
-[AUTH_RECOMMENDATION.md](AUTH_RECOMMENDATION.md) for initial Google/Fly setup and
-the real sign-in acceptance checks.
+[AUTH_RECOMMENDATION.md](AUTH_RECOMMENDATION.md) for the remaining first-administrator
+enrollment and production acceptance checks after the initial deployment.
 
 - [Routine checks](#routine-checks)
 - [Operator commands and maintenance windows](#operator-commands-and-maintenance-windows)
@@ -188,9 +188,9 @@ not included; unreferenced gallery files may be included.
    Locally, after stopping the local server:
 
    ```sh
-   install -d -m 700 /private/maj-backups
+   install -d -m 700 "$HOME/.local/share/maj-backups"
    env MAJ_DATA_DIR=/absolute/path/to/maj-data just admin backup \
-     --output /private/maj-backups/BACKUP_NAME
+     --output "$HOME/.local/share/maj-backups/BACKUP_NAME"
    ```
 
 4. Transfer the **whole completed directory** to protected storage off the Machine
@@ -199,10 +199,17 @@ not included; unreferenced gallery files may be included.
 
    ```bash
    umask 077
-   install -d -m 700 /private/maj-backups
+   install -d -m 700 "$HOME/.local/share/maj-backups"
    fly ssh sftp get --app maj-webpage --machine MACHINE_ID --recursive \
-     /data/backups/BACKUP_NAME /private/maj-backups/BACKUP_NAME
+     /data/backups/BACKUP_NAME "$HOME/.local/share/maj-backups/BACKUP_NAME"
    ```
+
+   Run Fly as your normal workstation user. The local parent directory above
+   belongs to that user; mode `0700` restricts access to its owner, which does not
+   have to be root. Remote `/data/backups` ownership is independent: Fly's SSH/SFTP
+   user defaults to root on the Machine. Do not use `sudo fly` or weaken the remote
+   backup permissions to make a local destination writable. Keep the local backup
+   outside the repository/build context. These commands also work in Fish.
 
    See [Fly recursive SFTP download](https://fly.io/docs/flyctl/ssh-sftp-get/).
    Verify the downloaded directory as described below, encrypt retained backups,
@@ -237,7 +244,7 @@ production Docker image. Run it on an extracted/private backup directory and
 stop if any check fails.
 
 ```bash
-maj_backup=/private/maj-backups/BACKUP_NAME
+maj_backup="$HOME/.local/share/maj-backups/BACKUP_NAME"
 python3 - "$maj_backup" <<'PY'
 import hashlib
 import json
@@ -302,9 +309,9 @@ and provisioned secrets separately; they are not in the application backup.
 
    ```bash
    umask 077
-   maj_backup=/private/maj-backups/BACKUP_NAME
-   maj_restore=/private/maj-recovery/NEW_NAME
-   install -d -m 700 /private/maj-recovery
+   maj_backup="$HOME/.local/share/maj-backups/BACKUP_NAME"
+   maj_restore="$HOME/.local/share/maj-recovery/NEW_NAME"
+   install -d -m 700 "$HOME/.local/share/maj-recovery"
    mkdir -m 700 -- "$maj_restore"
    install -m 600 -- "$maj_backup/admin.sqlite3" "$maj_restore/admin.sqlite3"
    cp -R -- "$maj_backup/gallery" "$maj_restore/gallery"
@@ -433,6 +440,30 @@ See [Fly release command behavior](https://fly.io/docs/reference/configuration/#
    and editors. Verify that saved records/photos and approvals survived; restart
    the Machine and verify again when validating a new persistence setup. Confirm
    no temporary sleep entrypoint remains. Record the release and backup results.
+
+### Update for the browser clock fix
+
+The Jiff browser-clock fix changes the hydration bundle. It requires a new image
+and uses the existing database, approvals and volume; no content re-import or
+volume provisioning is needed. Retain the previous image and verified backup.
+
+From the updated repository, run in Fish:
+
+```fish
+just deploy --ha=false --strategy immediate --config fly.toml
+fly status --app maj-webpage
+fly machine list --app maj-webpage
+fly volumes list --app maj-webpage
+```
+
+This builds a new image from the current source and performs the planned
+single-Machine cutover, with a brief interruption. The earlier `maj_release_image`
+variable identifies the previous image; this command builds the updated source.
+Confirm the recorded existing volume remains attached. Then open a fresh private
+browser window or force-reload so cached JavaScript/WASM is refreshed. Navigate
+Home → Shows → Past → Future, reload Past directly, and verify the browser console
+has no Jiff clock panic or `unreachable` error. An empty Future list can be correct
+when all saved dates are past. Continue the normal production acceptance checklist.
 
 ### Rollback
 
