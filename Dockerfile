@@ -24,7 +24,7 @@ COPY . .
 
 ENV RUSTFLAGS="--cfg erase_components"
 # Build the app
-RUN cargo leptos build --release -vv
+RUN cargo leptos build --release --cargo-locked -vv
 
 ########################################
 

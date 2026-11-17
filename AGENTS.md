@@ -24,6 +24,7 @@ Install Rust, the `wasm32-unknown-unknown` target, `cargo-leptos`, and `just`. L
 - `just fmt` / `just fmt-check`: format the justfile and Rust or check formatting.
 - `just lint`: lint server and browser targets; `just check` also checks formatting and runs Rust/script tests.
 - `just test-admin-browser`: run authenticated content workflows in Chromium/Firefox with isolated storage and test-only sessions; no Google credentials are needed.
+- `just test-upload-memory`: measure boundary-size uploads in fresh processes against a 192 MiB allowance within a 256 MiB budget; requires Linux and GNU time.
 - `just test-server`: build and serve on port 8082. In another terminal, use `just e2e-setup`, then `just e2e`.
 
 ## Development Disk Usage

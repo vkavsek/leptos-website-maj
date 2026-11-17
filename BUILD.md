@@ -192,6 +192,24 @@ Use `just fmt` to format the justfile and Rust source. `just lint-ssr` and `just
 run each target separately. `just check` combines formatting checks, both linters,
 Rust tests, and script tests; shutdown and browser tests are separate.
 
+Run the upload memory regression separately on Linux with GNU time installed
+(`sudo apt-get install time` on Debian/Ubuntu):
+
+```sh
+just test-upload-memory
+```
+
+It creates successful 12-megapixel JPEG, PNG and WebP fixtures, including EXIF
+rotation, 16-bit PNG and transparency, and checks publication and thumbnail
+dimensions. Each upload runs in a fresh child process; GNU time measures its peak
+resident memory, excluding fixture generation and Cargo. The limit is 192 MiB,
+reserving 64 MiB of the intended 256 MiB Machine for the rest of the application.
+This is an isolated local pipeline check; it does not measure the running HTTP
+server or deployed Fly Machine. Rerun after image-library, upload-limit or
+processing changes. Both memory tests are ignored by ordinary tests and coverage;
+this recipe runs the parent test, which invokes its child probe with temporary
+fixture settings. Do not run all ignored tests indiscriminately.
+
 Recipes that accept arguments forward them without shell interpolation. Examples:
 `just test --offline --lib server_config::tests` and `just build --cargo-offline`
 use cached dependencies. Build and test recipes enforce the existing lockfile.

@@ -102,10 +102,9 @@ pub(crate) fn prepare(
     let orientation = decoder
         .orientation()
         .map_err(|_| ContentError::Invalid("The photo metadata is invalid."))?;
-    let mut image = DynamicImage::from_decoder(decoder).map_err(|_| {
+    let image = DynamicImage::from_decoder(decoder).map_err(|_| {
         ContentError::Invalid("The photo could not be decoded within the image limits.")
     })?;
-    image.apply_orientation(orientation);
 
     // Keep JPEGs compact; normalize other formats to 8-bit PNG to preserve transparency.
     let output = if format == ImageFormat::Jpeg {
@@ -120,11 +119,13 @@ pub(crate) fn prepare(
         "png"
     };
     let name = normalized_name(filename, extension)?;
-    let image = if output == ImageFormat::Jpeg {
+    let mut image = if output == ImageFormat::Jpeg {
         DynamicImage::ImageRgb8(image.into_rgb8())
     } else {
         DynamicImage::ImageRgba8(image.into_rgba8())
     };
+    // Normalize first: rotating a 16-bit image would otherwise duplicate its larger pixel buffer.
+    image.apply_orientation(orientation);
 
     let staging = tempfile::Builder::new()
         .prefix("upload-")
@@ -307,6 +308,32 @@ mod tests {
         bytes.into_inner()
     }
 
+    #[test]
+    fn high_depth_rotation_preserves_normalized_pixels_and_alpha() {
+        use image::ImageEncoder;
+        let root = crate::test_support::directory();
+        crate::storage::prepare(root.path(), &[]).unwrap();
+        let source = DynamicImage::ImageRgba16(image::ImageBuffer::from_fn(2, 3, |x, y| {
+            image::Rgba([(x * 12000) as u16, (y * 20000) as u16, 40000, 32768])
+        }));
+        let mut bytes = Vec::new();
+        let mut encoder = image::codecs::png::PngEncoder::new(&mut bytes);
+        encoder
+            .set_exif_metadata(
+                b"II\x2a\0\x08\0\0\0\x01\0\x12\x01\x03\0\x01\0\0\0\x06\0\0\0\0\0\0\0".to_vec(),
+            )
+            .unwrap();
+        encoder
+            .write_image(source.as_bytes(), 2, 3, source.color().into())
+            .unwrap();
+        let prepared = prepare(root.path(), "oriented.png", bytes).unwrap();
+        let actual = image::open(prepared.staging.path().join(&prepared.original))
+            .unwrap()
+            .into_rgba8();
+        // Conversion is pointwise, so it must produce exactly the same pixels before or after rotation.
+        assert_eq!(actual, source.rotate90().into_rgba8());
+    }
+
     #[tokio::test]
     async fn jpeg_orientation_is_applied_before_metadata_is_removed() {
         let (root, database) = crate::test_support::database().await;
@@ -458,5 +485,175 @@ mod tests {
             0
         );
         database.close().await;
+    }
+
+    /// Run explicitly: fixture creation is excluded from each child process's measured peak RSS.
+    #[test]
+    #[ignore = "Linux memory-budget check; run just test-upload-memory"]
+    fn maximum_upload_memory_budget() {
+        use image::ImageEncoder;
+        use std::process::Command;
+
+        let fixtures = crate::test_support::directory();
+        let width = 4000;
+        let height = (PIXELS / u64::from(width)) as u32;
+        // Raw TIFF orientation 6 rotates 90 degrees; JPEG's APP1 adds the Exif prefix.
+        let exif = b"II\x2a\0\x08\0\0\0\x01\0\x12\x01\x03\0\x01\0\0\0\x06\0\0\0\0\0\0\0";
+        let mut peaks = Vec::new();
+        for name in [
+            "oriented.jpg",
+            "wide.png",
+            "rgba16.png",
+            "oriented16.png",
+            "alpha.webp",
+        ] {
+            // Construct only one input at a time; each fixture reaches the pixel or side boundary.
+            let image = match name {
+                "oriented.jpg" => DynamicImage::ImageRgb8(image::RgbImage::from_pixel(
+                    width,
+                    height,
+                    image::Rgb([20, 40, 80]),
+                )),
+                "rgba16.png" | "oriented16.png" => {
+                    DynamicImage::ImageRgba16(image::ImageBuffer::from_pixel(
+                        width,
+                        height,
+                        image::Rgba([0x2000, 0x8000, 0xc000, 0x8000]),
+                    ))
+                }
+                "wide.png" => DynamicImage::ImageRgba8(image::RgbaImage::from_pixel(
+                    6000,
+                    (PIXELS / 6000) as u32,
+                    image::Rgba([20, 40, 80, 128]),
+                )),
+                _ => DynamicImage::ImageRgba8(image::RgbaImage::from_pixel(
+                    width,
+                    height,
+                    image::Rgba([20, 40, 80, 128]),
+                )),
+            };
+            let (source_width, source_height) = (image.width(), image.height());
+            let path = fixtures.path().join(name);
+            if name == "oriented16.png" {
+                let mut encoder =
+                    image::codecs::png::PngEncoder::new(fs::File::create(&path).unwrap());
+                encoder.set_exif_metadata(exif.to_vec()).unwrap();
+                encoder
+                    .write_image(
+                        image.as_bytes(),
+                        source_width,
+                        source_height,
+                        image.color().into(),
+                    )
+                    .unwrap();
+            } else {
+                image.save(&path).unwrap();
+            }
+            drop(image);
+            if name == "oriented.jpg" {
+                let jpeg = fs::read(&path).unwrap();
+                let mut bytes = jpeg[..2].to_vec();
+                bytes.extend_from_slice(b"\xff\xe1");
+                bytes.extend_from_slice(&((exif.len() + 8) as u16).to_be_bytes());
+                bytes.extend_from_slice(b"Exif\0\0");
+                bytes.extend_from_slice(exif);
+                bytes.extend_from_slice(&jpeg[2..]);
+                fs::write(&path, bytes).unwrap();
+            }
+            assert!(fs::metadata(&path).unwrap().len() <= UPLOAD_BYTES as u64);
+            let rotated = name.starts_with("oriented");
+            let report = fixtures.path().join("peak-rss.txt");
+            // GNU time measures the fresh child, not Cargo, the test parent, or fixture buffers.
+            let output = Command::new("/usr/bin/time")
+                .args(["--format=%M", "--output"])
+                .arg(&report)
+                .arg(std::env::current_exe().unwrap())
+                .args([
+                    "--exact",
+                    "content::gallery::tests::upload_memory_probe",
+                    "--ignored",
+                    "--nocapture",
+                ])
+                .env("MAJ_UPLOAD_PROBE_FILE", &path)
+                .env(
+                    "MAJ_UPLOAD_PROBE_WIDTH",
+                    if rotated { source_height } else { source_width }.to_string(),
+                )
+                .env(
+                    "MAJ_UPLOAD_PROBE_HEIGHT",
+                    if rotated { source_width } else { source_height }.to_string(),
+                )
+                .output()
+                .expect("Install GNU time to run the upload memory check");
+            assert!(
+                output.status.success(),
+                "{name}: {} {}",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            );
+            let kib: usize = fs::read_to_string(&report).unwrap().trim().parse().unwrap();
+            eprintln!(
+                "{name}: {kib} KiB peak RSS ({:.1} MiB)",
+                kib as f64 / 1024.0
+            );
+            peaks.push((name, kib));
+        }
+        // Reserve 64 MiB of a 256 MiB Machine for HTTP/SQLite, input buffering, and other work.
+        assert!(
+            peaks.iter().all(|(_, kib)| *kib <= 192 * 1024),
+            "Upload pipeline exceeds its 192 MiB allowance: {peaks:?}"
+        );
+    }
+
+    #[test]
+    #[ignore = "Child of maximum_upload_memory_budget; requires its private fixture environment"]
+    fn upload_memory_probe() {
+        let input = PathBuf::from(std::env::var_os("MAJ_UPLOAD_PROBE_FILE").unwrap());
+        let width: u32 = std::env::var("MAJ_UPLOAD_PROBE_WIDTH")
+            .unwrap()
+            .parse()
+            .unwrap();
+        let height: u32 = std::env::var("MAJ_UPLOAD_PROBE_HEIGHT")
+            .unwrap()
+            .parse()
+            .unwrap();
+        let root = crate::test_support::directory();
+        crate::storage::prepare(root.path(), &[]).unwrap();
+        let prepared = prepare(
+            root.path(),
+            input.file_name().unwrap().to_str().unwrap(),
+            fs::read(&input).unwrap(),
+        )
+        .unwrap();
+        prepared.publish(root.path()).unwrap();
+        // Inspect headers without decoding another full-size copy into the measured process.
+        let mut decoder = ImageReader::open(
+            root.path()
+                .join("gallery/originals")
+                .join(&prepared.original),
+        )
+        .unwrap()
+        .with_guessed_format()
+        .unwrap()
+        .into_decoder()
+        .unwrap();
+        assert_eq!(decoder.dimensions(), (width, height));
+        assert!(matches!(
+            decoder.color_type(),
+            image::ColorType::Rgb8 | image::ColorType::Rgba8
+        ));
+        assert_eq!(
+            decoder.orientation().unwrap(),
+            image::metadata::Orientation::NoTransforms
+        );
+        assert_eq!(
+            image::image_dimensions(
+                root.path()
+                    .join("gallery/thumbnails")
+                    .join(&prepared.thumbnail)
+            )
+            .unwrap(),
+            (480, 270)
+        );
     }
 }

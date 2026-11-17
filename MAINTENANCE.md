@@ -406,6 +406,10 @@ See [Fly release command behavior](https://fly.io/docs/reference/configuration/#
    rather than suppressing them. SQLite now uses the pinned upstream fix and Paste
    has a reviewed temporary maintenance exception; the new Chrono advisory still
    blocks release. Recheck the Git pin and advisory review deadlines in README.md.
+   After image-library, upload-limit or processing changes, also run
+   `just test-upload-memory` on Linux with GNU time. It checks a 192 MiB isolated
+   upload allowance within a 256 MiB budget; it does not measure the full server
+   under production traffic. Check deployed memory when validating a new Machine size.
 2. Record the current image digest/commit and volume ID. Check disk space,
    production origin and Google callback registration, required secrets, and
    Machine count. `fly secrets list --app maj-webpage` lists names/status without

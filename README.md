@@ -329,9 +329,9 @@ The production Google client ID is configured in `fly.toml`. Before deploying
 the configuration changes, provide `MAJ_APP_ORIGIN` and `MAJ_DATA_DIR` as ordinary
 runtime settings, and install `GOOGLE_CLIENT_SECRET` through Fly secrets. The owner
 has completed production Google setup and staged the secret; deployment is pending.
-Production volume verification, real production Google sign-in,
-and upload memory measurements on the production Machine still require completion
-before an administration release.
+Production volume verification and real production Google sign-in still require
+completion before an administration release. Uploads have been measured locally
+against a 256 MiB budget; full-server memory on Fly remains unverified.
 
 The server handles Ctrl+C (`SIGINT`) and `SIGTERM` by stopping new connections and
 allowing active requests up to 25 seconds to finish. SMTP delivery has a 20-second
@@ -409,11 +409,18 @@ Gallery URLs retain `/img/about_pics/<name>` and
 `/img/about_thumbnails/<name>.webp`, including encoded imported names. Every request
 checks publication. Deleted URLs return 404 even if an older built asset exists.
 
-These limits are conservative starting values, **not a measured production memory
-guarantee**. Image transformations allocate beyond the decoder's buffer limit.
-Measure peak RSS with the largest supported photos on the intended Fly Machine
-before deployment; reduce the pixel limit or increase memory if needed. Keep one
-processing job per server and monitor volume capacity.
+`just test-upload-memory` checks successful 12-megapixel JPEG, PNG and WebP uploads
+in fresh local processes, including rotation, transparency and 16-bit PNG. On
+2026-11-17, peak resident memory ranged from **87.0 to 154.7 MiB**. Normalizing to
+8-bit pixels before rotation reduced the rotated 16-bit case from 199.3 to
+154.7 MiB without changing the output. The check allows 192 MiB, reserving 64 MiB
+of the intended **256 MiB** Machine for HTTP, SQLite, input buffers and other work.
+
+This measures the isolated upload pipeline; it does not establish full-server
+memory under traffic or on Fly. Fixtures reach the pixel/side boundaries and
+compress below the 10 MiB byte limit. Rerun after image-library, limit or processing
+changes; monitor deployed memory and volume capacity. Keep one processing job per
+server. See [BUILD.md](BUILD.md#rust-tests-and-checks) for test dependencies and execution.
 
 ### Shows and YouTube videos
 

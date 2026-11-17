@@ -17,8 +17,10 @@
   as confirmed by the owner.
 - [ ] Section 9: automated regression/build checks and the extended manual Google
   checklist below; record actual results rather than assuming section 8 covers every case.
-- [ ] Sections 10 onward: production persistence, upload memory
-  measurement, deployment and recovery remain pending.
+- [x] Local upload memory check: successful boundary fixtures fit the 192 MiB
+  upload allowance within the requested 256 MiB budget (2026-11-17).
+- [ ] Sections 10 onward: production persistence, full-server memory verification,
+  deployment and recovery remain pending.
 - [x] Section 10.7: production `GOOGLE_CLIENT_SECRET` staged in Fly secret storage,
   as confirmed by the owner. It has not yet been rolled out to the serving Machine.
 - [ ] Section 11: first production administration release and acceptance checklist.
@@ -38,8 +40,9 @@ and development launcher exist, together with section 4.2's private directories
 and section 4.3's initialized SQLite database. Section 5 now provides every listed
 operator command, private schemas, session middleware, shared authorization/CSRF
 guards, and Axum/Leptos server context. Sections 6–7 now provide Google sign-in and the three content workflows; public
-loaders query live SQLite. Real-provider checks and production upload memory
-measurement remain deployment prerequisites.
+loaders query live SQLite. Upload memory has been measured locally against a
+256 MiB budget; real-provider checks and deployed full-server memory verification
+remain deployment work.
 The `leptos-website-maj admin ...` commands work after building the current code;
 production use still requires the planned deployment and release blockers to clear.
 Google Console and Fly commands are existing tools, but this guide does not run
@@ -758,8 +761,10 @@ without metadata. Names are normalized and duplicate names rejected; content IDs
 are never reused after deletion. See README's content-maintenance section.
 
 Import the bundled catalog before serving existing content with this build.
-Validation uses isolated local data. Measure peak upload memory on the production
-Machine before deployment; the conservative limits are not a production measurement.
+Validation uses isolated local data. `just test-upload-memory` checks successful
+boundary fixtures locally against a 192 MiB upload allowance in a 256 MiB budget;
+the measured maximum is 154.7 MiB. This excludes the running HTTP server and does
+not verify production memory under traffic. No Fly memory test was run.
 
 The first admin page has **Gallery**, **Shows**, and **YouTube videos** only.
 
@@ -878,6 +883,7 @@ just check
 just build
 just test-admin-browser
 just test-shutdown
+just test-upload-memory
 just coverage --skip-clean --jobs 2
 just security
 ```
@@ -889,6 +895,10 @@ Chromium and Firefox, including removing imported records, single-editor navigat
 Back/Forward, uploads, public lookups and logout. The test harness requires installed
 Playwright browsers (`just e2e-setup`). `just test-shutdown` also exercises startup,
 private storage, operator import/backup and runtime locks using real local processes.
+`just test-upload-memory` needs Linux and GNU time. It creates JPEG/PNG/WebP
+boundary fixtures outside the measured children, checks successful publication,
+orientation and thumbnails, and enforces a 192 MiB peak-RSS allowance. It runs
+separately from normal tests/coverage and never connects to Fly or Google.
 Coverage reports go to `target/coverage/`; `--skip-clean` reuses the instrumented
 build for this follow-up run. Use `just clean` at a natural daily stopping point.
 
@@ -909,7 +919,7 @@ merely to get a green status.
 | Authorization/CSRF | Direct native form submissions and guarded APIs reject anonymous/revoked users, wrong/missing CSRF and foreign Origins; tests bypass the UI deliberately. |
 | Privacy | Router/handler tests assert no-store on private errors/redirects; authenticated `/admin` uses same-origin referrers for native form Origin, other private responses use no-referrer. Manually inspect real-provider logs/cookies below. |
 | Content | Import is repeat-safe. Imported records survive database reopen, appear in their Published list, and can be removed. IDs are not reused, so stale removal forms cannot delete replacement records. |
-| Uploads | Tests cover byte/pixel limits, corrupt data, traversal names, filename collisions, JPEG/PNG/WebP decoding, EXIF rotation, metadata stripping, publication failure rollback and deleted/orphan file denial. Production peak memory and crash/disk failure exercises remain deployment work. |
+| Uploads | Tests cover byte/pixel limits, corrupt data, traversal names, filename collisions, JPEG/PNG/WebP decoding, EXIF rotation, metadata stripping, publication failure rollback and deleted/orphan file denial. The 2026-11-17 local boundary check measured 87.0–154.7 MiB peak RSS, within the 192 MiB allowance for a 256 MiB budget. Full-server/Fly memory and crash/disk failure exercises remain deployment work. |
 | Persistence/recovery | Tests reopen durable SQLite data, restore a coordinated database/gallery backup and invalidate old sessions. Production Machine/release persistence still requires sections 10–11. |
 
 Keep the existing public-page, audio and gallery browser regressions as well:
@@ -1371,22 +1381,27 @@ following gates are still open:
   Cargo-audit keeps its warning visible; the crate remains unmaintained.
 - [ ] Resolve the newly reported `chrono 0.4.45` maintenance advisory
   `RUSTSEC-2026-0543` before deployment. It remains unexcepted and fails cargo-deny.
-- [ ] Add `--cargo-locked` to the Dockerfile's `cargo leptos build --release -vv`
-  command, matching the Just build recipes. Without it, a stale lockfile can be
-  changed inside the build rather than rejected, invalidating the dependency review.
+- [x] Docker now uses `cargo leptos build --release --cargo-locked -vv`, matching
+  the Just build recipes. Running that command against a deliberately stale
+  lockfile failed without changing the file; dependency changes must be reviewed.
+- [x] Local upload memory checked against the requested 256 MiB budget. Five
+  successful boundary fixtures peaked at 87.0–154.7 MiB, below the 192 MiB upload
+  allowance. The rotated 16-bit PNG regression also checks exact pixels/alpha.
 - [ ] Pass the image build and runtime checks in 11.3. They were **not run in this
   review**: Docker daemon access was denied, including outside the agent sandbox.
   Resolve Docker access or use another trusted build/test host; do not count a
   source review as a successful container build.
 - [ ] Complete section 9's applicable automated and manual checks. Record the
-  results for the actual release commit, including upload memory evidence for the
-  intended Machine size; do not use old results as evidence for later code.
+  results for the actual release commit. Local memory evidence is recorded above;
+  deployed full-server memory under traffic remains unverified. Do not use old
+  results as evidence for later code.
 
 The fresh dependency review reports `bans ok` and `sources ok`, but
 `advisories FAILED` for Chrono. The earlier Docker review ran cargo-deny separately
 because cargo-audit then stopped the combined recipe on SQLite. The subsequent
 dependency fix now reaches both checks: SQLite is fixed, Paste has its documented
-maintenance exception, and Chrono remains open. The Dockerfile fix is still pending.
+maintenance exception, and Chrono remains open. The Dockerfile lock enforcement
+and isolated local upload memory check are complete.
 
 After fixing the relevant code/configuration, run:
 
@@ -1394,12 +1409,13 @@ After fixing the relevant code/configuration, run:
 just check
 just security
 just test-shutdown
+just test-upload-memory
 just test-admin-browser
 ```
 
 Run public browser tests as described in BUILD.md and coverage when changing
 non-trivial Rust logic. Keep credentials out of automated tests. Review the other
-AUDIT.md findings, especially private query logging, before launch. Stop here if
+AUDIT.md findings, especially the remaining SMTP error disclosure, before launch. Stop here if
 any release gate fails.
 
 ### 11.2. Confirm the production target and staged configuration

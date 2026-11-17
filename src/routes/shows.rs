@@ -59,9 +59,11 @@ pub struct EventsSorted {
     date_asc: Vec<Event>,
 }
 impl EventsSorted {
+    #[inline]
     pub fn get_desc(&self) -> &[Event] {
         &self.date_desc
     }
+    #[inline]
     pub fn get_asc(&self) -> &[Event] {
         &self.date_asc
     }

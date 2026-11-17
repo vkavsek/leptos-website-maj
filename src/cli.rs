@@ -57,6 +57,7 @@ pub enum AdminCommand {
 }
 
 impl AdminCommand {
+    #[inline]
     pub fn needs_exclusive_storage(&self) -> bool {
         matches!(self, Self::ImportContent { .. } | Self::Backup { .. })
     }

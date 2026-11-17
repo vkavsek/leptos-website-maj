@@ -27,10 +27,8 @@ pub async fn static_file_and_err_handler(
     if res.status() != StatusCode::NOT_FOUND {
         res
     } else {
-        let request = format!("{} @ {}", parts.method, parts.uri);
-
-        // TODO: This is stupid improve error handling
-        tracing::error!("{}", request);
+        // Unmatched URLs can carry private OAuth codes or other sensitive query values.
+        tracing::error!(method = %parts.method, path = parts.uri.path(), "Static file not found");
         let handler = leptos_axum::render_app_to_stream(move || app_shell(options.clone()));
         handler(Request::from_parts(parts, body))
             .await
@@ -70,5 +68,50 @@ async fn get_static_file(req: Request<Body>, root: &str) -> Result<Response, Maj
     {
         Ok(res) => Ok(res.into_response()),
         Err(_err) => Err(MajServerError::Internal),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use leptos_axum::LeptosRoutes;
+    use tracing::instrument::WithSubscriber;
+
+    #[tokio::test]
+    async fn missing_page_logs_the_path_without_private_query_values() {
+        let root = tempfile::tempdir().unwrap();
+        let log = tempfile::NamedTempFile::new().unwrap();
+        let subscriber = tracing_subscriber::fmt()
+            .without_time()
+            .with_ansi(false)
+            .with_max_level(tracing::Level::ERROR)
+            .with_writer(log.reopen().unwrap())
+            .finish();
+        let options = LeptosOptions::builder()
+            .output_name("test")
+            .site_root(root.path().to_str().unwrap())
+            .build();
+        // Initialize the renderer through the same router integration as the server.
+        let router = axum::Router::new()
+            .leptos_routes(&options, Vec::new(), || ())
+            .fallback(static_file_and_err_handler)
+            .with_state(options);
+        let response = router
+            .oneshot(
+                Request::get("/missing?private=query_canary&code=oauth_canary")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .with_subscriber(subscriber)
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        let output = std::fs::read_to_string(log.path()).unwrap();
+        assert!(output.contains("/missing"));
+        assert!(output.contains("GET"));
+        assert!(!output.contains("query_canary"));
+        assert!(!output.contains("oauth_canary"));
+        assert!(!output.contains("?private="));
     }
 }

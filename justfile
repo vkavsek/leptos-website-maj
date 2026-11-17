@@ -148,6 +148,10 @@ e2e *args:
 test-admin-browser:
     just test --lib auth::editor::tests::browser_content_workflows -- --ignored --nocapture
 
+# Measure boundary-size upload RSS in fresh processes; requires Linux and GNU time.
+test-upload-memory:
+    just test --lib content::gallery::tests::maximum_upload_memory_budget -- --ignored --exact --nocapture
+
 # Build the Docker image.
 docker-build:
     docker build -t maj-web .
