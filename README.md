@@ -434,6 +434,16 @@ only help the administrator complete the form.
 
 ### Bundled assets and seed content
 
+The background uses the original `bg_smallest.webp` on desktop and the smaller
+`background_1716.webp` below 768 CSS pixels, or on touch screens up to 1024 CSS
+pixels wide. Where the browser exposes connection information, data-saving mode
+or an effective `slow-2g`/`2g`/`3g` connection also selects the smaller image at
+page load. Browsers without that API use the screen-based selection. Large
+viewports (at least 2560 CSS pixels wide or 1440 high) and high-density desktop
+viewports (at least 1280 CSS pixels wide at 1.5× density) always use the original,
+including on slow connections. This keeps detail on 4K displays with scaling.
+The heading font is preloaded; neither background image is preloaded.
+
 Biography, album artwork, styles, music and other static assets remain source
 changes in Rust, `public/` and `style/` and require rebuilding/releasing. The JSON
 files and gallery photos under `seed/` are **one-time import sources**, not

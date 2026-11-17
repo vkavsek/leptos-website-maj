@@ -166,6 +166,25 @@ iframe {
   background-repeat: no-repeat;
 }
 
+// Small screens work without connection detection, including phones in landscape.
+@media (max-width: 767px), (max-width: 1024px) and (pointer: coarse) {
+  .bg-wrapper {
+    background-image: url("/img/bg/background_1716.webp");
+  }
+}
+
+html[data-reduced-background] .bg-wrapper {
+  background-image: url("/img/bg/background_1716.webp");
+}
+
+// Preserve detail on large or high-density desktop displays, even on slow connections.
+@media (min-width: 2560px), (min-height: 1440px), (min-width: 1280px) and (min-resolution: 1.5dppx) {
+  .bg-wrapper,
+  html[data-reduced-background] .bg-wrapper {
+    background-image: url("/img/bg/bg_smallest.webp");
+  }
+}
+
 // Shared route layout
 .components {
   display: grid;
