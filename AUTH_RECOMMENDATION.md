@@ -1049,7 +1049,8 @@ manual checklist before marking section 9 fully complete.
 required checks and resolve the dependency release blocker before carrying out
 this production setup. Section 4 implements local configuration, private storage,
 and SQLite startup checks; this section attaches that storage to a persistent Fly
-volume. The checked-in `fly.toml` still has no volume mount.
+volume. The checked-in `fly.toml` now specifies the `maj_data` mount at `/data`;
+the actual volume attachment and production persistence still require verification.
 
 Work through 10.1–10.4 to choose and prepare the intended volume and plan migrations.
 Section 10.5 contains the acceptance checks to perform **after deployment in
@@ -1403,6 +1404,9 @@ issuer/subject. Confirm their next protected request fails. Requests that alread
 committed before revocation are not rolled back.
 
 ## 13. Backups, recovery, and routine maintenance
+
+Use [MAINTENANCE.md](MAINTENANCE.md) for the ongoing operating procedures,
+backup verification, restore steps, and deployment/rollback checklist.
 
 **The offline `admin backup` command is implemented; production scheduling and
 recovery validation remain pending.** It uses an exclusive cross-process file

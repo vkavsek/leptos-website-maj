@@ -18,6 +18,8 @@ Commands and tool installation are documented in [BUILD.md](BUILD.md).
   and Rust/browser test instructions.
 - [ARCHITECTURE.md](ARCHITECTURE.md): application structure, request handling,
   content loading, and contact form protections.
+- [MAINTENANCE.md](MAINTENANCE.md): routine operations, migrations, backups,
+  restores, deployments, rollback, and administrator access.
 - [AUDIT.md](AUDIT.md): audit findings and their resolution history.
 
 ## Development disk usage

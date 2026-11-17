@@ -4,7 +4,8 @@ Use the [justfile](justfile) as the project's command runner. Run `just` or
 `just --list` to list commands. Recipes run from the repository root, including
 when invoked from a subdirectory, and use Bash regardless of your interactive
 shell. Run the installation commands below from the repository root.
-For runtime configuration, content maintenance, and deployment, see [README.md](README.md).
+For runtime configuration, see [README.md](README.md). For content maintenance,
+database operations, and deployment, see [MAINTENANCE.md](MAINTENANCE.md).
 For application design, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Dependencies

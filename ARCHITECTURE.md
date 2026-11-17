@@ -4,7 +4,8 @@ The application uses Leptos for server rendering and browser hydration, Axum on
 Tokio for HTTP, and Lettre for SMTP delivery. SQLite holds the live gallery, shows,
 videos, approval and sessions; other static content remains in built assets. Build and
 test commands are in [BUILD.md](BUILD.md), and
-runtime configuration and maintenance are in [README.md](./README.md).
+runtime configuration is in [README.md](README.md), and operating procedures are
+in [MAINTENANCE.md](MAINTENANCE.md).
 
 ## Source organization
 

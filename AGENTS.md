@@ -111,6 +111,7 @@ storing them and handle collisions without overwriting existing files.
 ## Additional Guidelines
 
 The project is being actively developed on multiple different machines. Avoid including machine specific instructions in general documentation. Keep instructions generic to Linux.
+Keep all documentation up to date.
 
 ## Additional Resources
 
