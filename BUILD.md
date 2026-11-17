@@ -12,7 +12,7 @@ For application design, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 For native Linux builds, install:
 
-- Rust 1.89 or newer and Cargo through rustup (native file locking requires 1.89).
+- Rust 1.94 or newer and Cargo through rustup (required by SQLx).
 - [`just`](https://just.systems/man/en/), the project command runner.
 - The `wasm32-unknown-unknown` Rust target.
 - `cargo-leptos`, which builds the server, browser WASM, and SCSS assets.
@@ -22,7 +22,10 @@ For native Linux builds, install:
 - CA certificates for dependency downloads, SMTP TLS, and Google HTTPS verification.
 
 SQLx and the AWS-LC JWT/TLS backend use the C toolchain; no external database server or
-SQLite development package is needed. For creating migration files, install the
+SQLite development package is needed. The temporary pinned SQLx source and its
+patched SQLite engine are described in [README.md](README.md#patched-sqlite-dependency).
+The first dependency fetch requires access to the public SQLx Git repository as
+well as crates.io; `Cargo.lock` records the exact revision. For creating migration files, install the
 matching SQLx CLI (0.9):
 
 ```sh

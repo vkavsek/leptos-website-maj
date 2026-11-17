@@ -423,14 +423,14 @@ enabled by this step; section 5 now adds content/login-transaction tables.
 Fly startup checks `/data` is mounted on a separate filesystem before storage is
 created. The volume itself still needs provisioning in section 10.
 
-**Unresolved release blocker:** current `just audit`/`just deny` checks report
-[RUSTSEC-2026-0459](https://rustsec.org/advisories/RUSTSEC-2026-0459.html)
-for bundled `libsqlite3-sys` 0.37.0. SQLx 0.9.0 caps that dependency below 0.38.0,
-but patched releases start at 0.39.0. Do not deploy this database integration until
-a supported patched dependency path is available and verified. Private directory
-checks limit exposure to attacker-supplied database/WAL files; they do not fix the
-vulnerability. No exception or suppression was added. The older `paste`
-maintenance advisory remains too.
+**SQLite fix:** SQLx is patched to upstream revision
+`10462fa4414c6c7f1ed1d39bb31678e3b726878c` (#4502), permitting the locked
+`libsqlite3-sys` 0.39.1 / SQLite 3.54.1. A database test checks the linked engine
+is at least 3.54.0; the SQLite advisory is not suppressed. The exact Git source,
+review deadline, and return-to-stable plan are in
+[README.md](README.md#patched-sqlite-dependency). Paste's maintenance risk has a
+separate documented temporary exception. Fresh checks now also flag unmaintained
+Chrono; that remains a release blocker with no exception.
 
 Use `just db-migrate` for local schema administration (defaults to the development
 data directory, or respects `MAJ_DATA_DIR`). It invokes the existing executable's
@@ -512,8 +512,9 @@ The store's
 [manifest](https://docs.rs/crate/tower-sessions-sqlx-store/0.16.0/source/Cargo.toml)
 uses SQLx 0.9 and session-core 0.15. Resolve compatible features, check
 advisories/MSRVs, and commit the resulting lockfile when adding later integration.
-The section 4.3 SQLite release blocker remains unresolved; no advisory exception
-has been added.
+Section 4.3 now uses a pinned upstream SQLx fix for patched SQLite. The Cargo patch
+also applies to the session store's SQLx dependency, keeping one shared type/version
+graph. Follow the documented review/removal plan for this temporary Git source.
 
 ### Code changes
 
@@ -892,10 +893,13 @@ Coverage reports go to `target/coverage/`; `--skip-clean` reuses the instrumente
 build for this follow-up run. Use `just clean` at a natural daily stopping point.
 
 If `just security` stops at cargo-audit, run `just deny` separately as well. A failed
-security check is not a successful release gate. The existing SQLite advisory and
-unmaintained `paste` remain visible; the documented RSA exception applies only to
-the reviewed public-key verification path. Resolve the SQLite release blocker
-before deploying; do not add exceptions to get a green status.
+security check is not a successful release gate. The 2026-11-17 dependency follow-up
+fixed SQLite through pinned upstream SQLx and recorded temporary acceptance of
+Paste's maintenance risk; cargo-audit retains the Paste warning. The refreshed
+database also flags unmaintained Chrono, which still fails cargo-deny. See
+[the individual dependency decisions](README.md#coverage-and-dependency-checks);
+the RSA exception remains limited to public-key verification. Do not add exceptions
+merely to get a green status.
 
 | Area | Existing evidence / required follow-up |
 | --- | --- |
@@ -1358,13 +1362,15 @@ following gates are still open:
   delayed mutations fail, same-account browsers are signed out, other
   administrators remain signed in, and a fresh login works. Generation-write
   failures return an error instead of reporting a successful logout.
-- [ ] Resolve the bundled `libsqlite3-sys 0.37.0` advisory
-  `RUSTSEC-2026-0459` through a supported patched dependency path. Fresh
-  `cargo-audit` and `cargo-deny` checks both fail on it; SQLx's current constraint
-  prevents simply selecting patched `libsqlite3-sys >=0.39.0`.
-- [ ] Resolve `paste 1.0.15` / `RUSTSEC-2024-0436` under the dependency policy.
-  Fresh cargo-deny fails on its unmaintained status; this is a maintenance finding,
-  not a demonstrated runtime exploit. Do not broadly suppress the checks.
+- [x] Resolve `RUSTSEC-2026-0459`: pinned upstream SQLx #4502 permits patched
+  `libsqlite3-sys` 0.39.1, and the database test checks the actual linked engine.
+  No SQLite exception is used; review the temporary Git pin by 2026-12-17.
+- [x] Resolve the maintenance decision for `paste 1.0.15` / `RUSTSEC-2024-0436`:
+  stable Leptos still requires it, so only that maintenance advisory is accepted
+  temporarily in cargo-deny, with rationale and review deadline 2026-12-17.
+  Cargo-audit keeps its warning visible; the crate remains unmaintained.
+- [ ] Resolve the newly reported `chrono 0.4.45` maintenance advisory
+  `RUSTSEC-2026-0543` before deployment. It remains unexcepted and fails cargo-deny.
 - [ ] Add `--cargo-locked` to the Dockerfile's `cargo leptos build --release -vv`
   command, matching the Just build recipes. Without it, a stale lockfile can be
   changed inside the build rather than rejected, invalidating the dependency review.
@@ -1377,9 +1383,10 @@ following gates are still open:
   intended Machine size; do not use old results as evidence for later code.
 
 The fresh dependency review reports `bans ok` and `sources ok`, but
-`advisories FAILED`. The combined `just security` recipe stopped at cargo-audit;
-therefore cargo-deny was also run separately. No dependency exception, application
-fix, or Dockerfile change was made by this documentation review.
+`advisories FAILED` for Chrono. The earlier Docker review ran cargo-deny separately
+because cargo-audit then stopped the combined recipe on SQLite. The subsequent
+dependency fix now reaches both checks: SQLite is fixed, Paste has its documented
+maintenance exception, and Chrono remains open. The Dockerfile fix is still pending.
 
 After fixing the relevant code/configuration, run:
 

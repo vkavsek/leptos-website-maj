@@ -676,6 +676,19 @@ mod tests {
     async fn initializes_private_schemas_and_configures_every_connection() {
         let fixture = Fixture::new();
         let database = DatabaseManager::initialize(&fixture.0).await.unwrap();
+        // Check the linked engine, not just Cargo.lock: RUSTSEC-2026-0459 is fixed in SQLite 3.54.
+        let sqlite_version = sqlx::query_scalar::<_, String>("SELECT sqlite_version()")
+            .fetch_one(&database.pool)
+            .await
+            .unwrap();
+        let version: Vec<u32> = sqlite_version
+            .split('.')
+            .map(|part| part.parse().unwrap())
+            .collect();
+        assert!(
+            version.as_slice() >= [3, 54, 0].as_slice(),
+            "SQLite {sqlite_version} is older than the patched engine"
+        );
         let mut connections = Vec::new();
         for _ in 0..4 {
             let mut connection = database.pool.acquire().await.unwrap();

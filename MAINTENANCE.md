@@ -403,8 +403,9 @@ See [Fly release command behavior](https://fly.io/docs/reference/configuration/#
    Run `just check`, `just security`, `just test-shutdown`, and browser checks
    appropriate to the change; use `just coverage --jobs 2` for non-trivial native
    logic. A failed advisory fetch is not a clean audit. Resolve release blockers
-   rather than suppressing them; the currently documented SQLite/paste findings
-   need an explicit resolution before claiming clean security checks.
+   rather than suppressing them. SQLite now uses the pinned upstream fix and Paste
+   has a reviewed temporary maintenance exception; the new Chrono advisory still
+   blocks release. Recheck the Git pin and advisory review deadlines in README.md.
 2. Record the current image digest/commit and volume ID. Check disk space,
    production origin and Google callback registration, required secrets, and
    Machine count. `fly secrets list --app maj-webpage` lists names/status without

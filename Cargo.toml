@@ -2,6 +2,7 @@
 name = "leptos-website-maj"
 version = "2.0.0"
 edition = "2021"
+rust-version = "1.94"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -122,6 +123,12 @@ ssr = [
   "dep:image",
   "dep:clap",
 ]
+
+[patch.crates-io]
+# Upstream SQLx #4502 permits patched libsqlite3-sys 0.39.x; stable 0.9.0 does not.
+# Pin the first compatible upstream fix for both application and session-store SQLx.
+# Remove after a stable release includes it; review by 2026-12-17. See README.md.
+sqlx = { git = "https://github.com/launchbadge/sqlx", rev = "10462fa4414c6c7f1ed1d39bb31678e3b726878c" }
 
 # Defines a size-optimized profile for the WASM bundle in release mode
 [profile.wasm-release]

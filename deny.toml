@@ -11,6 +11,11 @@ unmaintained = "all"
 # Remove when openidconnect adopts patched rsa >=0.10. See README.md.
 ignore = [
   { id = "RUSTSEC-2023-0071", reason = "Google OIDC uses RSA public-key verification only; private-key timing leak is unreachable. Review by 2026-12-16 and on dependency/advisory or RSA usage changes." },
+  # Reviewed 2026-11-17: stable Leptos 0.8 and four supporting crates require paste 1.0.15.
+  # It only expands macros from trusted build inputs; this advisory reports no vulnerability.
+  # No patched release exists. Keep cargo-audit's warning visible and remove this exception
+  # when the stable framework drops paste. Recheck on dependency/advisory changes and by 2026-12-17.
+  { id = "RUSTSEC-2024-0436", reason = "Temporary acceptance of paste 1.0.15 maintenance risk in stable Leptos's compile-time macros, not a runtime security exception. No patched compatible release; review by 2026-12-17 and on dependency/advisory changes. See README.md." },
 ]
 
 [bans]
@@ -20,4 +25,8 @@ wildcards = "deny"
 [sources]
 unknown-registry = "deny"
 unknown-git = "deny"
+required-git-spec = "rev"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+# SQLx #4502 is the reviewed bridge to patched SQLite until a stable release is available.
+# Cargo.toml pins commit 10462fa4414c6c7f1ed1d39bb31678e3b726878c; review by 2026-12-17.
+allow-git = ["https://github.com/launchbadge/sqlx"]
