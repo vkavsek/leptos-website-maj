@@ -566,6 +566,9 @@ Contact delivery logs contain only `delivery=sent` or `delivery=failed` within t
 request span (`req`, with its `id` from `x-request-id`). Use that ID to correlate
 delivery results with HTTP request logs. The handler does not log names, email
 addresses, subjects, message bodies, or raw SMTP replies.
+The public API returns a fixed delivery failure message for SMTP errors; provider
+diagnostics are discarded before server-function serialization. Delivery still
+has a 20-second deadline and a separate fixed timeout message.
 Missing or empty mail credentials produce a separate static configuration error;
 the credential value is never logged.
 

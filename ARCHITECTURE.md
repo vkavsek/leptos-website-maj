@@ -211,6 +211,10 @@ no lock is held during SMTP or other async work. The mutex does not poison on pa
 recorded attempts stay in effect after the lock is released. Invalid submissions
 use no slot; missing or empty SMTP credentials also use no slot and return HTTP
 `500` with a static configuration log. SMTP failures and timeouts use a slot.
+Provider failures return a fixed public delivery error, and logs retain only the
+delivery outcome. No provider diagnostics enter the serialized server-function
+error. Message/transport setup errors also use the fixed delivery error; the
+20-second delivery timeout retains its separate retry message.
 A full allowance with configured SMTP credentials returns HTTP `429` until an attempt
 is at least one hour old.
 

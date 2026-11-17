@@ -1415,8 +1415,8 @@ just test-admin-browser
 
 Run public browser tests as described in BUILD.md and coverage when changing
 non-trivial Rust logic. Keep credentials out of automated tests. Review the other
-AUDIT.md findings, especially the remaining SMTP error disclosure, before launch. Stop here if
-any release gate fails.
+new findings appended to AUDIT.md before launch. The SMTP error disclosure is fixed;
+the Chrono security-policy gate remains open. Stop here if any release gate fails.
 
 ### 11.2. Confirm the production target and staged configuration
 

@@ -90,6 +90,8 @@ const MAX_SUBJECT_LENGTH: usize = 200;
 const MAX_MESSAGE_LENGTH: usize = 10_000;
 const MAIL_RATE_LIMIT_MESSAGE: &str =
     "The contact form has reached its hourly sending limit. Please try again later.";
+#[cfg(feature = "ssr")]
+const MAIL_DELIVERY_ERROR: &str = "Email delivery failed. Please try again later.";
 
 #[cfg(feature = "ssr")]
 // shortcut: allowance resets per process; use shared storage for a durable cap across replicas.
@@ -397,6 +399,26 @@ fn reserve_mail_attempt(attempts: &Mutex<Vec<Instant>>, now: Instant) -> bool {
     true
 }
 
+/// Keep provider diagnostics out of both the public error and delivery logs.
+#[cfg(feature = "ssr")]
+async fn deliver_mail(
+    mailer: &(impl lettre::AsyncTransport + Sync),
+    email: lettre::Message,
+) -> Result<(), ServerFnError> {
+    let result = match tokio::time::timeout(Duration::from_secs(20), mailer.send(email)).await {
+        Ok(Ok(_)) => Ok(()),
+        Ok(Err(_)) => Err(ServerFnError::new(MAIL_DELIVERY_ERROR)),
+        Err(_) => Err(ServerFnError::new(
+            "Email delivery timed out. Please try again later.",
+        )),
+    };
+    match &result {
+        Ok(()) => tracing::info!(delivery = "sent", "Contact email delivery"),
+        Err(_) => tracing::error!(delivery = "failed", "Contact email delivery"),
+    }
+    result
+}
+
 /// Validates a contact message and reserves one of ten send attempts per rolling hour.
 #[server(name = SendMail)]
 async fn send_mail(
@@ -409,10 +431,10 @@ async fn send_mail(
     use axum::Extension;
     use lettre::{
         message::header::ContentType, transport::smtp::authentication::Credentials,
-        AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
+        AsyncSmtpTransport, Message, Tokio1Executor,
     };
     use std::sync::Arc;
-    use tracing::{error, info};
+    use tracing::error;
 
     let name = name.trim();
     let email = email.trim();
@@ -461,7 +483,7 @@ async fn send_mail(
             "Sender INFO:\n\n{:*>20}{name}\n{:*>20}{email}\n\n\nEmail CONTENT:\n\n{email_content}",
             "Name: ", "Email: "
         ))
-        .map_err(<lettre::error::Error as Into<ServerFnError>>::into)?;
+        .map_err(|_| ServerFnError::new(MAIL_DELIVERY_ERROR))?;
 
     let creds = Credentials::new(
         "info@majkavsek.com".to_owned(),
@@ -470,28 +492,56 @@ async fn send_mail(
 
     // Open a remote connection to porkbun
     let mailer: AsyncSmtpTransport<Tokio1Executor> =
-        AsyncSmtpTransport::<Tokio1Executor>::relay("smtp.porkbun.com")?
+        AsyncSmtpTransport::<Tokio1Executor>::relay("smtp.porkbun.com")
+            .map_err(|_| ServerFnError::new(MAIL_DELIVERY_ERROR))?
             .credentials(creds)
             .build();
 
-    // Send the email
-    let res = match tokio::time::timeout(Duration::from_secs(20), mailer.send(email)).await {
-        Ok(result) => result.map(|_| ()).map_err(ServerFnError::from),
-        Err(_) => Err(ServerFnError::new(
-            "Email delivery timed out. Please try again later.",
-        )),
-    };
-
-    match res {
-        Ok(_) => info!(delivery = "sent", "Contact email delivery"),
-        Err(_) => error!(delivery = "failed", "Contact email delivery"),
-    }
-    res
+    deliver_mail(&mailer, email).await
 }
 
 #[cfg(all(test, feature = "ssr"))]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn mail_delivery_hides_transport_errors_from_serialized_responses_and_logs() {
+        use leptos::server_fn::error::FromServerFnError;
+        use lettre::transport::stub::AsyncStubTransport;
+        use tracing::instrument::WithSubscriber;
+
+        let log = tempfile::NamedTempFile::new().unwrap();
+        let subscriber = tracing_subscriber::fmt()
+            .without_time()
+            .with_ansi(false)
+            .with_writer(log.reopen().unwrap())
+            .finish();
+        let subscriber = tracing::Dispatch::new(subscriber);
+        let message = || {
+            lettre::Message::builder()
+                .from("sender@example.com".parse().unwrap())
+                .to("recipient@example.com".parse().unwrap())
+                .body("private-message-canary".to_owned())
+                .unwrap()
+        };
+        let error = deliver_mail(&AsyncStubTransport::new_error(), message())
+            .with_subscriber(subscriber.clone())
+            .await
+            .unwrap_err();
+        let serialized = String::from_utf8(error.ser().to_vec()).unwrap();
+        assert_eq!(error, ServerFnError::new(MAIL_DELIVERY_ERROR));
+        assert!(serialized.contains(MAIL_DELIVERY_ERROR));
+        assert!(!serialized.contains("stub error"));
+        assert!(!serialized.contains("private-message-canary"));
+        deliver_mail(&AsyncStubTransport::new_ok(), message())
+            .with_subscriber(subscriber)
+            .await
+            .unwrap();
+        let output = std::fs::read_to_string(log.path()).unwrap();
+        assert!(output.contains("failed") && output.contains("sent"));
+        assert!(!output.contains("stub error"));
+        assert!(!output.contains("private-message-canary"));
+    }
 
     #[test]
     fn mail_validation_accepts_unicode_and_boundary_lengths() {

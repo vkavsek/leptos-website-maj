@@ -27,12 +27,12 @@ Audit date: 2026-11-16. Reviewed commit `d58ea93` and the then-staged `fly.toml`
    - **Fix:** The fallback now logs structured method/path fields using `parts.uri.path()` and omits the query string.
    - **Verification:** A router-level log-capture regression requests `/missing?private=query_canary&code=oauth_canary`, confirms a 404 with the method/path logged, and verifies both query markers are absent.
 
-2. **The contact API returns raw SMTP failures** (`src/routes/home.rs:478`)
+2. **RESOLVED: The contact API returns raw SMTP failures** (`src/routes/home.rs`)
 
    - **What this is:** The public contact endpoint sends mail through SMTP, the protocol used to deliver email.
    - **Problem:** `ServerFnError::from` forwards the mail provider’s error text to the caller, even though the page displays a generic failure message. A provider authentication or recipient rejection therefore exposes backend diagnostics to anyone calling the endpoint directly; this audit did not demonstrate password disclosure.
-   - **Fix:** Return a fixed public delivery error for provider failures while keeping the existing safe delivery-status logs. Add a simulated transport failure and assert that its diagnostic marker is absent from the response.
-   - **If we skip it:** The API’s error details remain dependent on what an external mail server returns.
+   - **Fix:** Provider failures now return a fixed delivery message; message/transport setup errors also discard diagnostics. Safe sent/failed logs and the 20-second deadline with its separate timeout message are preserved.
+   - **Verification:** A Lettre stub transport simulates failure and success without a network connection. The regression checks the actual server-function error serialization, confirms the fixed public error, and verifies that the transport's `stub error` marker and a private message marker are absent from both serialized errors and captured logs.
 
 3. **RESOLVED: The production build can change the dependency lockfile** (`Dockerfile`, `justfile`)
 
@@ -60,7 +60,7 @@ Validation performed: source review traced startup/storage checks, Google login 
 
 The original audit's `cargo audit --json` exited with status 1: one vulnerability (`libsqlite3-sys`) and one unmaintained warning (`paste`), using advisory data updated on 2026-11-15. The existing scoped RSA exception was reviewed as an existing decision and was not counted as a new finding; `cargo-deny` was not rerun during that original audit.
 
-Verdict: Logout, SQLite, private-query logging and build lock enforcement are fixed; Paste has a documented temporary maintenance decision. Local boundary-upload memory checks pass for a 256 MiB budget. Resolve the new Chrono blocker described below and the remaining SMTP error-response finding before release; deployed full-server memory is still unverified. The assumed single-Machine setup does not require replication for these fixes.
+Verdict: Logout, SQLite, private-query logging, SMTP error disclosure and build lock enforcement are fixed; Paste has a documented temporary maintenance decision. Local boundary-upload memory checks pass for a 256 MiB budget. Resolve the Chrono blocker and review the new findings appended below before release; deployed full-server memory is still unverified. The assumed single-Machine setup does not require replication for these fixes.
 
 Not checked by the original audit: application builds/tests/coverage, browser tests, Docker build, and production memory. Item 1 now has a concurrent HTTP regression; its follow-up validation is recorded below. Live Google/SMTP behavior, deployed Fly settings, backup restoration on Fly, JavaScript dependency advisories, and a full visual/accessibility review remain untested by this audit.
 
