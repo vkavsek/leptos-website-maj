@@ -21,8 +21,8 @@ root; commands marked as running inside the Machine use its Linux shell. Example
 labelled `bash` require Bash, including when the interactive shell is Fish.
 
 Commands run from the repository root unless marked **inside the Machine**.
-Examples with variable assignments, `read`, or heredocs use **Bash**; start Bash
-first if your interactive shell is Fish. Replace uppercase placeholders before
+Examples labelled `bash` use **Bash**; the credential prompt labelled `fish` uses
+Fish. Replace uppercase placeholders before
 running commands. Production commands below target `maj-webpage`; check
 `fly.toml` and the actual deployment before each maintenance window.
 
@@ -486,14 +486,15 @@ Google availability affects new sign-ins; public browsing and existing eligible
 local sessions do not require a live Google connection. Diagnose provider outages
 without resetting the database or weakening local approval checks.
 
-For a Google secret rotation, use a Bash prompt and stdin, with shell tracing off:
+For a Google secret rotation, use this Fish prompt and stdin, with `fish_trace`
+disabled. Enter the secret at the masked prompt to keep it out of command history:
 
-```bash
-read -r -s -p 'Production Google client secret: ' maj_google_secret
+```fish
+read --silent --prompt-str 'Production Google client secret: ' maj_google_secret
 printf '\n'
 printf 'GOOGLE_CLIENT_SECRET=%s\n' "$maj_google_secret" | \
   fly secrets import --stage --app maj-webpage
-unset maj_google_secret
+set --erase maj_google_secret
 ```
 
 [Staging the secret](https://fly.io/docs/flyctl/secrets-import/) avoids an immediate

@@ -1,3 +1,5 @@
+@use "theme";
+
 @mixin full-grid-stretch {
   grid-column-start: 1;
   grid-column-end: 11;

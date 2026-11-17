@@ -7,6 +7,9 @@ test("native content forms publish and remove live records", async ({ page, cont
   const cookie: string = JSON.parse(process.env.MAJ_TEST_ADMIN_COOKIES!)[testInfo.project.name];
   const split = cookie.indexOf("=");
   await context.addCookies([{ name: cookie.slice(0, split), value: cookie.slice(split + 1), url: baseURL! }]);
+  await page.goto("/admin");
+  await expect(page.getByRole("link", { name: "Site information", exact: true })).toHaveAttribute("href", "/info");
+  await expect(page.getByRole("link", { name: "Privacy policy", exact: true })).toHaveAttribute("href", "/privacy");
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/admin");
   await expect(page.getByRole("heading", { name: "Administration", exact: true })).toBeVisible();

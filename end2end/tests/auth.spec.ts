@@ -7,6 +7,8 @@ test("anonymous admin page is accessible and private without contacting Google",
   expect(response?.headers()["referrer-policy"]).toBe("no-referrer");
   await expect(page.getByRole("main")).toBeVisible();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Administration sign-in");
+  await expect(page.getByRole("link", { name: "Site information", exact: true })).toHaveAttribute("href", "/info");
+  await expect(page.getByRole("link", { name: "Privacy policy", exact: true })).toHaveAttribute("href", "/privacy");
   await page.keyboard.press("Tab");
   await expect(page.locator(":focus")).toHaveAttribute("href", /^(\/auth\/google\/start|\/)$/);
 });

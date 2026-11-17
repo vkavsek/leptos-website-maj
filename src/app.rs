@@ -1,6 +1,9 @@
 use crate::{
     audio::AudioPlayer,
-    routes::{about::*, discography::*, error::ErrorTemplate, home::*, media::*, shows::*},
+    routes::{
+        about::*, discography::*, error::ErrorTemplate, home::*, info::Info, media::*,
+        privacy::Privacy, shows::*,
+    },
     MajServerError,
 };
 use leptos::prelude::*;
@@ -178,6 +181,8 @@ fn PageLayout() -> impl IntoView {
                         <Route path=path!("/discography") view=Discography />
                         <Route path=path!("/discography/:name") view=DiscographyDisplayAlbum />
                         <Route path=path!("/media") view=Media />
+                        <Route path=path!("/privacy") view=Privacy />
+                        <Route path=path!("/info") view=Info />
                     </Routes>
                 </main>
             </div>

@@ -1307,15 +1307,17 @@ OAuth client in `maj-webpage-admin-production`. The project ID is not the client
 ID. Import its secret without putting the value in command history, and stage it
 for the new release:
 
-```bash
-read -r -s -p 'Production Google client secret: ' maj_google_secret
+```fish
+read --silent --prompt-str 'Production Google client secret: ' maj_google_secret
 printf '\n'
 printf 'GOOGLE_CLIENT_SECRET=%s\n' "$maj_google_secret" | \
   fly secrets import --stage --app maj-webpage
-unset maj_google_secret
+set --erase maj_google_secret
 ```
 
-The value passes to Fly through stdin; do not enable shell tracing. See the
+Run this in Fish; enter the secret at the masked prompt, not on the command line,
+so the value is not saved in command history. The value passes to Fly through
+stdin; keep `fish_trace` disabled. See the
 [secret import command](https://fly.io/docs/flyctl/secrets-import/).
 
 ## 11. Deploy, import content, and approve the production account

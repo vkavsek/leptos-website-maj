@@ -4,6 +4,16 @@ A personal website for trumpeter and composer Maj Kavšek, with a biography,
 photo gallery, show listings, discography, videos, audio playback, and a contact form.
 Built with Rust, Leptos, and Axum.
 
+The public `/info` page describes the portfolio. The admin sign-in page and
+signed-in editor link to it and the privacy policy; these links are not part of
+the public portfolio navigation. Both pages
+remain readable without sign-in. For Google branding, use `/info` as the
+application homepage and `/privacy` as the privacy policy URL.
+The public `/privacy` page describes identity-only Google authentication, local
+sessions, contact messages, external services, retention and deletion. Keep its
+text in `src/routes/privacy.rs` aligned with implementation and actual operating
+practices; publishing the source change still requires a website release.
+
 Use `just` as the project command runner; `just --list` shows the commands in
 [justfile](justfile). Common commands are `just dev`, `just build`,
 `just build-release`, `just test`, and `just check`. Recipes work from repository

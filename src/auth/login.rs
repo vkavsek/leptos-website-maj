@@ -476,6 +476,11 @@ async fn admin(
                     <p>
                         <a href="/">"Back to the portfolio"</a>
                     </p>
+                    <footer>
+                        <a href="/info">"Site information"</a>
+                        " · "
+                        <a href="/privacy">"Privacy policy"</a>
+                    </footer>
                 },
             )
         }
@@ -501,6 +506,11 @@ async fn admin(
                 <p>
                     <a href="/">"Back to the portfolio"</a>
                 </p>
+                <footer>
+                    <a href="/info">"Site information"</a>
+                    " · "
+                    <a href="/privacy">"Privacy policy"</a>
+                </footer>
             },
         ),
         Err(error) => login_failure(error),

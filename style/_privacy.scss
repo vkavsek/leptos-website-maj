@@ -1,0 +1,61 @@
+@use "theme";
+
+.privacy-page,
+.info-page {
+  box-sizing: border-box;
+  block-size: 100%;
+  padding: 1.5rem;
+
+  @media screen and (orientation: landscape) {
+    margin-inline-start: 15%;
+  }
+
+  @media screen and (orientation: portrait) {
+    padding-block-start: calc(10vh + 1rem);
+    padding-block-end: 5rem;
+  }
+}
+
+.privacy-policy,
+.site-info {
+  box-sizing: border-box;
+  max-inline-size: 76ch;
+  block-size: 100%;
+  margin-inline: auto;
+  padding: clamp(1rem, 3vw, 2rem);
+  overflow: auto;
+  overflow-wrap: anywhere;
+  background: rgba(theme.$background, 0.95);
+  border-radius: 16px;
+  line-height: 1.7;
+
+  &:focus-visible {
+    outline: 2px solid theme.$yellow;
+    outline-offset: 3px;
+  }
+
+  h1 {
+    margin-block-start: 0;
+    font-family: theme.$font-display, sans-serif;
+    font-size: clamp(2rem, 5vw, 3rem);
+  }
+
+  h2 {
+    margin-block-start: 2rem;
+    font-size: 1.25rem;
+  }
+
+  p {
+    margin-block-end: 1rem;
+  }
+
+  a {
+    color: inherit;
+    text-underline-offset: 0.15em;
+  }
+
+  footer a {
+    display: inline-block;
+    padding-block: 0.5rem;
+  }
+}
