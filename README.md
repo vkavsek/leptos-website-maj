@@ -220,7 +220,12 @@ that browser's verified issuer and subject, returns HTTP 403, and expires after
 five minutes. Share those values privately with the operator. Run the approval
 command against the same data directory, then sign in again. The protected admin
 landing page provides Gallery, Shows and YouTube video forms, account status,
-and sign-out. Biography remains a source-code edit.
+and sign-out. Gallery entries group each image with its removal controls inside
+a bordered card: one column on small screens, three in larger portrait layouts,
+and five in larger landscape layouts. Shows share one newest-first table with
+removal controls in each row; small screens can scroll the table horizontally.
+The portfolio link, signed-in account, and sign-out control appear above the
+editors. Biography remains a source-code edit.
 
 | Route                       | Purpose                                                                                                 |
 | --------------------------- | ------------------------------------------------------------------------------------------------------- |

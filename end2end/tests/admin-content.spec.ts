@@ -25,6 +25,36 @@ test("native content forms publish and remove live records", async ({ page, cont
   };
   await expect(page.locator("main section")).toHaveCount(1);
   await expect(page.locator("#gallery")).toBeVisible();
+  // Layout changes retain each photo's confirmation and button inside its bordered card.
+  for (const size of [
+    { width: 375, height: 812, columns: 1 },
+    { width: 844, height: 390, columns: 1 },
+    { width: 1080, height: 1920, columns: 3 },
+    { width: 1920, height: 1080, columns: 5 },
+    { width: 3840, height: 2160, columns: 5 },
+  ]) {
+    await page.setViewportSize(size);
+    const grid = page.locator(".gallery-grid");
+    await expect.poll(() => grid.evaluate(element => getComputedStyle(element).gridTemplateColumns.split(" ").length)).toBe(size.columns);
+    for (const card of await grid.locator("li").all()) {
+      await expect(card).toHaveCSS("border-top-width", "1px");
+      await expect(card.locator("img")).toBeVisible();
+      await expect(card.getByRole("button", { name: "Remove", exact: true })).toBeVisible();
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+    if (size.columns > 1 && size.width < 3840) {
+      await page.screenshot({ path: testInfo.outputPath(`admin-gallery-${size.columns}-columns.png`), fullPage: true });
+    }
+  }
+  await page.setViewportSize({ width: 375, height: 812 });
+  const portfolio = (await page.getByRole("link", { name: "Back to the portfolio", exact: true }).boundingBox())!;
+  const identity = (await page.locator(".admin-identity").boundingBox())!;
+  const logout = (await page.getByRole("button", { name: "Sign out", exact: true }).boundingBox())!;
+  const editors = (await navigation.boundingBox())!;
+  expect(portfolio.y + portfolio.height).toBeLessThanOrEqual(identity.y);
+  expect(identity.y + identity.height).toBeLessThanOrEqual(logout.y);
+  expect(logout.y + logout.height).toBeLessThanOrEqual(editors.y);
+  await page.screenshot({ path: testInfo.outputPath("admin-gallery-mobile.png"), fullPage: true });
   await select("shows");
   await select("videos");
   await page.goBack();
@@ -36,7 +66,7 @@ test("native content forms publish and remove live records", async ({ page, cont
   // These records were imported before the browser signed in, rather than added by its forms.
   for (const [kind, label] of [["shows", `Published ${testInfo.project.name}`], ["videos", publishedVideo], ["gallery", publishedPhoto]]) {
     await select(kind);
-    const form = page.locator(`#${kind} li`).filter({ hasText: label }).getByRole("form");
+    const form = page.locator(`#${kind} ${kind === "shows" ? "tbody tr" : "li"}`).filter({ hasText: label }).getByRole("form");
     await expect(form).toBeVisible();
     await form.getByRole("checkbox", { name: "Confirm permanent removal" }).check();
     await form.getByRole("button", { name: "Remove", exact: true }).click();
@@ -54,6 +84,17 @@ test("native content forms publish and remove live records", async ({ page, cont
   expect((await submitting).headers()["origin"]).toBe(new URL(baseURL!).origin);
   await expect(page.locator("#shows")).toContainText(showName);
   expect(await (await request.get("/api/get_shows")).text()).toContain(showName);
+  const table = page.getByRole("table");
+  await expect(table).toHaveCount(1);
+  const dates = await table.locator("tbody time").evaluateAll(nodes => nodes.map(node => node.getAttribute("datetime")!));
+  expect(dates).toEqual([...dates].sort().reverse());
+  await expect(table.locator("tbody tr").filter({ hasText: showName }).getByRole("button", { name: "Remove", exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: /Published shows/ })).toHaveAttribute("tabindex", "0");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath("admin-shows-table.png"), fullPage: true });
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.screenshot({ path: testInfo.outputPath("admin-shows-desktop.png"), fullPage: true });
+  await page.setViewportSize({ width: 375, height: 812 });
 
   await select("videos");
   const videoId = testInfo.project.name === "chromium" ? "3uh_Jc1prRQ" : "dQw4w9WgXcQ";
@@ -77,7 +118,7 @@ test("native content forms publish and remove live records", async ({ page, cont
   await page.screenshot({ path: testInfo.outputPath("admin-published-gallery.png"), fullPage: true });
   for (const [kind, label] of [["shows", showName], ["videos", videoId], ["gallery", normalizedName]]) {
     await select(kind);
-    const form = page.locator(`#${kind} li`).filter({ hasText: label }).getByRole("form");
+    const form = page.locator(`#${kind} ${kind === "shows" ? "tbody tr" : "li"}`).filter({ hasText: label }).getByRole("form");
     const confirmation = form.getByRole("checkbox", { name: "Confirm permanent removal" });
     await expect(confirmation).not.toBeChecked();
     await expect(confirmation).toHaveAttribute("required", "");

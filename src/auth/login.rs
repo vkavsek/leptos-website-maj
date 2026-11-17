@@ -98,6 +98,92 @@ pub(super) fn page(status: StatusCode, title: &'static str, body: impl IntoView)
                         max-width: 45rem;
                         margin-inline: auto;
                     }
+                    main.admin-page {
+                        max-width: 100rem;
+                    }
+                    .admin-page section > form {
+                        max-width: 45rem;
+                    }
+                    .gallery-grid {
+                        display: grid;
+                        grid-template-columns: minmax(0, 1fr);
+                        gap: 1rem;
+                        padding: 0;
+                        list-style: none;
+                    }
+                    .gallery-grid > li {
+                        display: flex;
+                        flex-direction: column;
+                        gap: .5rem;
+                        min-width: 0;
+                        padding: .75rem;
+                        border: 1px solid #858585;
+                        border-radius: .5rem;
+                        background: #fafafa;
+                    }
+                    .gallery-grid a {
+                        display: block;
+                        padding: 0;
+                    }
+                    .gallery-grid img {
+                        display: block;
+                        width: 100%;
+                        aspect-ratio: 16 / 9;
+                        object-fit: contain;
+                    }
+                    .gallery-grid p {
+                        margin: 0;
+                    }
+                    .gallery-grid .removal-form {
+                        margin: auto 0 0;
+                    }
+                    .gallery-grid button {
+                        display: block;
+                        width: 100%;
+                    }
+                    @media (min-width: 48rem) and (orientation: portrait) {
+                        .gallery-grid {
+                            grid-template-columns: repeat(3, minmax(0, 1fr));
+                        }
+                    }
+                    @media (min-width: 64rem) and (orientation: landscape) {
+                        .gallery-grid {
+                            grid-template-columns: repeat(5, minmax(0, 1fr));
+                        }
+                    }
+                    .shows-table-wrap {
+                        overflow: auto;
+                        max-height: 75vh;
+                    }
+                    .shows-table {
+                        width: 100%;
+                        min-width: 48rem;
+                        border-collapse: separate;
+                        border-spacing: 0;
+                    }
+                    .shows-table th, .shows-table td {
+                        text-align: left;
+                        vertical-align: top;
+                        padding: .75rem;
+                        border-bottom: 1px solid #858585;
+                        overflow-wrap: anywhere;
+                    }
+                    .shows-table thead {
+                        position: sticky;
+                        top: 0;
+                        background: #ededed;
+                        z-index: 1;
+                    }
+                    .shows-table tbody tr:nth-child(even) {
+                        background: #f5f5f5;
+                    }
+                    .shows-table time {
+                        white-space: nowrap;
+                    }
+                    .shows-table .removal-form {
+                        margin: 0;
+                        min-width: 12rem;
+                    }
                     code, li {
                         overflow-wrap: anywhere;
                     }
@@ -146,7 +232,7 @@ pub(super) fn page(status: StatusCode, title: &'static str, body: impl IntoView)
                 </style>
             </head>
             <body>
-                <main>
+                <main class=(title == "Administration").then_some("admin-page")>
                     <h1>{title}</h1>
                     {body}
                 </main>
@@ -475,15 +561,14 @@ async fn admin(
                 StatusCode::OK,
                 "Administration",
                 view! {
-                    <p>"Signed in as "{administrator.label}"."</p>
-                    {editors}
+                    <p><a href="/">"Back to the portfolio"</a></p>
+                    <p class="admin-identity">"Signed in as "{administrator.label}"."</p>
                     <form action="/auth/logout" method="post">
                         <input type="hidden" name="csrf_token" value=data.csrf />
                         <button type="submit">"Sign out"</button>
                     </form>
-                    <p>
-                        <a href="/">"Back to the portfolio"</a>
-                    </p>
+                    <hr style="margin-top: 80px;" />
+                    {editors}
                     <footer>
                         <a href="/info">"Site information"</a>
                         " · "

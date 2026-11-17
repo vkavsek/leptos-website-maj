@@ -98,16 +98,20 @@ pub(super) async fn content(
             let label = format!(
                 "{} — {} {} {}",
                 show.date,
-                show.name.unwrap_or_default(),
-                show.club.unwrap_or_default(),
-                show.location.unwrap_or_default()
+                show.name.as_deref().unwrap_or_default(),
+                show.club.as_deref().unwrap_or_default(),
+                show.location.as_deref().unwrap_or_default()
             );
             let remove = removal("shows", show.id, &label, csrf);
+            let date = show.date.clone();
             view! {
-                <li>
-                    <p>{label}</p>
-                    {remove}
-                </li>
+                <tr>
+                    <th scope="row"><time datetime=date>{show.date}</time></th>
+                    <td>{show.name}</td>
+                    <td>{show.club}</td>
+                    <td>{show.location}</td>
+                    <td>{remove}</td>
+                </tr>
             }
         })
         .collect_view();
@@ -180,7 +184,7 @@ pub(super) async fn content(
                         </form>
                         <h3>"Published photos ("{photo_count}")"</h3>
                         {(photo_count == 0).then(|| view! { <p>"No published photos."</p> })}
-                        <ul>{gallery_items}</ul>
+                        <ul class="gallery-grid">{gallery_items}</ul>
                     </section>
                 }
             })}
@@ -213,9 +217,23 @@ pub(super) async fn content(
                             <input id="location" name="location" maxlength="500" />
                             <button type="submit">"Add show"</button>
                         </form>
-                        <h3>"Published shows ("{show_count}")"</h3>
+                        <h3 id="published-shows-heading">"Published shows ("{show_count}")"</h3>
                         {(show_count == 0).then(|| view! { <p>"No published shows."</p> })}
-                        <ul>{show_items}</ul>
+                        <div class="shows-table-wrap" role="region" aria-labelledby="published-shows-heading" tabindex="0">
+                            <table class="shows-table">
+                                <caption>"All shows, newest first"</caption>
+                                <thead>
+                                    <tr>
+                                        <th scope="col">"Date"</th>
+                                        <th scope="col">"Event"</th>
+                                        <th scope="col">"Venue"</th>
+                                        <th scope="col">"Location"</th>
+                                        <th scope="col">"Removal"</th>
+                                    </tr>
+                                </thead>
+                                <tbody>{show_items}</tbody>
+                            </table>
+                        </div>
                     </section>
                 }
             })}
@@ -494,6 +512,7 @@ fn removal(kind: &'static str, id: i64, label: &str, csrf: &str) -> impl IntoVie
             method="post"
             enctype="multipart/form-data"
             aria-label=format!("Remove {label}")
+            class="removal-form"
         >
             {fields(csrf, kind, "remove")}
             <input type="hidden" name="id" value=id.to_string() />
@@ -644,8 +663,13 @@ mod tests {
         crate::content::import(&database, root.path(), source.path())
             .await
             .unwrap();
+        // Logout revokes every session for an account; keep browser workflows independent.
+        database
+            .grant_administrator("issuer", "firefox", "Firefox test owner")
+            .await
+            .unwrap();
         let firefox = crate::auth::test_session(&database);
-        crate::auth::establish(&firefox, &database, "issuer", "owner")
+        crate::auth::establish(&firefox, &database, "issuer", "firefox")
             .await
             .unwrap();
         let cookies = serde_json::json!({
@@ -738,7 +762,12 @@ mod tests {
             )
             .unwrap();
             assert!(html.contains(marker));
-            assert_eq!(html.matches("<li>").count(), 2);
+            if kind == "shows" {
+                assert_eq!(html.matches("<tr>").count(), 3);
+                assert!(html.contains("All shows, newest first"));
+            } else {
+                assert_eq!(html.matches("<li>").count(), 2);
+            }
             assert_eq!(html.matches("<section ").count(), 1);
             assert!(html.contains(&format!("id=\"{kind}\"")));
             assert!(html.contains(&format!("name=\"id\" value=\"{id}\"")));
