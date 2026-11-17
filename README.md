@@ -228,7 +228,7 @@ and sign-out. Biography remains a source-code edit.
 | `GET /auth/google/start` | Persist browser-bound state and redirect to Google with PKCE and the `openid` scope |
 | `GET /auth/google/callback` | Consume state once, exchange the code, verify identity, and check local approval |
 | `GET /auth/identity` | Temporarily show the current browser's unapproved, verified identity |
-| `POST /auth/logout` | Verify Origin/CSRF, delete the local session, and clear its cookie |
+| `POST /auth/logout` | Verify Origin/CSRF, revoke all sessions for this administrator, and clear this browser's session/cookie |
 | `GET /admin` | Show the sign-in prompt or the approved administrator landing page |
 | `POST /admin/content` | Add/remove a photo, show or video after approval, Origin and multipart CSRF checks |
 
@@ -237,8 +237,12 @@ and no Domain; loopback development uses `maj_admin_dev` without Secure. Guards
 enforce 30-minute idle and eight-hour absolute limits, checking current approval
 and generation on each protected request. Mutations require an exact Origin and
 session-bound `x-csrf-token`; the native sign-out form carries the same token in
-its hidden `csrf_token` field. Signing out affects this website, not the Google
-account. Expired sessions/transactions are cleaned every five
+its hidden `csrf_token` field. Signing out invalidates all existing website
+sessions for that administrator across browsers/devices; other administrators
+remain signed in. The generation is advanced before this browser's session is
+flushed, so an in-flight request cannot restore access by saving a cached record.
+Approval remains enabled for a fresh sign-in. Signing out does not sign the user
+out of Google. Expired sessions/transactions are cleaned every five
 minutes. Login transactions use OAuth2-generated state, PKCE and nonce material,
 expire after five minutes, and are consumed once for their initiating browser.
 At most three outstanding transactions per browser and 128 overall are allowed.
@@ -312,10 +316,13 @@ already-set host variable.
 ## Deployment
 
 Install the Fly.io CLI (`flyctl`) and authenticate to the configured application
-before deploying. From the repository root:
+before deploying. For the first administration release, follow the
+[first deployment checklist](AUTH_RECOMMENDATION.md#11-first-production-administration-deployment-checklist)
+to verify the image and populate the volume before starting public HTTP.
+For subsequent releases after that setup, from the repository root:
 
 ```sh
-just deploy
+just deploy --ha=false
 ```
 
 Fly builds remotely by default; use `just deploy --local-only` to build with local
@@ -325,8 +332,9 @@ never through tracked configuration.
 
 The production Google client ID is configured in `fly.toml`. Before deploying
 the configuration changes, provide `MAJ_APP_ORIGIN` and `MAJ_DATA_DIR` as ordinary
-runtime settings, and install `GOOGLE_CLIENT_SECRET` through Fly secrets. The production secret is
-still pending. Production volume provisioning, real Google sign-in verification,
+runtime settings, and install `GOOGLE_CLIENT_SECRET` through Fly secrets. The owner
+has completed production Google setup and staged the secret; deployment is pending.
+Production volume verification, real production Google sign-in,
 and upload memory measurements on the production Machine still require completion
 before an administration release.
 

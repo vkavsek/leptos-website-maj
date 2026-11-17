@@ -399,7 +399,8 @@ async fn identity(session: Session) -> Response {
 }
 
 /// Requires current approval, the configured Origin and a session-bound CSRF token.
-/// Flush the server-side session before redirecting so its cookie cannot be reused.
+/// Invalidate all sessions for this administrator before clearing this browser's cookie.
+/// Durable generation changes reject sessions restored by another request's late save.
 async fn logout(
     session: Session,
     Extension(database): Extension<DatabaseManager>,
@@ -419,6 +420,13 @@ async fn logout(
             );
         }
         super::require_csrf(&session, &headers, &service.config.app_origin).await?;
+        // Revoke cached copies before deletion; flushing alone can be undone by an in-flight save.
+        if !database
+            .revoke_administrator_sessions(administrator.id)
+            .await?
+        {
+            return Err(AuthError::Forbidden);
+        }
         session.flush().await?;
         tracing::info!(
             action = "logout",
@@ -742,6 +750,10 @@ mod tests {
             .unwrap();
         assert_eq!(response.status(), StatusCode::METHOD_NOT_ALLOWED);
         private(&response);
+        assert_eq!(
+            database.administrators().await.unwrap()[0].session_generation,
+            0
+        );
         let response = app
             .clone()
             .oneshot(
@@ -804,6 +816,250 @@ mod tests {
             .unwrap();
         assert_eq!(response.status(), StatusCode::SEE_OTHER);
         assert_eq!(mock.requests().len(), 1);
+        database.close().await;
+    }
+
+    #[tokio::test]
+    async fn logout_invalidates_inflight_sessions_and_rejects_delayed_mutations() {
+        // Cover both a late successful response and the editor's post-body authorization check.
+        for mutation in [false, true] {
+            let (root, database) = crate::test_support::database().await;
+            let owner = database
+                .grant_administrator(ISSUER, "owner", "Owner")
+                .await
+                .unwrap();
+            database
+                .grant_administrator(ISSUER, "other", "Other administrator")
+                .await
+                .unwrap();
+            let session = super::super::test_session(&database);
+            super::super::establish(&session, &database, ISSUER, "owner")
+                .await
+                .unwrap();
+            let original_cookie = cookie(&session);
+            let csrf = session
+                .get::<AdminSession>(ADMIN_KEY)
+                .await
+                .unwrap()
+                .unwrap()
+                .csrf;
+            let peer = super::super::test_session(&database);
+            super::super::establish(&peer, &database, ISSUER, "owner")
+                .await
+                .unwrap();
+            let other = super::super::test_session(&database);
+            super::super::establish(&other, &database, ISSUER, "other")
+                .await
+                .unwrap();
+            let app = test_app(
+                &database,
+                service(
+                    Arc::new(config(root.path())),
+                    crate::auth::google::tests::unavailable_provider(),
+                ),
+            );
+
+            // Hold an independently loaded request across logout, without relying on wall-clock sleeps.
+            let loaded = Arc::new(tokio::sync::Notify::new());
+            let resume = Arc::new(tokio::sync::Notify::new());
+            let paused = Router::new()
+                .route(
+                    "/paused",
+                    post({
+                        let loaded = loaded.clone();
+                        let resume = resume.clone();
+                        move |session: Session,
+                              Extension(database): Extension<DatabaseManager>,
+                              headers: HeaderMap| {
+                            let loaded = loaded.clone();
+                            let resume = resume.clone();
+                            async move {
+                                super::super::require_admin(&session, &database).await?;
+                                // Guarantee a middleware save even when both requests fall in the same second.
+                                session.insert("paused_request", true).await?;
+                                loaded.notify_one();
+                                resume.notified().await;
+                                if mutation {
+                                    super::super::require_mutation(
+                                        &session,
+                                        &database,
+                                        &headers,
+                                        "http://localhost:8080",
+                                    )
+                                    .await?;
+                                    database
+                                        .add_show("2026-01-01", Some("Delayed show"), None, None)
+                                        .await?;
+                                }
+                                Ok::<_, AuthError>(StatusCode::OK)
+                            }
+                        }
+                    }),
+                )
+                .layer(Extension(database.clone()))
+                .layer(super::super::session_layer(&database, true));
+            let request = tokio::spawn(
+                paused.oneshot(
+                    Request::post("/paused")
+                        .header(COOKIE, &original_cookie)
+                        .header(ORIGIN, "http://localhost:8080")
+                        .header("x-csrf-token", &csrf)
+                        .body(Body::empty())
+                        .unwrap(),
+                ),
+            );
+            tokio::time::timeout(Duration::from_secs(5), loaded.notified())
+                .await
+                .unwrap();
+
+            let response = app
+                .clone()
+                .oneshot(
+                    Request::post("/auth/logout")
+                        .header(COOKIE, &original_cookie)
+                        .header(ORIGIN, "http://localhost:8080")
+                        .header("x-csrf-token", &csrf)
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::SEE_OTHER);
+            private(&response);
+            assert!(response.headers()[SET_COOKIE]
+                .to_str()
+                .unwrap()
+                .contains("Max-Age=0"));
+
+            resume.notify_one();
+            let late = tokio::time::timeout(Duration::from_secs(5), request)
+                .await
+                .unwrap()
+                .unwrap()
+                .unwrap();
+            if mutation {
+                assert_eq!(late.status(), StatusCode::FORBIDDEN);
+            } else {
+                assert_eq!(late.status(), StatusCode::OK);
+                assert_eq!(response_cookie(&late), original_cookie);
+                // Prove the store recreated the deleted record; authorization must still reject it.
+                let restored = Session::new(
+                    Some(session.id().unwrap()),
+                    Arc::new(database.session_store()),
+                    None,
+                );
+                assert!(restored
+                    .get::<AdminSession>(ADMIN_KEY)
+                    .await
+                    .unwrap()
+                    .is_some());
+            }
+            assert!(database.shows().await.unwrap().is_empty());
+
+            // All old sessions for this account fail, while another administrator remains signed in.
+            for old_cookie in [original_cookie, cookie(&peer)] {
+                let response = app
+                    .clone()
+                    .oneshot(
+                        Request::get("/admin")
+                            .header(COOKIE, old_cookie)
+                            .body(Body::empty())
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap();
+                assert!(matches!(
+                    response.status(),
+                    StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN
+                ));
+            }
+            let response = app
+                .clone()
+                .oneshot(
+                    Request::get("/admin")
+                        .header(COOKIE, cookie(&other))
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::OK);
+            let administrator = database.administrator(owner).await.unwrap().unwrap();
+            assert!(administrator.enabled);
+            assert_eq!(administrator.session_generation, 1);
+
+            // A fresh verified sign-in captures the new generation and works normally.
+            let fresh = super::super::test_session(&database);
+            super::super::establish(&fresh, &database, ISSUER, "owner")
+                .await
+                .unwrap();
+            let response = app
+                .oneshot(
+                    Request::get("/admin")
+                        .header(COOKIE, cookie(&fresh))
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::OK);
+            database.close().await;
+        }
+    }
+
+    #[tokio::test]
+    async fn logout_generation_failure_does_not_report_success() {
+        let (root, database) = crate::test_support::database().await;
+        let owner = database
+            .grant_administrator(ISSUER, "owner", "Owner")
+            .await
+            .unwrap();
+        // Exhaustion must fail closed rather than overflow or silently leave a usable old generation.
+        sqlx::query(
+            "UPDATE administrators SET
+                 session_generation = ?
+             WHERE id = ?",
+        )
+        .bind(i64::MAX)
+        .bind(owner)
+        .execute(database.test_pool())
+        .await
+        .unwrap();
+        let session = super::super::test_session(&database);
+        super::super::establish(&session, &database, ISSUER, "owner")
+            .await
+            .unwrap();
+        let csrf = session
+            .get::<AdminSession>(ADMIN_KEY)
+            .await
+            .unwrap()
+            .unwrap()
+            .csrf;
+        let app = test_app(
+            &database,
+            service(
+                Arc::new(config(root.path())),
+                crate::auth::google::tests::unavailable_provider(),
+            ),
+        );
+        let response = app
+            .oneshot(
+                Request::post("/auth/logout")
+                    .header(COOKIE, cookie(&session))
+                    .header(ORIGIN, "http://localhost:8080")
+                    .header("x-csrf-token", csrf)
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+        private(&response);
+        assert!(!response.headers().contains_key(LOCATION));
+        assert!(!response.headers().contains_key(SET_COOKIE));
+        let administrator = database.administrator(owner).await.unwrap().unwrap();
+        assert!(administrator.enabled);
+        assert_eq!(administrator.session_generation, i64::MAX);
         database.close().await;
     }
 

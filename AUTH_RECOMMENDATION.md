@@ -4,6 +4,8 @@
 
 - [x] Sections 1–3: deployment values, Google projects/consent, and OAuth clients
   completed, as confirmed by the owner.
+- [x] Production Google branding, publishing, and client setup completed,
+  as confirmed by the owner; development remains separate.
 - [x] Section 4.1: server configuration validation and the development Fish
   launcher implemented and tested.
 - [x] Section 4.2: private layout and separation from public assets implemented.
@@ -17,8 +19,9 @@
   checklist below; record actual results rather than assuming section 8 covers every case.
 - [ ] Sections 10 onward: production persistence, upload memory
   measurement, deployment and recovery remain pending.
-- [ ] Final pre-deployment step: install the production `GOOGLE_CLIENT_SECRET`
-  in Fly secret storage. **It has not been added yet.** See steps 10–11.
+- [x] Section 10.7: production `GOOGLE_CLIENT_SECRET` staged in Fly secret storage,
+  as confirmed by the owner. It has not yet been rolled out to the serving Machine.
+- [ ] Section 11: first production administration release and acceptance checklist.
 
 This guide specifies the first administration release: Google OpenID Connect
 (OIDC), one explicitly approved administrator, and editing for gallery photos,
@@ -42,7 +45,7 @@ production use still requires the planned deployment and release blockers to cle
 Google Console and Fly commands are existing tools, but this guide does not run
 them or change the deployed application.
 
-Provider documentation was checked on 2026-11-12. Console labels and dependency
+Deployment documentation was rechecked on 2026-11-17. Console labels and dependency
 versions can change; the linked official documentation is the reference.
 Shell examples use **Bash** unless labeled **Fish**, on Linux, from the
 repository root unless noted.
@@ -56,8 +59,8 @@ Record these before creating credentials:
 
 | Value               | Development                                  | Production                                       |
 | ------------------- | -------------------------------------------- | ------------------------------------------------ |
-| Application origin  | `http://localhost:8080`                      | `https://www.majkavsek.com`                      |
-| Callback            | `http://localhost:8080/auth/google/callback` | `https://www.majkavsek.com/auth/google/callback` |
+| Application origin  | `http://localhost:8080`                      | `https://majkavsek.com`                      |
+| Callback            | `http://localhost:8080/auth/google/callback` | `https://majkavsek.com/auth/google/callback` |
 | Data directory      | `$HOME/.local/share/maj-admin-dev`           | `/data` on a Fly volume                          |
 | Google OAuth client | Web client in the development project        | Web client in the production project             |
 | Google client ID | `312770222166-qtkr1gn7e22jpofqtt31vhbq88bj3ppb.apps.googleusercontent.com` | `774712125801-lljgocauoic4un01lt1ml1hg27l10tep.apps.googleusercontent.com` |
@@ -121,28 +124,22 @@ Cloud project are separate permissions.
 5. Configure the sign-in permissions, called **scopes**, in each project:
 
    - Open **Google Auth Platform → Data Access**, then **Add or remove scopes**.
-     Select these two entries, using their identifiers to distinguish them:
-     `openid` and `https://www.googleapis.com/auth/userinfo.email`.
-   - If an entry is missing from the list, use **Manually add scopes** to enter
-     the missing identifier, then **Add to table**. Do not enter `openid email`
-     as one Console scope; it represents two separate permissions.
-   - Click **Update**, then **Save** if the page offers it. Check that both
-     entries appear under the non-sensitive scopes. Leave `userinfo.profile`
-     unselected; no sensitive or restricted scopes are needed for this design.
+     Select `openid`, which is the only scope the current server requests.
+   - If it is missing from the list, use **Manually add scopes**, enter `openid`,
+     then **Add to table**.
+   - Click **Update**, then **Save** if the page offers it. Check that `openid`
+     appears under the non-sensitive scopes. Email/profile permissions and
+     sensitive or restricted scopes are not needed for this implementation.
    - Repeat for the other project; scope configuration is separate for each.
 
    `openid` enables OpenID Connect sign-in and an ID token containing Google's
-   stable account identifier (`sub`). The email permission supplies the account's
-   email address and `email_verified` claim. It does not allow reading or sending
-   Gmail messages. Use email to help identify the account during enrollment;
-   website access still depends on the locally approved issuer and subject,
-   rather than an email match.
+   stable account identifier (`sub`). Enrollment uses the verified issuer and
+   subject shown by `/auth/identity`; an email address is not the approval key.
 
-   In the server implementation, request exactly the space-separated scopes
-   `openid email` when starting login. Google accepts `email` as the OpenID
-   Connect equivalent of the longer Console identifier above. Declaring scopes
-   in the Console does not configure the Rust client's authorization request;
-   configure both, and validate the returned ID token as described in step 6.
+   `src/auth/google.rs` already requests `openid` without email/profile or offline
+   access. An older version of this guide suggested `openid email`; that extra
+   permission is unnecessary for the implemented flow. Declaring scopes in the
+   Console does not change the Rust client's request; keep both aligned.
    See [Google's scope configuration instructions](https://support.google.com/cloud/answer/15549135?hl=en)
    and [OpenID Connect scope definitions](https://developers.google.com/identity/openid-connect/openid-connect).
 
@@ -154,7 +151,7 @@ Follow Google's [consent setup instructions](https://developers.google.com/works
 and [audience documentation](https://support.google.com/cloud/answer/15549945?hl=en).
 Normally, Testing limits authorization to listed test users and consent expires
 after seven days. Google's exception for identity-only requests such as our
-`openid email` scopes removes those restrictions and the Testing warning. Other
+`openid` scope removes those restrictions and the Testing warning. Other
 Google accounts can therefore complete Google sign-in even while Testing is
 selected. **The Test users list is not the website's administrator access
 control.** Adding an email there does not grant website access: explicitly approve
@@ -204,7 +201,7 @@ Switch to `maj-webpage-admin-production` and repeat those steps with these value
 | Application type | Web application | Web application |
 | Client name | `maj-admin-web-development` | `maj-admin-web-production` |
 | Authorized JavaScript origins | Leave empty | Leave empty |
-| Authorized redirect URI | `http://localhost:8080/auth/google/callback` | `https://www.majkavsek.com/auth/google/callback` |
+| Authorized redirect URI | `http://localhost:8080/auth/google/callback` | `https://majkavsek.com/auth/google/callback` |
 
 Keep only the matching environment's callback on each client. The production
 hostname follows section 1; change both sections together if the canonical domain
@@ -262,7 +259,7 @@ Use these four environment variables; do not hard-code credentials in Rust:
 
 | Setting | Development value | Production value | Purpose |
 | ------- | ----------------- | ---------------- | ------- |
-| `MAJ_APP_ORIGIN` | `http://localhost:8080` | `https://www.majkavsek.com` | Canonical browser-facing origin, without a trailing slash |
+| `MAJ_APP_ORIGIN` | `http://localhost:8080` | `https://majkavsek.com` | Canonical browser-facing origin, without a trailing slash |
 | `GOOGLE_CLIENT_ID` | Unset normally; development client's ID for login tests | Production client's ID | Identify the matching OAuth client from section 3 |
 | `GOOGLE_CLIENT_SECRET` | Unset normally; enter development secret interactively for login tests | Production client's secret | Authenticate the server to Google during the code exchange |
 | `MAJ_DATA_DIR` | `$HOME/.local/share/maj-admin-dev` after shell expansion | `/data` | Absolute path containing the database and uploaded gallery files |
@@ -346,7 +343,7 @@ production; allow HTTP only for explicit loopback development origins. Use the
 same origin for callback generation and the mutation Origin checks in step 6.
 
 For example, the production origin produces
-`https://www.majkavsek.com/auth/google/callback`. Fly forwards requests to the
+`https://majkavsek.com/auth/google/callback`. Fly forwards requests to the
 server on port 8080, but the public origin remains HTTPS without that internal
 port. Never derive it from incoming Host or forwarded headers. Successful login
 returns to the fixed `/admin` path; do not accept an arbitrary return URL.
@@ -647,7 +644,7 @@ Use these proposed routes:
 | `GET /auth/google/start`    | Create a short-lived login transaction and redirect to Google                                                            |
 | `GET /auth/google/callback` | Consume the transaction, validate identity, and check local approval                                                     |
 | `GET /auth/identity`        | Display only the current browser's recently verified identity for manual enrollment; give unapproved accounts HTTP `403` |
-| `POST /auth/logout`         | Validate CSRF protection, invalidate the local session, and clear the cookie                                             |
+| `POST /auth/logout`         | Validate Origin/CSRF, advance this administrator's session generation, and clear this browser's session/cookie           |
 | `GET /admin`                | Render the editor only for an enabled administrator; otherwise display/redirect to login                                 |
 
 The callback exchanges the returned authorization code on the server. Use the
@@ -706,8 +703,12 @@ section must connect the validated login/logout flow to them:
   a sliding cookie expiry alone does not enforce the absolute limit.
 - Check the administrator's enabled flag and generation from the database on
   every protected request. This makes revocation effective on subsequent requests.
-- Invalidate the local session on logout using the session library. Website logout
-  does not sign the browser out of its Google account.
+- After authorization and Origin/CSRF checks, advance this administrator's durable
+  session generation before flushing the current session with the library.
+  All existing website sessions for this account then fail their next guard,
+  including cached records saved after logout. Other administrators and approval
+  remain unchanged; a fresh sign-in is allowed. Work already authorized may finish.
+  Website logout does not sign the browser out of its Google account.
 
 Use the library's [session APIs](https://docs.rs/tower-sessions/latest/tower_sessions/struct.Session.html)
 for rotation and logout. See [OWASP session guidance](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)
@@ -992,9 +993,12 @@ tested on: FIREFOX: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:160.0) Gecko/20
   an error. Automated tests cover replay and wrong-browser state; do not paste
   real callback URLs/codes into tickets, terminals, logs or another browser just
   to reproduce them. A reloaded used callback must not create another session.
-- [x] **Logout:** from an authenticated editor click Sign out; expect the sign-in
+- [ ] **Logout (repeat after the account-wide logout fix):** from an authenticated
+  editor click Sign out; expect the sign-in
   page. Reload `/admin?section=shows` and use Back then reload: neither can restore
-  access. Public content stays visible. Application logout does not sign the
+  access. In another browser signed into the same administrator account, the next
+  protected request must require sign-in too; a different administrator stays
+  signed in. Public content stays visible. Application logout does not sign the
   browser out of Google, so a later new sign-in may skip Google prompts.
 
 ### 9.4. Real editing, expiry and restart checks
@@ -1295,17 +1299,19 @@ must report failed writes instead of reporting unsaved changes as successful.
 
 ### 10.7. Review Google production configuration and stage its secret
 
-Before launch, review the Google project's Audience publishing controls and
-complete any branding/domain verification the Console requests. Moving to In
+**Status: complete, confirmed by the owner.** Production Google setup is complete
+and the production secret is staged in Fly; deployment remains pending.
+
+The Google project's Audience, branding/domain verification, and production
+client configuration have been completed. Moving to In
 production does not grant anyone administration rights in this application;
 the local approval table remains authoritative. Identity-only Testing behaviour
 is described in step 2, rather than relying on a presumed seven-day expiry.
 
-**Pending: the production secret has not been added to Fly.** As the final
-configuration step before the deployment in step 11, retrieve the secret for the
-OAuth client in `maj-webpage-admin-production`. The project ID is not the client
-ID. Import its secret without putting the value in command history, and stage it
-for the new release:
+Do not re-import the already staged secret just to follow this guide. If it needs
+replacement later, retrieve the secret for the OAuth client in
+`maj-webpage-admin-production` and use the Fish procedure below. The project ID
+is not the client ID. This stages the replacement without putting it in history:
 
 ```fish
 read --silent --prompt-str 'Production Google client secret: ' maj_google_secret
@@ -1320,71 +1326,331 @@ so the value is not saved in command history. The value passes to Fly through
 stdin; keep `fish_trace` disabled. See the
 [secret import command](https://fly.io/docs/flyctl/secrets-import/).
 
-## 11. Deploy, import content, and approve the production account
+## 11. First production administration deployment checklist
 
-After deployment and import, complete section 10.5's restart/release persistence
-checks and the isolated restore test in section 13. Only then mark production
-persistence verified in section 10.
+**Status: not deployed.** The owner has completed Google production setup and
+staged `GOOGLE_CLIENT_SECRET`. This does not establish that the image, volume,
+production login, or recovery procedure has passed acceptance. Complete the
+unchecked gates below before exposing the administration release.
 
-**Before running `just deploy`, finish step 10's pending production secret import.**
-Use `fly secrets list --app maj-webpage` to check that `GOOGLE_CLIENT_SECRET`
-exists without displaying its value. Ensure it belongs to the same OAuth client
-as the configured production `GOOGLE_CLIENT_ID`. Do not deploy this configuration
-change with missing credentials: the new server rejects that startup.
+The checklist assumes one serving Machine in `ams`, one recorded `maj_data`
+volume mounted at `/data`, and one initially approved administrator. Workstation
+shell examples in this section use **Fish**; commands inside a remote Linux
+console use **sh**. Replace `REPLACE_WITH_...` placeholders and keep a private
+record of the commit, image digest, Machine ID, volume ID, and backup location.
 
-The Docker build must include the implemented operator subcommands in the existing
-server executable. Run schema migrations on the machine with the volume mounted,
-before opening the HTTP listener. Fly build/release-command environments do not
-provide the mounted volume needed for these data migrations.
+### 11.1. Clear the release gates
 
-```bash
-just deploy --ha=false
-fly status --app maj-webpage
+The Dockerfile and startup path have been reviewed together. These contracts
+match: Debian Bookworm builder/runtime, Clang/LLD for the native linker, the WASM
+target and Leptos `ssr`/`hydrate` feature split, generated assets copied to
+`/app/site`, executable entrypoint, OpenSSL/CA certificates, production environment,
+port 8080, `RUST_LOG=info`, and Fly's 30-second shutdown allowance. Application
+migrations are embedded in the executable; no migration files or CLI tools need
+to be installed in the runtime image. Runtime data and credentials stay outside
+the image and must be supplied at launch.
+
+**Review result: not ready to deploy yet.** Static configuration agrees, but the
+following gates are still open:
+
+- [x] Fix the logout/session resurrection race in AUDIT.md item 1. The concurrent
+  HTTP regression now confirms that a late session upsert cannot restore access,
+  delayed mutations fail, same-account browsers are signed out, other
+  administrators remain signed in, and a fresh login works. Generation-write
+  failures return an error instead of reporting a successful logout.
+- [ ] Resolve the bundled `libsqlite3-sys 0.37.0` advisory
+  `RUSTSEC-2026-0459` through a supported patched dependency path. Fresh
+  `cargo-audit` and `cargo-deny` checks both fail on it; SQLx's current constraint
+  prevents simply selecting patched `libsqlite3-sys >=0.39.0`.
+- [ ] Resolve `paste 1.0.15` / `RUSTSEC-2024-0436` under the dependency policy.
+  Fresh cargo-deny fails on its unmaintained status; this is a maintenance finding,
+  not a demonstrated runtime exploit. Do not broadly suppress the checks.
+- [ ] Add `--cargo-locked` to the Dockerfile's `cargo leptos build --release -vv`
+  command, matching the Just build recipes. Without it, a stale lockfile can be
+  changed inside the build rather than rejected, invalidating the dependency review.
+- [ ] Pass the image build and runtime checks in 11.3. They were **not run in this
+  review**: Docker daemon access was denied, including outside the agent sandbox.
+  Resolve Docker access or use another trusted build/test host; do not count a
+  source review as a successful container build.
+- [ ] Complete section 9's applicable automated and manual checks. Record the
+  results for the actual release commit, including upload memory evidence for the
+  intended Machine size; do not use old results as evidence for later code.
+
+The fresh dependency review reports `bans ok` and `sources ok`, but
+`advisories FAILED`. The combined `just security` recipe stopped at cargo-audit;
+therefore cargo-deny was also run separately. No dependency exception, application
+fix, or Dockerfile change was made by this documentation review.
+
+After fixing the relevant code/configuration, run:
+
+```fish
+just check
+just security
+just test-shutdown
+just test-admin-browser
+```
+
+Run public browser tests as described in BUILD.md and coverage when changing
+non-trivial Rust logic. Keep credentials out of automated tests. Review the other
+AUDIT.md findings, especially private query logging, before launch. Stop here if
+any release gate fails.
+
+### 11.2. Confirm the production target and staged configuration
+
+- [x] Production Google branding/publishing/client setup completed (owner confirmed).
+- [x] Production Google secret staged in Fly (owner confirmed; not independently read).
+- [ ] Verify the canonical origin and registered callback are exactly
+  `https://majkavsek.com` and `https://majkavsek.com/auth/google/callback`.
+  Production uses the existing client ID in `fly.toml`; development credentials
+  and localhost callbacks remain in their separate project.
+- [ ] Review `fly.toml`: `MAJ_DATA_DIR=/data`, volume name `maj_data`, region `ams`,
+  services on port 8080, HTTPS redirection, and the intended `app` process group.
+- [ ] Inspect the actual Machines, volumes, staged secret status, and certificates:
+
+  ```fish
+  fly status --app maj-webpage
+  fly machine list --app maj-webpage
+  fly volumes list --app maj-webpage
+  fly secrets list --app maj-webpage
+  fly certs list --app maj-webpage
+  fly config validate --config fly.toml
+  ```
+
+  Record the unique volume ID and its attachment, not just its name. Confirm one
+  intended serving Machine; `--ha=false` will not remove existing replicas. Back
+  up any state before retiring a replica. Do not display environment dumps or
+  secret values to check credentials.
+- [ ] Confirm `GOOGLE_CLIENT_SECRET` belongs to the production client and is staged
+  for this app. Decide whether SMTP must work at launch: retain/provision
+  `PORKMAIL_PWD` for real delivery, or explicitly accept that contact submissions
+  fail while public browsing remains available.
+- [ ] Confirm the selected volume's runtime ownership/private permissions using
+  section 10.3, enough disk headroom, and the rollback plan. Preserve the previous
+  image/configuration and any existing data before cutover.
+
+A staged secret is stored but not necessarily active on existing Machines.
+[Fly injects it when Machines are subsequently started or updated](https://fly.io/docs/apps/secrets/),
+including maintenance helpers. Do not run `fly secrets deploy` just to test staging:
+that updates the existing release. Neither build arguments nor Docker layers
+should contain the Google or SMTP secret.
+
+### 11.3. Build and check the exact release image without deploying HTTP
+
+- [ ] Choose a unique image label containing the release commit. Build and push
+  once, then keep using that image; do not rebuild a different artifact for cutover:
+
+  ```fish
+  set -l maj_release_image registry.fly.io/maj-webpage:first-admin-REPLACE_WITH_SHORT_COMMIT
+  just deploy --build-only --push --image-label first-admin-REPLACE_WITH_SHORT_COMMIT
+  ```
+
+  This uses Fly's builder and registry but does not update serving Machines.
+  It can incur build costs. For a configured local Docker builder, add
+  `--local-only`. See [Fly deploy options](https://fly.io/docs/flyctl/deploy/).
+  Check free space before large builds, and keep private data out of the build
+  context; ignore rules for SQLite files do not make an arbitrary backup directory
+  safe to place inside the repository.
+- [ ] With Docker available, pull and inspect that image on a trusted workstation:
+
+  ```fish
+  docker pull "$maj_release_image"
+  docker image inspect --format '{{json .RepoDigests}}' "$maj_release_image"
+  docker run --rm --network none "$maj_release_image" admin --help
+  docker run --rm --network none --entrypoint /bin/sh "$maj_release_image" -ec '
+    test -s /app/site/data_json/shows.json
+    test -s /app/site/data_json/yt_videos.json
+    test -d /app/site/img/about_pics
+    test -d /app/site/img/about_thumbnails
+    test -d /app/site/pkg
+    ls /app/site/pkg
+  '
+  ```
+
+  Record the image digest and confirm the package directory includes the expected
+  JavaScript, WASM, and CSS assets. Executing `admin --help` also checks that the
+  runtime can load the native executable and offers the implemented operator commands.
+- [ ] Run an isolated local HTTP smoke check with disposable container storage and
+  no Google/SMTP credentials:
+
+  ```fish
+  docker run --rm --publish 127.0.0.1:8082:8080 \
+    --env APP_ENVIRONMENT=development \
+    --env MAJ_APP_ORIGIN=http://localhost:8082 \
+    --env MAJ_DATA_DIR=/data "$maj_release_image"
+  ```
+
+  In another terminal, check `http://localhost:8082/health-check`, the public pages,
+  `/info`, `/privacy`, and the unapproved `/admin` response. The disposable catalog
+  is empty until imported; this check must not attach production storage or use
+  production secrets. Stop the container after checking.
+
+Prefer the recorded digest reference (`registry.fly.io/maj-webpage@sha256:...`)
+for the remaining steps; set `maj_release_image` to that reference in the same
+Fish terminal. Keep shell variables available until the checklist is complete.
+A failed build or smoke check returns to 11.1; it is not permission to deploy.
+
+### 11.4. Initialize and import on the volume before public startup
+
+**These operations change production storage.** Plan the maintenance window and
+use only the image that passed 11.3. The initial catalog is empty by design;
+startup does not import bundled content automatically. Populate it before the
+first public HTTP startup to avoid serving empty shows/videos/gallery lists.
+
+For the expected **new, unattached volume**, start a temporary private shell with
+that exact image and the recorded volume ID:
+
+```fish
+fly machine run --app maj-webpage --region ams \
+  --volume REPLACE_WITH_VOLUME_ID:/data --shell "$maj_release_image"
+```
+
+`--shell` overrides the normal executable with an interactive maintenance process
+and removes the helper Machine on exit; it does not launch the website. The
+helper is temporarily billable. Record its Machine ID for backup transfer.
+This is the same new-volume workflow as section 10.3, now using the release image
+rather than Debian alone. See [Fly Machine run](https://fly.io/docs/flyctl/machine-run/).
+
+**If the volume is already attached**, do not attach a helper to it. Follow the
+[existing-Machine maintenance procedure](MAINTENANCE.md#fly-keep-a-console-available-while-http-is-stopped),
+adding `--image "$maj_release_image"` to the temporary sleep update so its console
+contains the intended release executable. Keep HTTP stopped throughout the shared
+commands below. Back up an existing catalog with its matching old executable
+before introducing a schema change; do not treat existing data as a fresh import.
+
+Inside the selected maintenance console:
+
+```sh
+id
+awk '$5 == "/data" { print }' /proc/self/mountinfo
+stat -c '%a %u:%g %n' /data
+ls -la /data
+```
+
+- [ ] Confirm this is the intended dedicated volume and expected runtime user.
+  Only for a confirmed new root, prepare its mode with `install -d -m 700 /data`.
+  For existing data, correct only inspected paths named by validation errors.
+- [ ] Initialize application/session schemas without opening HTTP:
+
+  ```sh
+  MAJ_DATA_DIR=/data /app/leptos-website-maj admin migrate
+  MAJ_DATA_DIR=/data /app/leptos-website-maj admin list-users
+  ```
+
+  Require success; a genuinely new installation lists `[]`. Unexpected approved
+  users mean this is not the assumed fresh database: stop and investigate.
+- [ ] Import the bundled public catalog once:
+
+  ```sh
+  MAJ_DATA_DIR=/data /app/leptos-website-maj admin import-content --source /app/site
+  ```
+
+  Record the imported show/video/photo counts and compare with the intended source
+  content. An already-initialized catalog must be preserved; skip re-import after
+  confirming its contents. Never remove its marker or database to force an import.
+- [ ] Check the database/gallery/staging owner and private modes, then create a
+  coordinated baseline backup and transfer it off the Machine. Use section 13 and
+  MAINTENANCE.md for completion-marker/checksum verification and SFTP transfer;
+  transfer while the console/helper is still running. Preserve the bundled source
+  and release image too. Restore-test the backup in isolated storage before cutover.
+
+For the new-volume helper, leave the shell only after these checks and transfers:
+
+```sh
+exit
+```
+
+Then confirm that helper removal released the intended volume:
+
+```fish
 fly machine list --app maj-webpage
+fly volumes list --app maj-webpage
 ```
 
-`--ha=false` prevents deploy from creating spare machines; it does not remove
-pre-existing replicas. Confirm the actual machine/volume arrangement. See
-[deploy options](https://fly.io/docs/flyctl/deploy/) and
-[volume lifecycle limits](https://fly.io/docs/volumes/overview/).
+Keep the volume. If it remains attached to the helper, resolve that attachment
+before proceeding rather than selecting a different empty volume. For the
+already-attached branch, leave the existing Machine in maintenance mode and
+continue to 11.5; the deployment must restore the normal startup configuration.
 
-Import before exposing the first new release publicly. Plan a short maintenance
-window for the offline import; public content now reads the live database. Do not
-automatically restore bundled content over an initialized database.
+Migrations and import run on the volume-backed Machine, never in the Docker build
+or Fly's `release_command`, which has no persistent volume attached.
 
-On the single intended data Machine, use a maintenance console with the HTTP
-process stopped and the intended release image/volume attached. Section 13
-explains that requirement. Run the import once inside that console, then restore
-the normal server entrypoint and check health:
+### 11.5. Start the administration release with the prepared catalog
 
-```bash
-MAJ_DATA_DIR=/data /app/leptos-website-maj admin import-content --source /app/site
-```
+- [ ] Confirm the release gates and offline preparation passed, the baseline
+  backup is verified, and staged credentials match the production client.
+- [ ] Deploy the already checked image using the normal checked-in configuration:
 
-Check the import result and public gallery/show/video pages before allowing edits.
-Then visit the canonical production `/admin`, sign in with the intended Google
-account, and obtain its verified identity from `/auth/identity`. Use the verified
-production result even if the same account was enrolled in development.
+  ```fish
+  just deploy --image "$maj_release_image" --ha=false --strategy immediate --config fly.toml
+  fly status --app maj-webpage
+  fly machine list --app maj-webpage
+  fly volumes list --app maj-webpage
+  fly logs --app maj-webpage
+  ```
 
-```bash
-fly ssh console --app maj-webpage -C \
-  '/app/leptos-website-maj admin grant-google --issuer https://accounts.google.com --subject REPLACE_WITH_VERIFIED_GOOGLE_SUBJECT --label owner'
-fly ssh console --app maj-webpage -C \
-  '/app/leptos-website-maj admin list-users'
-```
+  `immediate` is a deliberate single-Machine cutover with downtime, not a parallel
+  old/new schema rollout. Verify that the prepared volume ID is attached and that
+  no maintenance entrypoint/command remains. Interrupt log streaming with Ctrl+C.
+  If deployment fails, inspect its error and the resolved Machine configuration;
+  keep the prepared volume/backup intact. Do not create or import another database
+  as a workaround. Restore a retained sleep override using MAINTENANCE.md before
+  declaring startup successful.
+- [ ] Require successful configuration/storage/schema initialization, a listening
+  server, and healthy checks. New/updated Machines receive the staged Google secret;
+  verify deployment status without printing its value.
+- [ ] Visit the canonical public site. Check `/health-check`, `/info`, `/privacy`,
+  shows, videos, and full-size gallery images against the imported content.
+  Check CSS/WASM/audio loading and HTTPS redirects. Health alone is not proof
+  that the catalog, provider credentials, or persistence work.
 
-These operator commands are implemented. Identity commands can run alongside HTTP
-and are invoked through Fly's existing
-[SSH console](https://fly.io/docs/flyctl/ssh-console/). If there is any ambiguity
-about the target machine, select the one with the intended `/data` volume rather
-than running approval/import commands against an arbitrary replica.
+### 11.6. Enroll exactly one production administrator
 
-Sign in again. Confirm exactly one approved account, all three editor sections,
-rejection of direct unauthorized mutations, correct secure cookies/cache headers,
-and successful logout. Add/remove disposable content, restart the machine, and
-confirm the saved state survives. Public content must not need a rebuild after
-these edits. Check that a direct Fly hostname or alternate domain cannot bypass
-authentication or confuse callback/session origins.
+- [ ] Open `https://majkavsek.com/admin` and sign in with the intended Google
+  account. The first unapproved sign-in should show `/auth/identity` with HTTP 403
+  and its verified issuer/subject, rather than permitting edits.
+- [ ] Confirm ownership privately and copy that production identity before its
+  five-minute display expires. Do not use the email address or an assumed subject.
+- [ ] From the operator workstation, select the volume-backed serving Machine:
+
+  ```fish
+  fly ssh console --app maj-webpage --machine REPLACE_WITH_MACHINE_ID -C \
+    '/app/leptos-website-maj admin grant-google --issuer https://accounts.google.com --subject REPLACE_WITH_VERIFIED_GOOGLE_SUBJECT --label owner'
+  fly ssh console --app maj-webpage --machine REPLACE_WITH_MACHINE_ID -C \
+    '/app/leptos-website-maj admin list-users'
+  ```
+
+  Require exactly one enabled administrator with the intended identity. Identity
+  commands use the serving executable and can run alongside HTTP; import/backup
+  cannot. Keep subject/list output private.
+- [ ] Sign in again and verify Gallery, Shows, and YouTube editors. A second Google
+  account must remain unapproved. Publishing Google branding and adding Test users
+  do not grant local administration permissions.
+
+### 11.7. Accept persistence, access control, and recovery
+
+- [ ] Complete sections 9.3–9.4's real-provider/cookie/Origin/CSRF/logout checks
+  on the canonical production origin, including the fixed logout race regression.
+  Alternate hostnames must not grant access or generate a different callback.
+- [ ] Add/remove disposable show/video/photo entries through the editors. Verify
+  public changes after reload and denial of removed image URLs; no release should
+  be needed for these live content changes.
+- [ ] Perform section 10.5's filesystem/content restart checks. Confirm the recorded
+  volume, real catalog, gallery files, and approved identity survive. Expected
+  session expiry is not data loss.
+- [ ] Deploy a fresh release from the same accepted source, with the same volume,
+  and repeat persistence checks to establish survival across image replacement,
+  not just restart. This is a separate planned operation after the initial release.
+- [ ] If SMTP is configured, send one deliberate contact message and confirm actual
+  receipt; otherwise record delivery as intentionally unavailable. Production
+  tests must not accidentally consume the shared allowance with repeated probes.
+- [ ] Take a post-enrollment backup, transfer/verify it off-machine, and test isolated
+  recovery with restored sessions revoked before serving. Record the retained
+  image, backup age, results, and the ongoing backup schedule.
+
+Only after these checks pass mark sections 10–11's production persistence and
+recovery complete. If startup/migration fails, keep the release closed and use
+MAINTENANCE.md's rollback/recovery procedure. An older image alone does not undo a
+schema migration; a restored database must be paired with its matching gallery.
 
 ## 12. Add a second administrator later
 

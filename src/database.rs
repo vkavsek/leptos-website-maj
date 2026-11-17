@@ -136,6 +136,29 @@ impl DatabaseManager {
             == 1)
     }
 
+    /// Invalidates one administrator's sessions without changing their approval.
+    ///
+    /// Logout must advance this durable generation before flushing its session:
+    /// another request can recreate the deleted session row from cached data.
+    /// The existing maximum-integer/-1 guard makes exhaustion fail atomically;
+    /// a missing administrator returns false instead of reporting successful revocation.
+    pub async fn revoke_administrator_sessions(&self, id: i64) -> sqlx::Result<bool> {
+        Ok(sqlx::query(
+            "UPDATE administrators SET
+                 session_generation = CASE
+                     WHEN session_generation < 9223372036854775807
+                         THEN session_generation + 1
+                     ELSE -1
+                 END
+             WHERE id = ?",
+        )
+        .bind(id)
+        .execute(&self.pool)
+        .await?
+        .rows_affected()
+            == 1)
+    }
+
     /// Invalidates all current sessions while preserving identity approvals.
     ///
     /// The UPDATE has no WHERE clause: every administrator's generation advances,

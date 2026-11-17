@@ -473,8 +473,10 @@ In the selected production console, using the serving version:
 Use the action needed, not the entire block in sequence. Both administrators have
 the same content permissions. Revocation disables the chosen identity and
 invalidates its sessions; re-enabling requires a fresh sign-in. Global session
-revocation preserves approvals. Until the logout race in AUDIT.md is fixed, use
-the operator revocation commands when assured invalidation is required.
+revocation preserves approvals. Website logout also revokes all existing sessions
+for the signing-out administrator across browsers/devices, without disabling the
+identity or affecting other administrators. Use operator revocation when an
+identity must be disabled or sessions must be ended without access to a browser.
 
 Store `GOOGLE_CLIENT_SECRET` and `PORKMAIL_PWD` in Fly secrets; origin, data path,
 and Google client ID are ordinary configuration. Restart/redeploy after credential

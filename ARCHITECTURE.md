@@ -112,6 +112,11 @@ accounts receive only five-minute identity state and redirect to `/auth/identity
 for explicit shell-based enrollment. Admin and identity pages render on the server
 with escaped text and no JavaScript. Logout is a native POST form (or API header)
 with the same session-bound CSRF check and exact Origin policy. GET cannot log out.
+After those checks, logout advances only that administrator's session generation
+before flushing the current browser's session. This invalidates all of that
+account's existing sessions, including cached records later reinserted by another
+request, while preserving approval and other administrators' sessions. Work already
+authorized may finish; subsequent guards reject the old generation.
 
 The HTTP process and identity commands hold shared filesystem locks. Offline
 import/backup commands require exclusive ownership across processes. Import stages

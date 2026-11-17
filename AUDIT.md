@@ -1,15 +1,15 @@
 What this repo does: This is Maj Kavšek’s portfolio, built with Leptos and Axum. Google sign-in protects an editor for gallery photos, shows, and YouTube videos; SQLite and private image files hold the published content. This audit assumes one region, one Machine, one volume, one or two administrators, and modest public traffic that includes bots.
 
-Audit date: 2026-11-16. Reviewed commit `d58ea93` and the existing staged `fly.toml` changes. The report replaces the previous audit; it does not change application code or deployment configuration.
+Audit date: 2026-11-16. Reviewed commit `d58ea93` and the then-staged `fly.toml` changes. Later fixes are marked resolved below without renumbering the original findings.
 
 **Must fix**
 
-1. **An in-flight request can restore a session after logout** (`src/auth/login.rs:403`, `src/auth.rs:250`, `src/auth/editor.rs:261`)
+1. **RESOLVED: An in-flight request can restore a session after logout** (`src/auth/login.rs`, `src/database.rs`, `src/auth.rs`)
 
    - **What this is:** Each HTTP request loads its own session record, and the session middleware saves changed records after the handler finishes.
-   - **Problem:** Start a slow authenticated upload, log out in another request, then let the upload finish: logout deletes the stored session, but the upload retains its cached authentication and can save the same session ID again. The installed SQL session store recreates missing records on save; a local SQL reproduction confirmed this mechanism, while the complete HTTP race remains untested.
-   - **Fix:** Advance that administrator’s `session_generation` before flushing the logout session, so records saved by older requests fail the existing authorization check. Document that logout signs out all sessions for that account, and add a regression test that pauses a request across logout and then tries the old cookie again.
-   - **If we skip it:** A cookie that should have been invalidated can become usable again, and a delayed upload can pass the post-upload authorization check after logout.
+   - **Problem:** Before the fix, a slow authenticated request could finish after logout and recreate the deleted session under its old ID. A deterministic HTTP regression reproduced restored administrator access before the fix.
+   - **Fix:** Logout now advances only that administrator's durable `session_generation` after authorization/Origin/CSRF checks and before flushing the session. All existing sessions for that account are invalidated without disabling approval or affecting other administrators; late session records can still be stored but cannot authorize access.
+   - **Verification:** The HTTP regression pauses a request across logout and covers both a late session upsert and an editor-style delayed mutation. It checks old/same-account cookies, unaffected other administrators, fresh login, and cookie clearing; a separate test checks that generation exhaustion returns an error rather than successful logout.
 
 2. **The bundled SQLite dependency still fails the security audit** (`Cargo.lock:2495`, `Cargo.toml:57`)
 
@@ -59,6 +59,8 @@ Validation performed: source review traced startup/storage checks, Google login 
 
 Fresh `cargo audit --json` exited with status 1: one vulnerability (`libsqlite3-sys`) and one unmaintained warning (`paste`), using advisory data updated on 2026-11-15. The existing scoped RSA exception was reviewed as an existing decision and was not counted as a new finding; `cargo-deny` was not rerun during this audit.
 
-Verdict: Fix logout invalidation first, resolve the SQLite release blocker, then close the logging, error-response, build, and upload-validation gaps. The assumed single-Machine setup does not require database replication to address these findings.
+Verdict: Item 1 is resolved. Resolve the SQLite release blocker next, then close the logging, error-response, build, and upload-validation gaps. The assumed single-Machine setup does not require database replication to address these findings.
 
-Not checked: no fresh application build, Rust test suite, coverage run, browser tests, Docker build, or production memory measurement. The logout finding has a storage-level reproduction, not a complete concurrent HTTP test; live Google/SMTP behavior, deployed Fly settings, backup restoration on Fly, JavaScript dependency advisories, and a full visual/accessibility review were not tested.
+Not checked by the original audit: application builds/tests/coverage, browser tests, Docker build, and production memory. Item 1 now has a concurrent HTTP regression; its follow-up validation is recorded below. Live Google/SMTP behavior, deployed Fly settings, backup restoration on Fly, JavaScript dependency advisories, and a full visual/accessibility review remain untested by this audit.
+
+Follow-up validation for item 1: the new HTTP regression failed before the fix because the old cookie regained access, then passed after durable generation revocation was added. Targeted logout tests passed, as did server Clippy and formatting checks. `just coverage --jobs 2` passed 81 native tests, with the browser workflow test ignored, and reported 80.83% line coverage (2403/2973). The changed SQL revocation path and logout ordering were exercised, including generation exhaustion; the defensive rejection when an administrator disappears between lookup and update was not triggered. A session-store flush failure was not injected. Browser/real-Google checks remain pending; tests used local fixtures and mock providers, not real credentials. Other findings were not re-audited or resolved by this fix.
