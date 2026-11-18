@@ -16,14 +16,10 @@ enrollment and real Google sign-in acceptance checks.
 - [Troubleshooting and cleanup](#troubleshooting-and-cleanup)
 
 Replace `MACHINE_ID`, `BACKUP_NAME`, and example absolute paths with the recorded
-values and operator-owned locations. Run workstation commands from the repository
-root; commands marked as running inside the Machine use its Linux shell. Examples
-labelled `bash` require Bash, including when the interactive shell is Fish.
-
-Commands run from the repository root unless marked **inside the Machine**.
-Examples labelled `bash` use **Bash**; the credential prompt labelled `fish` uses
-Fish. Replace uppercase placeholders before
-running commands. Production commands below target `maj-webpage`; check
+values and operator-owned locations. Workstation commands use **Fish** and run
+from the repository root; commands marked **inside the Machine** use **Bash**.
+Just recipes use Bash internally when invoked from Fish. Replace uppercase
+placeholders before running commands. Production commands below target `maj-webpage`; check
 `fly.toml` and the actual deployment before each maintenance window.
 
 ## Operating model and data to preserve
@@ -69,7 +65,7 @@ without a replication plan.
 
 From the operator workstation:
 
-```sh
+```fish
 fly status --app maj-webpage
 fly machine list --app maj-webpage
 fly volumes list --app maj-webpage
@@ -85,13 +81,13 @@ or mutate production content as part of unattended health checks.
 
 Select the recorded Machine explicitly:
 
-```sh
+```fish
 fly ssh console --app maj-webpage --machine MACHINE_ID
 ```
 
 **Inside the Machine**, inspect capacity and private storage:
 
-```sh
+```bash
 df -h /data
 du -sh /data/gallery /data/staging
 stat -c '%a %u:%g %n' /data /data/gallery /data/staging /data/admin.sqlite3
@@ -149,7 +145,7 @@ for example, `maj-webpage-2026-11-18-000`, then `maj-webpage-2026-11-18-001`.
 Existing names, including incomplete attempts, are never reused. The subshell
 stops on error and closes SSH only after a successful backup and completion check.
 
-```sh
+```bash
 (
   set -eu
   install -d -m 700 /data/backups
@@ -247,7 +243,7 @@ console, destroy the Machine, or attach a second helper to the live volume.
 
 After maintenance, exit SSH and restore the current image's normal entrypoint:
 
-```sh
+```fish
 fly machine update MACHINE_ID --app maj-webpage \
   --entrypoint /app/leptos-website-maj --command ''
 ```
@@ -274,7 +270,7 @@ not included; unreferenced gallery files may be included.
    the [cheat sheet's naming and backup commands](#fly-backup-cheat-sheet).
    Locally, choose a new `BACKUP_NAME` after stopping the local server:
 
-   ```sh
+   ```fish
    install -d -m 700 "$HOME/.local/share/maj-backups"
    env MAJ_DATA_DIR=/absolute/path/to/maj-data just admin backup \
      --output "$HOME/.local/share/maj-backups/BACKUP_NAME"
@@ -326,12 +322,13 @@ Never count a second directory on the same volume as an independent backup.
 Use a trusted backup source. Checksums detect corruption or incomplete transfer;
 someone able to replace both files and checksums can forge them. The following
 read-only check requires Python 3.11+ on the recovery workstation, not in the
-production Docker image. Run it on an extracted/private backup directory and
-stop if any check fails.
+production Docker image. Run these commands in Fish on an extracted/private
+backup directory and stop if any check fails. Fish does not support heredocs;
+`python3 -c` accepts the multiline program as a single quoted argument.
 
-```bash
-maj_backup="$HOME/.local/share/maj-backups/BACKUP_NAME"
-python3 - "$maj_backup" <<'PY'
+```fish
+set -l maj_backup "$HOME/.local/share/maj-backups/BACKUP_NAME"
+python3 -c '
 import hashlib
 import json
 import sqlite3
@@ -367,17 +364,34 @@ with sqlite3.connect((root / "admin.sqlite3").as_uri() + "?mode=ro", uri=True) a
         raise SystemExit("SQLite integrity check failed")
     if db.execute("PRAGMA foreign_key_check").fetchall():
         raise SystemExit("SQLite foreign key check failed")
-    if db.execute("SELECT 1 FROM sqlite_master WHERE name = 'gallery_images'").fetchone():
+    if db.execute("SELECT 1 FROM sqlite_master WHERE name = ?", ("gallery_images",)).fetchone():
         for original, thumbnail in db.execute("SELECT original_file, thumbnail_file FROM gallery_images"):
             for directory, name in (("originals", original), ("thumbnails", thumbnail)):
                 if f"gallery/{directory}/{name}" not in manifest["files"]:
                     raise SystemExit("Catalog references a missing image")
 print("Backup checks passed")
-PY
+' "$maj_backup"
 ```
 
 This verifies transfer consistency and database/file references; the isolated
 restore and application checks below are still required.
+
+### Copy local backups to a folder on a hard drive
+
+On the workstation, install `rsync`. These Fish commands copy new or changed files
+and retain older drive copies even if they have been removed locally.
+
+```fish
+set -l maj_backup_drive /path/to/mounted/backup-drive
+
+rsync -a --no-owner --no-group --info=progress2 \
+  "$HOME/.local/share/maj-backups/" "$maj_backup_drive"
+```
+
+Archive mode preserves Unix permissions where the drive's filesystem
+supports them; use encrypted storage with access restricted to you. Require a
+successful transfer and run the verification above on the drive's backup copies.
+See the [rsync manual](https://download.samba.org/pub/rsync/rsync.1).
 
 ## Restore and recovery
 
@@ -391,16 +405,17 @@ and provisioned secrets separately; they are not in the application backup.
 1. Verify the backup above. Retain its matching release executable/image and
    migration sources; do not start an arbitrary newer binary against it yet.
 2. As the intended local runtime user, choose a new absolute directory outside
-   the repository/public roots. These **Bash** commands refuse an existing target:
+   the repository/public roots. These **Fish** commands refuse an existing target
+   and stop copying if a preceding operation fails:
 
-   ```bash
+   ```fish
    umask 077
-   maj_backup="$HOME/.local/share/maj-backups/BACKUP_NAME"
-   maj_restore="$HOME/.local/share/maj-recovery/NEW_NAME"
+   set -l maj_backup "$HOME/.local/share/maj-backups/BACKUP_NAME"
+   set -l maj_restore "$HOME/.local/share/maj-recovery/NEW_NAME"
    install -d -m 700 "$HOME/.local/share/maj-recovery"
-   mkdir -m 700 -- "$maj_restore"
-   install -m 600 -- "$maj_backup/admin.sqlite3" "$maj_restore/admin.sqlite3"
-   cp -R -- "$maj_backup/gallery" "$maj_restore/gallery"
+   and mkdir -m 700 -- "$maj_restore"
+   and install -m 600 -- "$maj_backup/admin.sqlite3" "$maj_restore/admin.sqlite3"
+   and cp -R -- "$maj_backup/gallery" "$maj_restore/gallery"
    ```
 
    Run each step only after the previous one succeeds. Do not copy old WAL/SHM,
@@ -409,18 +424,64 @@ and provisioned secrets separately; they are not in the application backup.
 3. Using the backup's matching release binary, invalidate restored sessions before
    opening HTTP; administrator approvals remain intact:
 
-   ```bash
-   MAJ_DATA_DIR="$maj_restore" /path/to/matching/leptos-website-maj admin revoke-all-sessions
-   MAJ_DATA_DIR="$maj_restore" /path/to/matching/leptos-website-maj admin list-users
+   ```fish
+   env MAJ_DATA_DIR="$maj_restore" /path/to/matching/leptos-website-maj admin revoke-all-sessions
+   and env MAJ_DATA_DIR="$maj_restore" /path/to/matching/leptos-website-maj admin list-users
    ```
 
    This also clears pending logins. If testing an upgrade, take a copy of this
    recovered data first, then run the new version's migration against that copy.
 
-4. Run the matching application/assets on loopback in explicit development mode,
-   with production Google/SMTP credentials removed. Use the local run instructions
-   in [README.md](README.md#runtime-configuration), selecting the recovered root;
-   `just run` is suitable only when its debug binary matches the recovery version.
+4. Start the recovered application locally using the release that created the
+   backup. Use that release's executable **and complete built site directory**:
+   the latter contains `pkg/` (JavaScript, WASM, and CSS), images, fonts, and other
+   public assets. Point to the site root, not its `pkg/` subdirectory. If rebuilding
+   is necessary, use a separate checkout of the recorded release commit and the
+   [release build instructions](BUILD.md#release-build), so the embedded migrations
+   and browser code match the recovery version.
+
+   In the same Fish session as step 2, `$maj_restore` selects the recovered copy.
+   Replace these two paths with the matching executable and site directory:
+
+   ```fish
+   set -l maj_recovery_binary /absolute/path/to/matching/leptos-website-maj
+   set -l maj_recovery_site /absolute/path/to/matching/site
+   env -u GOOGLE_CLIENT_ID -u GOOGLE_CLIENT_SECRET -u PORKMAIL_PWD -u FLY_APP_NAME \
+     APP_ENVIRONMENT=development \
+     MAJ_DATA_DIR="$maj_restore" \
+     MAJ_APP_ORIGIN=http://127.0.0.1:8082 \
+     LEPTOS_SITE_ADDR=127.0.0.1:8082 \
+     LEPTOS_SITE_ROOT="$maj_recovery_site" \
+     RUST_LOG=info \
+     "$maj_recovery_binary"
+   ```
+
+   `MAJ_DATA_DIR` directs startup writes and migrations to the recovered copy;
+   keep the downloaded backup intact. `APP_ENVIRONMENT=development` allows local
+   operation without Google credentials, even with a release executable. The
+   `env -u` options remove Google and SMTP credentials only from the child process;
+   removing `FLY_APP_NAME` also prevents an inherited Fly mount check locally.
+   `LEPTOS_SITE_ADDR` restricts the listener to this computer; `MAJ_APP_ORIGIN`
+   supplies the matching browser origin and does not control the listener.
+
+   Leave that terminal running. In another workstation terminal, check health:
+
+   ```fish
+   curl --fail --show-error http://127.0.0.1:8082/health-check
+   ```
+
+   Open `http://127.0.0.1:8082` in a private browser window. Check that styles,
+   images, and interactive controls load, alongside the recovered catalog.
+   Without Google/SMTP credentials, Google sign-in is unavailable and the contact
+   form cannot send email; those workflows need separate checks using development
+   credentials. This public-content rehearsal does not establish that they work.
+
+   Stop the rehearsal with Ctrl+C and wait for the process to exit before further
+   maintenance. If port 8082 is occupied, choose another unused port and update
+   both address settings and the health/browser URLs together. `just run` or
+   `just run-release` is suitable only when its existing binary and selected assets
+   match this recovery version; see [runtime configuration](README.md#runtime-configuration).
+
 5. Check gallery images, shows/videos, approval records, and rejection of old
    sessions. Restart, verify the recovered content again, and record the result.
    Keep this rehearsal inaccessible from the public network.
@@ -442,7 +503,7 @@ left beside the recovered database.
 
 Use the matching release image in maintenance mode and run **inside the Machine**:
 
-```sh
+```bash
 MAJ_DATA_DIR=/data /app/leptos-website-maj admin revoke-all-sessions
 MAJ_DATA_DIR=/data /app/leptos-website-maj admin list-users
 ```
@@ -478,7 +539,7 @@ the documented build requirements and test a toolchain update before deploying i
    data before releasing.
 4. With the local HTTP server stopped, apply deliberately to the intended root:
 
-   ```sh
+   ```fish
    env MAJ_DATA_DIR=/absolute/path/to/maj-data just db-migrate
    ```
 
@@ -514,7 +575,7 @@ See [Fly release command behavior](https://fly.io/docs/reference/configuration/#
 4. Restore the recorded normal Machine startup configuration after backup, then
    deploy during the maintenance window; the new server migrates before HTTP:
 
-   ```sh
+   ```fish
    just deploy --ha=false
    fly status --app maj-webpage
    fly machine list --app maj-webpage
@@ -562,7 +623,7 @@ To manage approved users, obtain the verified issuer/subject from that person's
 Google Console Test users and email addresses do not grant application access.
 In the selected production console, using the serving version:
 
-```sh
+```bash
 /app/leptos-website-maj admin list-users
 /app/leptos-website-maj admin grant-google \
   --issuer https://accounts.google.com --subject VERIFIED_SUBJECT --label owner

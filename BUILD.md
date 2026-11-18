@@ -2,8 +2,9 @@
 
 Use the [justfile](justfile) as the project's command runner. Run `just` or
 `just --list` to list commands. Recipes run from the repository root, including
-when invoked from a subdirectory, and use Bash regardless of your interactive
-shell. Run the installation commands below from the repository root.
+when invoked from a subdirectory. Workstation examples use Fish 3.7 or newer;
+Just runs recipes internally with Bash. Run the installation commands below
+from the repository root.
 For runtime configuration, see [README.md](README.md). For content maintenance,
 database operations, and deployment, see [MAINTENANCE.md](MAINTENANCE.md).
 For application design, see [ARCHITECTURE.md](ARCHITECTURE.md).
@@ -28,20 +29,20 @@ The first dependency fetch requires access to the public SQLx Git repository as
 well as crates.io; `Cargo.lock` records the exact revision. For creating migration files, install the
 matching SQLx CLI (0.9):
 
-```sh
+```fish
 cargo install sqlx-cli --version 0.9.0 --locked --no-default-features --features sqlite
 ```
 
 On Debian or Ubuntu, install the system dependencies with:
 
-```sh
+```fish
 sudo apt-get update
 sudo apt-get install build-essential clang lld pkg-config libssl-dev ca-certificates
 ```
 
 With Rust and Cargo installed:
 
-```sh
+```fish
 rustup target add wasm32-unknown-unknown
 cargo install cargo-leptos --locked
 cargo install just --locked
@@ -53,7 +54,7 @@ build tools itself. Browser tests additionally require Node.js 20 or newer and n
 
 For coverage and dependency security checks, also install:
 
-```sh
+```fish
 cargo install cargo-tarpaulin --locked
 cargo install cargo-audit --locked
 cargo install cargo-deny --locked
@@ -63,7 +64,7 @@ cargo install cargo-deny --locked
 
 Build and serve the complete site with automatic reload:
 
-```sh
+```fish
 just dev
 ```
 
@@ -74,7 +75,7 @@ local runtime settings and removes Google and SMTP credentials. Use
 
 To build without starting a server:
 
-```sh
+```fish
 just build
 ```
 
@@ -92,7 +93,7 @@ rebuild. See [development disk usage](README.md#development-disk-usage) for deta
 
 ## Release build
 
-```sh
+```fish
 just build-release
 ```
 
@@ -103,7 +104,7 @@ local development settings; see README for production runtime configuration.
 
 ## Docker build
 
-```sh
+```fish
 just docker-build
 ```
 
@@ -137,7 +138,7 @@ builds, configure a native builder or emulation for the requested platform.
 
 Run the full Rust test suite without SMTP credentials:
 
-```sh
+```fish
 just test
 ```
 
@@ -166,13 +167,13 @@ focused group, use `just test --lib FILTER` with one of these filters:
 
 Run the album HTTP regression test separately with:
 
-```sh
+```fish
 just test --test album_routes
 ```
 
 Run content-import and development-launcher regression checks with:
 
-```sh
+```fish
 just test-scripts
 ```
 
@@ -185,7 +186,7 @@ the launcher's just recipe without accessing the real clipboard, Google, or SMTP
 
 Build the debug server and run the Linux shutdown regression checks with:
 
-```sh
+```fish
 just test-shutdown
 ```
 
@@ -202,7 +203,7 @@ standard library is sufficient.
 
 Check formatting and lint both compilation targets:
 
-```sh
+```fish
 just fmt-check
 just lint
 ```
@@ -214,7 +215,7 @@ Rust tests, and script tests; shutdown and browser tests are separate.
 Run the upload memory regression separately on Linux with GNU time installed
 (`sudo apt-get install time` on Debian/Ubuntu):
 
-```sh
+```fish
 just test-upload-memory
 ```
 
@@ -237,7 +238,7 @@ use cached dependencies. Build and test recipes enforce the existing lockfile.
 
 Run the native Rust unit and integration tests with cargo-tarpaulin:
 
-```sh
+```fish
 just coverage
 ```
 
@@ -260,7 +261,7 @@ additional command options.
 
 ## Dependency security checks
 
-```sh
+```fish
 just audit
 just deny
 ```
@@ -285,27 +286,27 @@ reports. See [RustSec](https://rustsec.org/) and the
 Build the complete application and start a separate browser-test server without
 SMTP or Google credentials:
 
-```sh
+```fish
 just test-server
 ```
 
 Leave that process running on `127.0.0.1:8082`. In another terminal, install browser
 test dependencies if needed:
 
-```sh
+```fish
 just e2e-setup
 ```
 
 Installing browser system libraries may require administrator privileges. Run all
 three browser projects with:
 
-```sh
+```fish
 just e2e
 ```
 
 To run only installed Chromium and Firefox browsers:
 
-```sh
+```fish
 just e2e --project=chromium --project=firefox
 ```
 
@@ -327,7 +328,7 @@ A completed import is not repeated.
 To exercise authenticated add/remove forms without Google credentials or a
 separately running server:
 
-```sh
+```fish
 just test-admin-browser
 ```
 

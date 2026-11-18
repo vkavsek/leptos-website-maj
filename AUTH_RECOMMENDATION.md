@@ -18,8 +18,6 @@
       deployed, as confirmed by the owner. The initial build/import/deployment steps
       are finished; do not repeat them to enroll an administrator.
 
-TODO: [section 4](#4.-establish-an-off-machine-backup-and-rehearse-recovery) and on.
-
 **Current state: the website is deployed; no production administrators are approved.**
 Successful deployment does not establish that production sign-in, editing,
 persistence, full-server memory, or recovery have passed acceptance. Those are
@@ -32,7 +30,7 @@ performed. Keep a private record of the date, deployed commit/image digest,
 Machine/volume IDs, browser/version, results, and backup location. Never record
 client secrets, cookies, tokens, callback query strings, or CSRF values.
 
-Workstation examples use **Fish**. Commands inside a Machine use **sh**.
+Workstation examples use **Fish**. Commands inside a Fly Machine use **Bash**.
 Replace uppercase placeholders before running commands. Build/test instructions
 are in [BUILD.md](BUILD.md); ongoing operations are in [MAINTENANCE.md](MAINTENANCE.md).
 
@@ -227,7 +225,7 @@ image digest and a private record of the intended enabled identity.
    longer be approved before exposing a restored system. Check content and image
    references, restart the isolated app, and record the recovery result.
 
-- [ ] A verified off-machine backup exists and an isolated restore has succeeded.
+- [x] A verified off-machine backup exists and an isolated restore has succeeded.
 
 ## 5. Verify restart and release persistence
 
@@ -244,7 +242,7 @@ single serving Machine; do not start a second independent catalog for this test.
 
    **Inside the Machine:**
 
-   ```sh
+   ```bash
    awk '$5 == "/data" { print }' /proc/self/mountinfo
    df -h /data
    stat -c '%a %u:%g %n' /data /data/gallery /data/staging /data/admin.sqlite3
@@ -277,8 +275,8 @@ single serving Machine; do not start a second independent catalog for this test.
    verified off-machine backup of the accepted clean state using the established
    maintenance procedure.
 
-- [ ] Content, gallery files, and approval survive restart.
-- [ ] Content, gallery files, and approval survive image replacement.
+- [x] Content, gallery files, and approval survive restart.
+- [x] Content, gallery files, and approval survive image replacement.
 
 Until image replacement is tested, leave that item pending rather than treating
 restart alone as proof of release persistence. An older image does not undo a

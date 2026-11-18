@@ -17,7 +17,8 @@ practices; publishing the source change still requires a website release.
 Use `just` as the project command runner; `just --list` shows the commands in
 [justfile](justfile). Common commands are `just dev`, `just build`,
 `just build-release`, `just test`, and `just check`. Recipes work from repository
-subdirectories and use Bash, including when your interactive shell is Fish.
+subdirectories. Workstation command examples use Fish; Just runs recipes internally
+with Bash.
 
 Use `just coverage` for native Rust coverage reports and `just security` for
 cargo-audit/cargo-deny dependency checks. Coverage improves incrementally without
@@ -41,7 +42,7 @@ building server, WASM, release, and coverage variants of this project.
 Stop development watchers and active builds/tests before cleaning. Save any
 coverage reports you want to retain outside `target/`, then run:
 
-```sh
+```fish
 just clean
 ```
 
@@ -98,7 +99,7 @@ companion files must also be private. Staging and gallery
 directories must share the data root's filesystem. For a new dedicated data root,
 run as the server's runtime user:
 
-```sh
+```fish
 install -d -m 700 /path/to/dedicated/maj-data
 ```
 
@@ -268,7 +269,7 @@ defaults `MAJ_DATA_DIR` to `$HOME/.local/share/maj-admin-dev`, removing Google a
 SMTP credentials. After a complete build, start an existing binary with
 `just run` (debug) or `just run-release` (release). For example:
 
-```sh
+```fish
 just build-release
 just run-release
 ```
@@ -281,13 +282,13 @@ SMTP or consuming an hourly sending slot. The rest of the site remains available
 Restart the server after changing the password; handlers use the startup configuration.
 To serve a different content directory with an existing binary:
 
-```sh
+```fish
 env LEPTOS_SITE_ROOT=/path/to/site just run-release
 ```
 
 For server-only development against source content, without rebuilding browser assets:
 
-```sh
+```fish
 just dev-source
 ```
 
@@ -298,7 +299,7 @@ The Docker image defaults to production and requires all four authentication
 configuration variables. For a local public-page check without Google credentials,
 run the image built by the build guide with:
 
-```sh
+```fish
 just docker-run
 ```
 
@@ -316,7 +317,7 @@ setup and production acceptance are described in
 [AUTH_RECOMMENDATION.md](AUTH_RECOMMENDATION.md).
 The deployment command, from the repository root, is:
 
-```sh
+```fish
 just deploy --ha=false
 ```
 
@@ -370,7 +371,7 @@ live push. Editable pages, APIs and gallery images use `Cache-Control: no-store`
 Before first use, stop the HTTP server and import the existing catalog into the
 same `MAJ_DATA_DIR` used by the server:
 
-```sh
+```fish
 just admin import-content --source seed
 ```
 

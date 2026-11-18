@@ -11,6 +11,13 @@
 
 Install Rust, the `wasm32-unknown-unknown` target, `cargo-leptos`, and `just`. Linux linker settings in `.cargo/config.toml` require Clang and LLD. Use the root `justfile` for project commands; `just --list` lists recipes. Recipes use Bash even from Fish and run from the repository root.
 
+Write all workstation command examples for Fish (available on every development
+machine), and label their code blocks `fish`. Commands run inside a Fly Machine
+use Bash and should be labelled `bash`. Keep each example's shell and execution
+location explicit. Existing Bash scripts and Just recipes retain their interpreter;
+show their invocation from Fish. Syntax-check documentation examples with the
+appropriate shell without executing maintenance or deployment commands.
+
 - `just dev`: rebuild and serve locally at `http://localhost:8080` without Google/SMTP credentials.
 - `just dev-auth`: prompt for development Google credentials and clear the clipboard before serving.
 - `just build` / `just build-release`: build the server and browser WASM/CSS assets.
