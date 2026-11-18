@@ -7,9 +7,7 @@ pub fn AudioPlayer() -> impl IntoView {
     // Signals
     let (time, set_time) = signal(0u64);
     let (duration, set_duration) = signal(0u64);
-    let (volume, set_volume) = signal(0.5f64);
     let (play_btn_class, set_play_btn_class) = signal("play");
-    let (vol_btn_class, set_vol_btn_class) = signal("ico-vol-med");
     // Derived signals
     let time_fmt = move || fmt_sec_to_mmss(time.get());
     let duration_fmt = move || fmt_sec_to_mmss(duration.get());
@@ -64,32 +62,6 @@ pub fn AudioPlayer() -> impl IntoView {
         set_time.set(time_to_seek as u64);
     };
 
-    let change_volume = move |ev| {
-        let audio = audio_ref.get().unwrap();
-        let new_volume = event_target::<web_sys::HtmlInputElement>(&ev).value_as_number();
-        if new_volume > 0.0 {
-            audio.set_muted(false);
-        }
-        audio.set_volume(new_volume);
-        set_volume.set(new_volume);
-    };
-
-    let sync_volume = move |_| {
-        let audio = audio_ref.get().unwrap();
-        if audio.muted() {
-            set_volume.set(0.0);
-            set_vol_btn_class.set("ico-vol-mute");
-        } else {
-            set_volume.set(audio.volume());
-            set_vol_btn_class.set("ico-vol-med");
-        }
-    };
-
-    let vol_button_click = move |_| {
-        let audio = audio_ref.get().unwrap();
-        audio.set_muted(!audio.muted());
-    };
-
     view! {
         <div class="audio-player">
             <audio
@@ -106,7 +78,6 @@ pub fn AudioPlayer() -> impl IntoView {
                 on:pause=move |_| set_play_btn_class.set("play")
                 on:ended=move |_| set_play_btn_class.set("play")
                 on:error=move |_| set_play_btn_class.set("play")
-                on:volumechange=sync_volume
             >
                 "Audio Player"
             </audio>
@@ -134,28 +105,6 @@ pub fn AudioPlayer() -> impl IntoView {
                 <div class="time">
                     <div class="current-time">{time_fmt}</div>
                     <div class="duration-time">{duration_fmt}</div>
-                </div>
-            </div>
-            <div class="controls">
-                <div class="volume-container">
-                    <button
-                        class=vol_btn_class
-                        on:click=vol_button_click
-                        title="Volume / Mute"
-                        aria-label=move || if vol_btn_class.get() == "ico-vol-mute" { "Unmute" } else { "Mute" }
-                    ></button>
-                    <input
-                        class="volume-slider"
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.01"
-                        prop:value=move || volume.get()
-                        aria-label="Volume"
-                        aria-orientation="vertical"
-                        aria-valuetext=move || format!("{}%", (volume.get() * 100.0).round() as u32)
-                        on:input=change_volume
-                    />
                 </div>
             </div>
         </div>

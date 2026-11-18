@@ -182,7 +182,7 @@ one image at a time. JSON files are limited to 2 MiB, with at most 10000 shows,
 are rejected. Files receive opaque stored names; public filenames remain in the
 database for the catalog-gated gallery handlers. Failed publication can leave private
 orphans after a crash, but must not expose partially imported records. Public
-pages now read the live database; no restart is needed after online edits.
+pages read the live database; no restart is needed after online edits.
 
 Backup does **not** run pending schema migrations. Provision its parent directory
 privately, keep it outside public trees and the Docker build context, and choose
@@ -263,11 +263,6 @@ headers, capped at one hour; non-cacheable responses are discarded after use, an
 responses without usable freshness are immediately stale. Startup and existing
 local sessions make no Google requests. No access/refresh tokens are retained.
 
-The SQLite advisory is addressed by a pinned upstream SQLx fix and bundled
-`libsqlite3-sys` 0.39.1. The application and session store share this dependency
-path. See [the dependency review](#patched-sqlite-dependency) for the exact source,
-verification, and removal plan; no SQLite advisory exception is used.
-
 For ordinary local development, `just dev` supplies the loopback origin and
 defaults `MAJ_DATA_DIR` to `$HOME/.local/share/maj-admin-dev`, removing Google and
 SMTP credentials. After a complete build, start an existing binary with
@@ -315,10 +310,10 @@ already-set host variable.
 ## Deployment
 
 Install the Fly.io CLI (`flyctl`) and authenticate to the configured application
-before deploying. The first administration release is deployed; follow
-[the remaining production setup](AUTH_RECOMMENDATION.md) to approve the first
-administrator and verify production access, persistence, and recovery.
-For subsequent releases, use [the release checklist](MAINTENANCE.md#release-checklist).
+before deploying. Use [the release checklist](MAINTENANCE.md#release-checklist)
+for deployment, backup, and verification procedures. Initial administrator
+setup and production acceptance are described in
+[AUTH_RECOMMENDATION.md](AUTH_RECOMMENDATION.md).
 The deployment command, from the repository root, is:
 
 ```sh
@@ -332,10 +327,9 @@ never through tracked configuration.
 
 The production Google client ID, `MAJ_APP_ORIGIN`, and `MAJ_DATA_DIR` are ordinary
 runtime settings in `fly.toml`; `GOOGLE_CLIENT_SECRET` is supplied through Fly
-secrets. Production Google setup and deployment are complete, with no approved
-production administrators yet. Production sign-in, persistence, and recovery
-acceptance remain pending. Uploads have been measured locally against a 256 MiB
-budget; full-server memory on Fly remains unverified.
+secrets. Confirm the origin, callback registration, client credentials, and
+persistent volume before deploying. Validate sign-in, content persistence,
+recovery, and full-server memory against the configured Machine size.
 
 The server handles Ctrl+C (`SIGINT`) and `SIGTERM` by stopping new connections and
 allowing active requests up to 25 seconds to finish. SMTP delivery has a 20-second
@@ -413,18 +407,11 @@ Gallery URLs retain `/img/about_pics/<name>` and
 `/img/about_thumbnails/<name>.webp`, including encoded imported names. Every request
 checks publication. Deleted URLs return 404 even if an older built asset exists.
 
-`just test-upload-memory` checks successful 12-megapixel JPEG, PNG and WebP uploads
-in fresh local processes, including rotation, transparency and 16-bit PNG. On
-2026-11-17, peak resident memory ranged from **87.0 to 154.7 MiB**. Normalizing to
-8-bit pixels before rotation reduced the rotated 16-bit case from 199.3 to
-154.7 MiB without changing the output. The check allows 192 MiB, reserving 64 MiB
-of the intended **256 MiB** Machine for HTTP, SQLite, input buffers and other work.
-
-This measures the isolated upload pipeline; it does not establish full-server
-memory under traffic or on Fly. Fixtures reach the pixel/side boundaries and
-compress below the 10 MiB byte limit. Rerun after image-library, limit or processing
-changes; monitor deployed memory and volume capacity. Keep one processing job per
-server. See [BUILD.md](BUILD.md#rust-tests-and-checks) for test dependencies and execution.
+Use `just test-upload-memory` to check the isolated upload pipeline against a
+192 MiB allowance within a 256 MiB Machine budget. It does not measure the full
+HTTP server under traffic. Rerun after image-library, limit, or processing changes;
+monitor deployed memory and volume capacity. See
+[BUILD.md](BUILD.md#rust-tests-and-checks) for test dependencies and execution.
 
 ### Shows and YouTube videos
 
@@ -463,13 +450,16 @@ matching `<original filename>.webp` names for bundled gallery thumbnails.
 
 ## Keyboard controls and dialogs
 
+Landscape navigation keeps its top offset below the player and reserves an
+additional 32–80 pixels at the bottom, reducing the space between links as needed.
+
 Gallery thumbnails are labeled buttons: activate them with Enter or Space. The
-photo viewer has named previous, next, and close buttons. Audio seeking and volume
-use range inputs with arrow-key, Home, and End support. Seeking stays disabled until
-the duration is known; volume and mute controls stay synchronized. The player uses
-the Minor Flaw promo. Volume uses a vertical slider: Up increases volume and Down
-decreases it. It sits to the right of the mute button, inside the player in both
-orientations, and stays fixed when hovered. Media videos use responsive 4:3 frames
+photo viewer has named previous, next, and close buttons. Audio seeking uses a
+range input with arrow-key, Home, and End support. Seeking stays disabled until
+the duration is known. The player uses
+the Minor Flaw promo. Volume is initialized to 50%; use the device's volume
+controls to adjust listening volume. The player provides play/pause and seeking.
+Media videos use responsive 4:3 frames
 with fullscreen support and display an error if video content cannot be loaded.
 Shows keeps a readable list area and allows the page to scroll at high magnification.
 Album detail pages scroll to reveal all notes, artwork,
@@ -490,104 +480,16 @@ and send limits.
 
 ## Coverage and dependency checks
 
-`just coverage` measures native Rust line coverage with cargo-tarpaulin. The
-initial baseline on 2026-11-12 is **69.25%** (831/1,200 lines), with all 27 Rust
-tests passing. Reports are in `target/coverage/`. This excludes browser/WASM
-execution and the script tests; coverage should improve through useful tests for
-changed behaviour, without an initial percentage gate.
+`just coverage` measures native Rust line coverage with cargo-tarpaulin and writes
+reports to `target/coverage/`. It excludes browser/WASM execution and script tests.
+Improve coverage through useful tests for changed behavior; no percentage gate
+is enforced. See [coverage instructions](BUILD.md#rust-coverage).
 
-`just security` runs cargo-audit and cargo-deny with current advisory data.
-The 2026-11-17 follow-up fixed SQLite and documented narrow maintenance-risk
-acceptance for Paste and transitive Chrono. Cargo-audit retains both warnings;
-cargo-deny permits only the named advisories under the documented review policy.
-
-### Transitive Chrono maintenance-risk acceptance
-
-Reviewed **2026-11-17**, with review due **2026-12-17** and on every dependency or
-advisory change. Application dates use Jiff, but the latest stable `oauth2 5.0.0`
-and `openidconnect 4.1.0` still require `chrono 0.4.45` for protocol timestamp
-serialization, expiry and claim verification. No compatible stable Chrono-free
-upgrade is available. Replacing tested authentication libraries solely to remove
-this maintenance dependency would introduce a larger authentication change.
-
-Only the unmaintained advisory `RUSTSEC-2026-0543` is temporarily accepted in
-cargo-deny. It reports no known vulnerability; future vulnerability advisories
-remain enforced. This is not a claim that Chrono is maintained or that its inputs
-are all trusted: it still parses provider timestamp claims. Cargo-audit keeps the
-warning visible. Remove the exception when compatible maintained upstream versions
-replace Chrono, and rerun authentication/expiry tests and fresh security checks.
-Do not extend this decision to other advisories or add new direct Chrono usage.
-
-See [BUILD.md](BUILD.md#dependency-security-checks) for commands and prerequisites.
-
-### Patched SQLite dependency
-
-SQLx's stable 0.9.0 release caps `libsqlite3-sys` below the versions patched for
-[RUSTSEC-2026-0459](https://rustsec.org/advisories/RUSTSEC-2026-0459.html).
-`Cargo.toml` therefore patches SQLx to the first upstream fix,
-[`10462fa4414c6c7f1ed1d39bb31678e3b726878c`](https://github.com/launchbadge/sqlx/commit/10462fa4414c6c7f1ed1d39bb31678e3b726878c)
-(SQLx #4502). This permits the locked `libsqlite3-sys` 0.39.1, which bundles SQLite
-3.54.1. All SQLx workspace crates come from the same revision, including the
-session store's SQLx dependency; there is no custom fork or system-library setup.
-The database initialization test queries the actual linked SQLite version and
-requires at least 3.54.0, so checking the lockfile alone is insufficient.
-
-`deny.toml` allows only this named Git repository, requires revision-pinned Git
-sources, and continues to deny unknown repositories/registries. Review the pin by
-**2026-12-17**, on dependency/advisory changes, and before release. Switch back to
-a compatible stable SQLx release that permits patched SQLite when available,
-remove the Cargo patch and Git allowance, update the lockfile, and rerun security,
-database, migration, session, and backup/recovery checks. Do not select a moving branch.
-Use the application operator commands for database maintenance; the separately
-installed SQLx CLI used to create migration files has its own dependency graph.
-
-### Paste maintenance-risk acceptance
-
-Reviewed **2026-11-17** for `paste` **1.0.15** under
-[RUSTSEC-2024-0436](https://rustsec.org/advisories/RUSTSEC-2024-0436.html).
-The current stable `leptos` 0.8.23, `either_of` 0.1.9, `reactive_graph` 0.2.16,
-`reactive_stores` 0.4.4, and `tachys` 0.2.19 depend on it. There is no patched
-`paste` release or compatible stable framework update that removes these uses.
-
-The accepted risk is lack of future maintenance: this advisory reports no known
-vulnerability. `paste` is a compile-time procedural macro over trusted Rust source;
-public requests/uploads are not supplied to it. Its generated code is exercised
-by server/browser checks. This does not protect against a compromised dependency
-or make an abandoned crate maintained. Cargo-deny permits only this advisory ID
-with a documented reason; **cargo-audit keeps its warning visible**. Other advisory
-IDs and source checks remain enforced.
-
-Reassess by **2026-12-17**, whenever dependencies/advisories change, and before
-adding new macro usage. Remove the exception when the stable framework replaces
-`paste`; do not extend it to a newly reported vulnerability without a fresh
-applicability review. This resolves the audit's missing maintenance decision,
-not the upstream maintenance status.
-
-### RSA advisory applicability
-
-Reviewed **2026-11-16** for `openidconnect` **4.1.0** and its `rsa` **0.9.10**
-dependency. Both [.cargo/audit.toml](.cargo/audit.toml) and [deny.toml](deny.toml)
-except [RUSTSEC-2023-0071](https://rustsec.org/advisories/RUSTSEC-2023-0071.html);
-cargo-deny's separate Paste exception is described above.
-This private-key timing advisory does not apply to our Google sign-in verification:
-the library constructs an `RsaPublicKey` from Google's published modulus/exponent
-and verifies an RS256 signature. The application supplies no RSA private key and
-does not call RSA signing or decryption. Encrypted ID tokens and non-RS256
-signatures are rejected; the OAuth client secret is used only for HTTPS token
-exchange. Local fixture tokens are signed separately with AWS-LC.
-
-The reviewed path is `verify_rsa_signature` → `RsaPublicKey::verify` → public
-exponentiation and signature-padding verification. Private-key APIs exposed by
-the dependency are outside this path. See the
-[OpenID Connect implementation](https://github.com/ramosbugs/openidconnect-rs/blob/main/src/core/crypto.rs)
-and [RSA verification implementation](https://github.com/RustCrypto/RSA/blob/v0.9.10/src/pkcs1v15.rs).
-
-Review this exception by **2026-12-16**, whenever dependencies or the advisory
-change, and before adding any new RSA use. Remove it once upstream adopts patched
-`rsa >=0.10`. The configurations suppress this specific advisory ID, so each
-dependency change must check for new RSA paths; they do not enforce call-path
-reachability. This RSA exception does not suppress the SQLite or maintenance
-advisories; their fixes and individual policies are documented above.
+`just security` runs cargo-audit and cargo-deny with current advisory data. Review
+findings before releases and after dependency changes. Scoped advisory exceptions,
+source pins, rationale, removal criteria, and review deadlines are recorded in
+[DEPENDENCY_POLICY.md](DEPENDENCY_POLICY.md). A past successful check does not
+replace a fresh release check.
 
 ## Logs and privacy
 
@@ -601,5 +503,5 @@ has a 20-second deadline and a separate fixed timeout message.
 Missing or empty mail credentials produce a separate static configuration error;
 the credential value is never logged.
 
-Earlier private data already present in hosting logs is not removed by code changes.
-Manage log access and retention through the hosting provider.
+Manage log access, retention, and deletion through the hosting provider;
+application changes do not rewrite retained logs.

@@ -114,6 +114,12 @@ storing them and handle collisions without overwriting existing files.
 The project is being actively developed on multiple different machines. Avoid including machine specific instructions in general documentation. Keep instructions generic to Linux.
 Keep all documentation up to date.
 
+Keep `README.md`, `MAINTENANCE.md`, `ARCHITECTURE.md`, and `BUILD.md` focused on
+reusable documentation and current behavior. Keep one-off repair walkthroughs,
+deployment progress, and historical test results in issue, release, or audit notes.
+Record scoped dependency security decisions and review deadlines in
+`DEPENDENCY_POLICY.md`; link to them from the general guides.
+
 ## Additional Resources
 
 Use these additional resources when developing this project:

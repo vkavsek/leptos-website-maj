@@ -30,7 +30,8 @@ in [MAINTENANCE.md](MAINTENANCE.md).
 | `src/routes/`                    | Pages, content loaders, and contact server function                                    |
 | `src/audio/`                     | Audio player and browser media event handling                                          |
 | `style/`                         | SCSS entry point and partials                                                          |
-| `public/`                        | Source images, fonts, music, and JSON content                                          |
+| `public/`                        | Served images, fonts, and music                                          |
+| `seed/`                          | Offline import JSON and gallery originals/thumbnails                                 |
 | `tests/`, `end2end/tests/`       | Rust integration fixtures/tests and Playwright browser tests                           |
 
 ## Rendering and request flow
@@ -58,12 +59,12 @@ an Axum `Extension<Arc<ServerConfig>>`. Production requires a public HTTPS origi
 an absolute data path, and paired Google OAuth credentials. Explicit loopback
 development can omit both credentials; it does not grant administrator access.
 The secret uses `SecretString` and configuration has no `Debug` implementation.
-No auth configuration is serialized to the browser. Google login is implemented;
-the content editors use native server-rendered forms. Storage contains `admin.sqlite3`
+No auth configuration is serialized to the browser. Sign-in and content editors
+render on the server and use native links and forms. Storage contains `admin.sqlite3`
 with mode `0600`, plus original/thumbnail and staging directories with
 mode `0700`. Existing files are retained; unsafe ownership, modes, links, or public
 path overlap stops startup. Gallery/staging share the data root's filesystem for
-later atomic publication. Public asset trees are checked for symlinks at startup
+atomic publication. Public asset trees are checked for symlinks at startup
 and must remain immutable at runtime; the static handler serves only built assets.
 
 Before binding the listener, `DatabaseManager` opens that database with foreign
@@ -103,8 +104,6 @@ than blocking public startup. The OAuth2 exchange supplies the stored PKCE verif
 Application checks additionally enforce issuance time, optional not-before,
 subject shape, expiration ordering, and authorized party. `jsonwebtoken` remains
 for bounded header/JWK handling and AWS-LC fixture signing, not token verification.
-The RSA advisory exception is limited to the library's public-key verification
-path; see [the applicability assessment](README.md#rsa-advisory-applicability).
 Account tokens are neither logged nor retained.
 
 Approved callbacks rotate sessions and redirect to `/admin`. Verified unapproved
@@ -128,7 +127,7 @@ and rolls back rows; ambiguous commit failure retains files to avoid breaking an
 committed references. Backup opens the database without applying pending migrations,
 uses `VACUUM INTO`, copies matching gallery
 files, and writes SHA-256 manifest/completion files. Startup never imports bundled
-content automatically. Public loaders now query the live database; bundled files are import sources only.
+content automatically. Public loaders query the live database; bundled files are import sources only.
 
 SIGINT and SIGTERM initiate Axum's graceful shutdown. Active connections get up to
 25 seconds to drain; remaining connections close when that deadline expires. Fly's
@@ -234,10 +233,11 @@ environment. Delivery logging omits private fields; see [logs and privacy](READM
 
 ## Browser interaction
 
-Audio time, duration, playback state, and volume follow native media events instead
+Audio time, duration, and playback state follow native media events instead
 of a polling timer. Metadata already loaded before hydration is read on mount.
 Unknown or non-finite durations disable seeking; rejected play requests leave the
-control paused.
+control paused. Volume is initialized to 50% on mount; the page has no volume or
+mute controls.
 
 Dialogs use native modal behavior for focus, background inertness, and Escape
 handling. The shared light-dismiss helper supplies outside-click dismissal when

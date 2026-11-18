@@ -22,8 +22,8 @@ For native Linux builds, install:
 - CA certificates for dependency downloads, SMTP TLS, and Google HTTPS verification.
 
 SQLx and the AWS-LC JWT/TLS backend use the C toolchain; no external database server or
-SQLite development package is needed. The temporary pinned SQLx source and its
-patched SQLite engine are described in [README.md](README.md#patched-sqlite-dependency).
+SQLite development package is needed. The SQLx source pin and bundled SQLite
+requirements are recorded in [DEPENDENCY_POLICY.md](DEPENDENCY_POLICY.md#patched-sqlite-dependency).
 The first dependency fetch requires access to the public SQLx Git repository as
 well as crates.io; `Cargo.lock` records the exact revision. For creating migration files, install the
 matching SQLx CLI (0.9):
@@ -251,9 +251,9 @@ just deny
 uses [deny.toml](deny.toml) with all features enabled for dependency graph analysis,
 without compiling `ssr` and `hydrate` together. Its selected checks are advisories,
 bans, and sources. Both commands retain their nonzero exit status on failure.
-The sole exception, configured for both tools, is `RUSTSEC-2023-0071` for RSA
-public-key verification; see the
-[applicability assessment and review conditions](README.md#rsa-advisory-applicability).
+Review the scoped exceptions and source pins in
+[DEPENDENCY_POLICY.md](DEPENDENCY_POLICY.md) alongside the tool output; each
+assessment has its own applicability conditions and review deadline.
 
 Normal runs need network access to refresh advisory data and dependency metadata.
 For an explicitly cached development check after the databases are populated,
@@ -326,4 +326,4 @@ high zoom, gallery filename collisions, accessible icon names, and background
 positions across history and reloads. External pages and email responses are
 mocked; no email is sent.
 The light-dismiss fallback is tested with native light dismiss disabled, and audio
-checks guard against reintroducing the old 10 ms polling interval.
+checks verify media-event synchronization without a high-frequency polling timer.

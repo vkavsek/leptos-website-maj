@@ -42,10 +42,6 @@ $box-shadow: 0 4px 9px 2px rgba(40, 40, 40, 0.9);
       flex-shrink: 0;
     }
 
-    .controls {
-      height: 100%;
-    }
-
     .time-container {
       width: 60%;
       padding-top: 0;
@@ -120,14 +116,10 @@ $box-shadow: 0 4px 9px 2px rgba(40, 40, 40, 0.9);
 
   &:hover,
   &:focus-within {
-    .time-container,
-    .controls {
+    .time-container {
       display: unset;
     }
 
-    .volume-container {
-      display: grid;
-    }
   }
 }
 
@@ -161,8 +153,7 @@ $box-shadow: 0 4px 9px 2px rgba(40, 40, 40, 0.9);
   background-image: url("/img/icon/pause.svg");
 }
 
-.timeline,
-.volume-slider {
+.timeline {
   appearance: none;
   width: 100%;
   min-height: 24px;
@@ -189,7 +180,6 @@ $box-shadow: 0 4px 9px 2px rgba(40, 40, 40, 0.9);
     background: theme.$yellow;
   }
 
-  // Logical dimensions turn the line with the volume slider's writing mode.
   &::-webkit-slider-thumb {
     appearance: none;
     inline-size: 3px;
@@ -224,101 +214,4 @@ $box-shadow: 0 4px 9px 2px rgba(40, 40, 40, 0.9);
 
 .time-container {
   min-width: 0;
-}
-
-.controls {
-  flex: 0 0 auto;
-}
-
-.volume-container {
-  display: none;
-  grid-template-columns: auto 24px;
-  align-items: center;
-  gap: 8px;
-  z-index: 2;
-  justify-items: center;
-}
-
-.volume-slider {
-  writing-mode: vertical-lr;
-  direction: rtl;
-  width: 24px;
-  min-width: 24px;
-  height: clamp(24px, calc(var(--player-height) + 16px), 80px);
-  background: $background-dark;
-  border-radius: 8px;
-}
-
-.ico-vol-med,
-.ico-vol-mute {
-  min-width: 24px;
-  min-height: 24px;
-  cursor: pointer;
-  transition: 0.1s;
-  border-radius: 45%;
-  background-size: 65%;
-  background-repeat: no-repeat;
-  background-position: center;
-
-  &:hover {
-    transform: scale(1.1);
-    box-shadow: $box-shadow;
-  }
-}
-
-.ico-vol-med {
-  align-self: center;
-  border: 1px solid black;
-  background-color: theme.$yellow;
-  background-image: url("/img/icon/volume.svg");
-}
-
-.ico-vol-mute {
-  background-color: red;
-  border: 0;
-  background-image: url("/img/icon/volume-mute.svg");
-}
-
-@media screen and (orientation: portrait) {
-  .ico-vol-med,
-  .ico-vol-mute {
-    box-sizing: border-box;
-    height: 50%;
-    width: auto;
-    aspect-ratio: 1;
-  }
-
-  .volume-container {
-    width: 100%;
-    height: 100%;
-    display: grid;
-    grid-template-rows: 100%;
-  }
-
-  .volume-slider {
-    height: calc(4rem - 16px);
-  }
-}
-
-@media screen and (orientation: landscape) and (min-width: 800px) {
-  .ico-vol-med,
-  .ico-vol-mute {
-    height: 2vw;
-    width: 2vw;
-  }
-}
-
-@media screen and (orientation: landscape) and (max-width: 800px) {
-  .ico-vol-med,
-  .ico-vol-mute {
-    height: 2.5vw;
-    width: 2.5vw;
-  }
-}
-
-@media screen and (orientation: landscape) {
-  .volume-container {
-    width: 100%;
-    display: none;
-  }
 }

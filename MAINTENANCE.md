@@ -4,8 +4,8 @@ This is the operating guide for the portfolio and its private administration
 pages. Build dependencies and test setup are in [BUILD.md](BUILD.md), runtime
 variables are in [README.md](README.md#runtime-configuration), and application
 design is in [ARCHITECTURE.md](ARCHITECTURE.md). Use
-[AUTH_RECOMMENDATION.md](AUTH_RECOMMENDATION.md) for the remaining first-administrator
-enrollment and production acceptance checks after the initial deployment.
+[AUTH_RECOMMENDATION.md](AUTH_RECOMMENDATION.md) for initial administrator
+enrollment and real Google sign-in acceptance checks.
 
 - [Routine checks](#routine-checks)
 - [Operator commands and maintenance windows](#operator-commands-and-maintenance-windows)
@@ -410,8 +410,9 @@ See [Fly release command behavior](https://fly.io/docs/reference/configuration/#
    Run `just check`, `just security`, `just test-shutdown`, and browser checks
    appropriate to the change; use `just coverage --jobs 2` for non-trivial native
    logic. A failed advisory fetch is not a clean audit. Resolve release blockers
-   rather than suppressing them. SQLite now uses the pinned upstream fix and Paste
-   has a reviewed temporary maintenance exception; transitive Chrono has a separate temporary maintenance exception (review by 2026-12-17). Recheck the Git pin and advisory review deadlines in README.md.
+   rather than suppressing them. Review source pins and scoped advisory exceptions
+   against their rationale, removal criteria, and deadlines in
+   [DEPENDENCY_POLICY.md](DEPENDENCY_POLICY.md).
    After image-library, upload-limit or processing changes, also run
    `just test-upload-memory` on Linux with GNU time. It checks a 192 MiB isolated
    upload allowance within a 256 MiB budget; it does not measure the full server
@@ -440,30 +441,6 @@ See [Fly release command behavior](https://fly.io/docs/reference/configuration/#
    and editors. Verify that saved records/photos and approvals survived; restart
    the Machine and verify again when validating a new persistence setup. Confirm
    no temporary sleep entrypoint remains. Record the release and backup results.
-
-### Update for the browser clock fix
-
-The Jiff browser-clock fix changes the hydration bundle. It requires a new image
-and uses the existing database, approvals and volume; no content re-import or
-volume provisioning is needed. Retain the previous image and verified backup.
-
-From the updated repository, run in Fish:
-
-```fish
-just deploy --ha=false --strategy immediate --config fly.toml
-fly status --app maj-webpage
-fly machine list --app maj-webpage
-fly volumes list --app maj-webpage
-```
-
-This builds a new image from the current source and performs the planned
-single-Machine cutover, with a brief interruption. The earlier `maj_release_image`
-variable identifies the previous image; this command builds the updated source.
-Confirm the recorded existing volume remains attached. Then open a fresh private
-browser window or force-reload so cached JavaScript/WASM is refreshed. Navigate
-Home → Shows → Past → Future, reload Past directly, and verify the browser console
-has no Jiff clock panic or `unreachable` error. An empty Future list can be correct
-when all saved dates are past. Continue the normal production acceptance checklist.
 
 ### Rollback
 
@@ -549,6 +526,7 @@ project if the only administrator loses their Google account.
 | Migration failure/checksum mismatch | Keep the server stopped; compare the release's immutable migrations and backup history, then fix forward or restore a compatible pair |
 | Backup/import reports storage busy | Stop HTTP, watchers, and other operator commands; do not remove `admin.lock` |
 | Content disappears after deploy | Check Machine count and volume attachment before creating/importing anything; an empty new database is not recovery |
+| Browser displays old styles or scripts after a release | Confirm the deployed image and built assets match; check in a fresh private window or hard-refresh to bypass cached assets |
 | Google login fails | Compare canonical origin/callback/client pairing, account approval, cookies, system time, and outbound HTTPS; use the real-login guide |
 | Content mutation is forbidden | Refresh the form/sign-in and use the canonical origin; do not disable Origin/CSRF checks |
 | Contact mail fails | Check provisioned SMTP credentials and provider availability; failures/timeouts consume the shared ten-attempt hourly allowance |

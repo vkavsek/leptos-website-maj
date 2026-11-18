@@ -129,12 +129,16 @@ iframe {
   .nav-links {
     width: 12%;
     --nav-padding: clamp(16px, 1.25vw, 40px);
+    --nav-bottom-gap: clamp(32px, 5dvh, 80px);
     --nav-top: calc(
       var(--player-top) + var(--player-height) + 2 * var(--player-padding) +
         32px
     );
     top: var(--nav-top);
-    height: min(75vh, calc(100dvh - var(--nav-top) - 2 * var(--nav-padding)));
+    height: calc(
+      min(75vh, calc(100dvh - var(--nav-top) - 2 * var(--nav-padding))) -
+        var(--nav-bottom-gap)
+    );
 
     margin-block: 0;
     margin-inline: 10px;
@@ -178,7 +182,9 @@ html[data-reduced-background] .bg-wrapper {
 }
 
 // Preserve detail on large or high-density desktop displays, even on slow connections.
-@media (min-width: 2560px), (min-height: 1440px), (min-width: 1280px) and (min-resolution: 1.5dppx) {
+@media (min-width: 2560px),
+  (min-height: 1440px),
+  (min-width: 1280px) and (min-resolution: 1.5dppx) {
   .bg-wrapper,
   html[data-reduced-background] .bg-wrapper {
     background-image: url("/img/bg/bg_smallest.webp");
@@ -295,7 +301,7 @@ html[data-reduced-background] .bg-wrapper {
 
 @media screen and (orientation: landscape) {
   .title {
-    font-size: 5rem;
+    font-size: 8rem;
   }
 }
 

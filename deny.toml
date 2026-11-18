@@ -8,19 +8,19 @@ unmaintained = "all"
 # Reviewed 2026-11-16: openidconnect 4.1.0 uses rsa 0.9.10 only to verify Google
 # RS256 signatures with public keys; no RSA private-key operations are used.
 # Review by 2026-12-16, on dependency/advisory changes, or before any new RSA use.
-# Remove when openidconnect adopts patched rsa >=0.10. See README.md.
+# Remove when openidconnect adopts patched rsa >=0.10. See DEPENDENCY_POLICY.md.
 ignore = [
   # Reviewed 2026-11-17: application dates use Jiff; oauth2 5.0.0 and
   # openidconnect 4.1.0 still require Chrono for protocol timestamp types.
   # Accept only this maintenance advisory, not future vulnerabilities.
-  # Review by 2026-12-17 and on dependency/advisory changes; see README.md.
+  # Review by 2026-12-17 and on dependency/advisory changes; see DEPENDENCY_POLICY.md.
   { id = "RUSTSEC-2026-0543", reason = "Temporary acceptance of transitive Chrono maintenance risk in the latest stable OAuth2/OIDC stack; application uses Jiff. Review by 2026-12-17 and on dependency/advisory changes. Remove when compatible upstream releases replace Chrono; cargo-audit keeps its warning." },
   { id = "RUSTSEC-2023-0071", reason = "Google OIDC uses RSA public-key verification only; private-key timing leak is unreachable. Review by 2026-12-16 and on dependency/advisory or RSA usage changes." },
   # Reviewed 2026-11-17: stable Leptos 0.8 and four supporting crates require paste 1.0.15.
   # It only expands macros from trusted build inputs; this advisory reports no vulnerability.
   # No patched release exists. Keep cargo-audit's warning visible and remove this exception
   # when the stable framework drops paste. Recheck on dependency/advisory changes and by 2026-12-17.
-  { id = "RUSTSEC-2024-0436", reason = "Temporary acceptance of paste 1.0.15 maintenance risk in stable Leptos's compile-time macros, not a runtime security exception. No patched compatible release; review by 2026-12-17 and on dependency/advisory changes. See README.md." },
+  { id = "RUSTSEC-2024-0436", reason = "Temporary acceptance of paste 1.0.15 maintenance risk in stable Leptos's compile-time macros, not a runtime security exception. No patched compatible release; review by 2026-12-17 and on dependency/advisory changes. See DEPENDENCY_POLICY.md." },
 ]
 
 [bans]

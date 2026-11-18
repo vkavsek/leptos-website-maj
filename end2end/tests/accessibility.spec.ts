@@ -79,7 +79,7 @@ test("route background positions survive history, reloads, and nested URLs", asy
   await expect(background).toHaveCSS("background-position", /^0(?:px|%) 0%$/);
 });
 
-test("audio sliders work with arrows, Home and End", async ({ page }) => {
+test("playback slider works with arrows, Home and End without volume controls", async ({ page }) => {
   await ready(page);
   const play = page.getByRole("button", { name: "Play", exact: true });
   await play.focus();
@@ -96,22 +96,10 @@ test("audio sliders work with arrows, Home and End", async ({ page }) => {
     return Math.abs(media.currentTime - Math.floor(media.duration));
   })).toBeLessThan(1);
 
-  await position.press("Tab");
-  await expect(page.getByRole("button", { name: "Mute", exact: true })).toBeFocused();
-  await page.keyboard.press("Tab");
-  const volume = page.getByRole("slider", { name: "Volume", exact: true });
-  await expect(volume).toBeFocused();
-  await volume.press("Home");
-  await expect.poll(() => page.locator("audio").evaluate(audio => (audio as HTMLAudioElement).volume)).toBe(0);
-  await volume.press("ArrowUp");
-  await expect.poll(() => page.locator("audio").evaluate(audio => (audio as HTMLAudioElement).volume)).toBeCloseTo(0.01, 2);
-  await volume.press("End");
-  await expect.poll(() => page.locator("audio").evaluate(audio => (audio as HTMLAudioElement).volume)).toBe(1);
-  await volume.press("Shift+Tab");
-  await page.keyboard.press("Space");
-  await expect(volume).toHaveValue("0");
-  await page.keyboard.press("Space");
-  await expect(volume).toHaveValue("1");
+  await expect(page.getByRole("slider", { name: "Volume", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^(Mute|Unmute)$/ })).toHaveCount(0);
+  await position.press("Shift+Tab");
+  await expect(play).toBeFocused();
 });
 
 test("contact dialog contains focus and restores it after Escape or closing", async ({ page }) => {
