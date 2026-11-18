@@ -1,4 +1,7 @@
-FROM rust:1-bookworm AS builder
+FROM rust:1-bookworm AS chef
+
+ARG CARGO_CHEF_VERSION=0.1.78
+ARG CARGO_LEPTOS_VERSION=0.3.12
 
 # Install cargo-binstall, which makes it easier to install other
 # cargo extensions like cargo-leptos
@@ -11,19 +14,33 @@ RUN wget --progress=dot:giga -O cargo-binstall.tgz \
 RUN apt-get update -y \
   && apt-get install -y --no-install-recommends clang lld
 
-# Install cargo-leptos
-RUN cargo binstall cargo-leptos -y \
+# Keep the build tools identical in the planner, dependency, and application stages.
+RUN cargo binstall cargo-leptos --version "${CARGO_LEPTOS_VERSION}" -y \
+  && cargo install cargo-chef --version "${CARGO_CHEF_VERSION}" --locked \
   # Add the WASM target
   && rustup target add wasm32-unknown-unknown
 
 
-# Make an /app dir, which everything will eventually live in
-RUN mkdir -p /app
 WORKDIR /app
-COPY . .
-
 ENV RUSTFLAGS="--cfg erase_components"
-# Build the app
+# Match cargo-leptos's compile-time setting when warming Leptos dependencies.
+ENV LEPTOS_OUTPUT_NAME="leptos-website-maj"
+
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM chef AS builder
+COPY --from=planner /app/recipe.json recipe.json
+# SSR and hydration use different features, profiles, and target directories.
+RUN cargo chef cook --recipe-path recipe.json --locked --release \
+  --no-default-features --features ssr --bin leptos-website-maj
+RUN cargo chef cook --recipe-path recipe.json --locked \
+  --no-default-features --features hydrate --profile wasm-release \
+  --target wasm32-unknown-unknown --target-dir /app/target/front
+
+COPY . .
+# Build real sources, embed migrations, and generate the browser/CSS assets.
 RUN cargo leptos build --release --cargo-locked -vv
 
 ########################################

@@ -107,9 +107,27 @@ local development settings; see README for production runtime configuration.
 just docker-build
 ```
 
-The multi-stage Dockerfile builds release server and browser assets and packages
-these with runtime OpenSSL libraries and CA certificates. The build context excludes
-`target/`, so local build output is rebuilt inside the container.
+The multi-stage Dockerfile installs pinned cargo-chef and cargo-leptos versions;
+neither tool needs to be installed on the host for Docker builds. A planner derives
+a dependency recipe from the manifests, Cargo configuration, and lockfile. Separate
+layers warm the SSR dependencies in `target/` and hydration dependencies under
+`target/front/` using the `wasm-release` profile. Source and asset changes can reuse
+these layers when the recipe and build environment remain unchanged.
+
+The final build still uses `cargo leptos build --release --cargo-locked` to compile
+the application, embed migrations, and generate browser/CSS assets. The runtime
+image contains the server, site, and offline seed content with OpenSSL libraries
+and CA certificates. The build context excludes `target/`; host build artifacts
+are not used. Cache reuse requires retaining or importing the Docker builder's
+cache; clearing it makes the next dependency build cold.
+
+Keep both cook commands aligned with the features/profiles in `Cargo.toml`,
+`RUSTFLAGS`, the working directory, and cargo-leptos's compile-time environment.
+In particular, `LEPTOS_OUTPUT_NAME` must match during dependency cooking and the
+final build. Changing Rust, build tools, dependencies, or compiler settings can
+invalidate cached dependencies. Override `CARGO_CHEF_VERSION` or
+`CARGO_LEPTOS_VERSION` with Docker `--build-arg` when deliberately updating the
+build tools, then verify both server and browser output.
 
 The builder selects the x86_64 or aarch64 `cargo-binstall` archive using its own
 architecture (`uname -m`), saving it as `cargo-binstall.tgz`. For `--platform`
