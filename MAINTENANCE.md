@@ -34,15 +34,15 @@ and canonical origin `https://majkavsek.com`. A volume name is not its unique ID
 record the actual Machine and `vol_...` IDs. There is no application replication;
 maintenance and regional/host failures can interrupt public browsing.
 
-| Location | What it contains | Maintenance rule |
-| --- | --- | --- |
-| `/app/leptos-website-maj`, `/app/site` | Release executable and built assets | Replace together with a release; keep the previous image reference |
-| `/data/admin.sqlite3` | Approvals, browser sessions, login transactions, shows, videos, gallery catalog, migration/import history | Preserve with its matching gallery; never copy only the live database file |
-| `/data/admin.sqlite3-wal`, `-shm`, possibly `-journal` | SQLite working files | Leave under SQLite's control; never remove them to recover space |
-| `/data/gallery/originals`, `/data/gallery/thumbnails` | Uploaded/imported image pairs | Back up and restore with the database |
-| `/data/staging` | Temporary upload/import work | Private; excluded from application backups |
-| `/data/admin.lock` | Cross-process maintenance lock | Leave in place; deleting it does not unlock a running process safely |
-| `/data/backups` (if used) | Temporary local backup copies | Transfer completed copies off the volume; this directory alone is not disaster recovery |
+| Location                                               | What it contains                                                                                          | Maintenance rule                                                                        |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `/app/leptos-website-maj`, `/app/site`                 | Release executable and built assets                                                                       | Replace together with a release; keep the previous image reference                      |
+| `/data/admin.sqlite3`                                  | Approvals, browser sessions, login transactions, shows, videos, gallery catalog, migration/import history | Preserve with its matching gallery; never copy only the live database file              |
+| `/data/admin.sqlite3-wal`, `-shm`, possibly `-journal` | SQLite working files                                                                                      | Leave under SQLite's control; never remove them to recover space                        |
+| `/data/gallery/originals`, `/data/gallery/thumbnails`  | Uploaded/imported image pairs                                                                             | Back up and restore with the database                                                   |
+| `/data/staging`                                        | Temporary upload/import work                                                                              | Private; excluded from application backups                                              |
+| `/data/admin.lock`                                     | Cross-process maintenance lock                                                                            | Leave in place; deleting it does not unlock a running process safely                    |
+| `/data/backups` (if used)                              | Temporary local backup copies                                                                             | Transfer completed copies off the volume; this directory alone is not disaster recovery |
 
 Directories must be owned by the runtime user with mode `0700`; database and
 other private files use `0600`. The current Docker image runs as root; recheck
@@ -58,14 +58,14 @@ without a replication plan.
 
 ## Routine checks
 
-| When | Check |
-| --- | --- |
-| After a release, restart, or configuration change | Health, public pages, admin sign-in, Machine/volume pairing, and recent logs |
-| After content-editing sessions and before migrations or substantial deletions | Take and transfer a coordinated backup |
-| Daily when production content is changing | Check backup success/age, disk space, and application failures; use a scheduled maintenance window for offline backups |
-| Periodically and after recovery changes | Restore a backup into isolated storage and record the result |
-| Before releases and after dependency changes | Run current security checks and review unresolved audit findings |
-| During continuous development | Stop builds/watchers and run `just clean` daily |
+| When                                                                          | Check                                                                                                                  |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| After a release, restart, or configuration change                             | Health, public pages, admin sign-in, Machine/volume pairing, and recent logs                                           |
+| After content-editing sessions and before migrations or substantial deletions | Take and transfer a coordinated backup                                                                                 |
+| Daily when production content is changing                                     | Check backup success/age, disk space, and application failures; use a scheduled maintenance window for offline backups |
+| Periodically and after recovery changes                                       | Restore a backup into isolated storage and record the result                                                           |
+| Before releases and after dependency changes                                  | Run current security checks and review unresolved audit findings                                                       |
+| During continuous development                                                 | Stop builds/watchers and run `just clean` daily                                                                        |
 
 From the operator workstation:
 
@@ -121,6 +121,97 @@ need an exclusive lock and fail promptly if another application process is using
 the root. Migration work and restoration also belong in a maintenance window;
 the shared lock on `admin migrate` does not make a live schema change safe.
 
+### Fly Backup cheat sheet
+
+**WORKSTATION:**
+
+Select the existing Machine and prepare a private download
+directory before downtime. Autostop must be off.
+
+```fish
+set -l maj_machine_id MACHINE_ID
+umask 077
+install -d -m 700 "$HOME/.local/share/maj-backups"
+```
+
+Stop HTTP while keeping SSH available on the same Machine and volume.
+
+```fish
+fly machine update "$maj_machine_id" --app maj-webpage \
+  --entrypoint /bin/sleep --command infinity --skip-health-checks -y
+fly ssh console --app maj-webpage --machine "$maj_machine_id"
+```
+
+**MACHINE:**
+
+Create today's snapshot using the next counter, starting at `000`. Dates use UTC:
+for example, `maj-webpage-2026-11-18-000`, then `maj-webpage-2026-11-18-001`.
+Existing names, including incomplete attempts, are never reused. The subshell
+stops on error and closes SSH only after a successful backup and completion check.
+
+```sh
+(
+  set -eu
+  install -d -m 700 /data/backups
+  maj_backup_day=$(date -u +%F)
+  maj_last_backup=$(
+    find /data/backups -mindepth 1 -maxdepth 1 -printf '%f\n' |
+      grep -E "^maj-webpage-$maj_backup_day-[0-9]{3,}$" |
+      sort -V | tail -n 1
+  )
+  maj_backup_index=0
+  if [ -n "$maj_last_backup" ]; then
+    maj_backup_index=$(expr "${maj_last_backup##*-}" + 1)
+  fi
+  maj_backup_name=$(printf 'maj-webpage-%s-%03d' "$maj_backup_day" "$maj_backup_index")
+  MAJ_DATA_DIR=/data /app/leptos-website-maj admin backup \
+    --output "/data/backups/$maj_backup_name"
+  test -f "/data/backups/$maj_backup_name/COMPLETE"
+  printf 'Completed backup: %s\n' "$maj_backup_name"
+)
+if [ "$?" -eq 0 ]; then
+  exit
+fi
+```
+
+**WORKSTATION:**
+
+Restore HTTP immediately, before downloading the completed snapshot.
+
+```fish
+fly machine update "$maj_machine_id" --app maj-webpage \
+  --entrypoint /app/leptos-website-maj --command '' -y
+curl --fail --show-error https://majkavsek.com/health-check
+```
+
+Download the highest completed counter for today while the site is serving
+normally. Selection uses `COMPLETE` markers, not modification times, and handles
+counters above `999`. To download another UTC day's latest backup, replace the
+`date` expression with that date, for example `set -l maj_backup_day 2026-11-18`.
+An existing local destination is left untouched; verify it or move it aside
+before retrying an interrupted download.
+
+```fish
+set -l maj_backup_day (date -u +%F)
+set -l maj_backup_markers (fly ssh console --app maj-webpage --machine "$maj_machine_id" \
+  --quiet --command 'find /data/backups -mindepth 2 -maxdepth 2 -type f -name COMPLETE')
+and begin
+    set -l maj_backup_name (printf '%s\n' $maj_backup_markers | \
+      string match --regex "^/data/backups/maj-webpage-$maj_backup_day-[0-9]{3,}/COMPLETE\$" | \
+      sort -V | tail -n 1 | path dirname | path basename)
+    if test -z "$maj_backup_name"
+        echo "No completed backup found for $maj_backup_day (UTC)." >&2
+    else if test -e "$HOME/.local/share/maj-backups/$maj_backup_name"; or test -L "$HOME/.local/share/maj-backups/$maj_backup_name"
+        echo "Local destination already exists: $maj_backup_name; no download started." >&2
+    else
+        fly ssh sftp get --app maj-webpage --machine "$maj_machine_id" --recursive \
+          "/data/backups/$maj_backup_name" "$HOME/.local/share/maj-backups/$maj_backup_name"
+    end
+end
+```
+
+More below, including configuration checks and [backup verification](#verify-a-backup-before-using-it).
+
 ### Local or self-managed server
 
 Stop the watcher/server and prevent its supervisor from restarting it. Ctrl+C,
@@ -140,10 +231,11 @@ custom configurations need their own matching restoration commands.
 
 From the workstation, during the announced downtime:
 
-```sh
-fly machine update MACHINE_ID --app maj-webpage \
+```fish
+set -l maj_machine_id MACHINE_ID
+fly machine update "$maj_machine_id" --app maj-webpage \
   --entrypoint /bin/sleep --command infinity --skip-health-checks
-fly ssh console --app maj-webpage --machine MACHINE_ID
+fly ssh console --app maj-webpage --machine "$maj_machine_id"
 ```
 
 This preserves the image and volume and intentionally fails the HTTP checks.
@@ -175,17 +267,12 @@ references, and writes a SHA-256 checksum manifest. Staging and the lock file ar
 not included; unreferenced gallery files may be included.
 
 1. Stop HTTP using the procedure above, and stop other operator commands.
-2. Provision a private backup parent outside public assets/build context. Choose
-   a new destination name; the command refuses to overwrite an existing directory.
-3. Run the backup and require a successful exit. **Inside the Fly Machine**:
-
-   ```sh
-   install -d -m 700 /data/backups
-   MAJ_DATA_DIR=/data /app/leptos-website-maj admin backup \
-     --output /data/backups/BACKUP_NAME
-   ```
-
-   Locally, after stopping the local server:
+2. Provision a private backup parent outside public assets/build context. The Fly
+   cheat sheet selects the next date/counter name automatically; the command
+   refuses to overwrite an existing directory.
+3. Run the backup and require a successful exit. **Inside the Fly Machine**, use
+   the [cheat sheet's naming and backup commands](#fly-backup-cheat-sheet).
+   Locally, choose a new `BACKUP_NAME` after stopping the local server:
 
    ```sh
    install -d -m 700 "$HOME/.local/share/maj-backups"
@@ -193,28 +280,27 @@ not included; unreferenced gallery files may be included.
      --output "$HOME/.local/share/maj-backups/BACKUP_NAME"
    ```
 
-4. Transfer the **whole completed directory** to protected storage off the Machine
-   and its volume. For example, from a Bash workstation shell with a new local
-   destination, while the maintenance Machine is still reachable:
+4. Restart HTTP using the restoration command above and check health as soon as
+   the backup finishes successfully. The completed snapshot is independent of
+   subsequent application writes, so downloading it does not require downtime.
 
-   ```bash
-   umask 077
-   install -d -m 700 "$HOME/.local/share/maj-backups"
-   fly ssh sftp get --app maj-webpage --machine MACHINE_ID --recursive \
-     /data/backups/BACKUP_NAME "$HOME/.local/share/maj-backups/BACKUP_NAME"
-   ```
+5. Transfer the **whole completed directory** to protected storage off the Machine
+   and its volume. After restoring normal service, use the cheat sheet's Fish
+   download commands to select that UTC day's latest completed backup. If UTC
+   midnight has passed since creation, explicitly select the backup's date.
 
    Run Fly as your normal workstation user. The local parent directory above
    belongs to that user; mode `0700` restricts access to its owner, which does not
    have to be root. Remote `/data/backups` ownership is independent: Fly's SSH/SFTP
    user defaults to root on the Machine. Do not use `sudo fly` or weaken the remote
    backup permissions to make a local destination writable. Keep the local backup
-   outside the repository/build context. These commands also work in Fish.
+   outside the repository/build context.
 
    See [Fly recursive SFTP download](https://fly.io/docs/flyctl/ssh-sftp-get/).
    Verify the downloaded directory as described below, encrypt retained backups,
    and restrict access: they contain approved identities and browser sessions.
-5. Restart HTTP and check health. Record the backup time, application commit/image,
+
+6. Record the backup time, application commit/image,
    volume ID, transfer destination, verification result, and last restore test.
 
 A valid backup contains `admin.sqlite3`, both `gallery/` trees, `manifest.json`
@@ -319,6 +405,7 @@ and provisioned secrets separately; they are not in the application backup.
 
    Run each step only after the previous one succeeds. Do not copy old WAL/SHM,
    staging, or lock files into the new root. Confirm private ownership/modes.
+
 3. Using the backup's matching release binary, invalidate restored sessions before
    opening HTTP; administrator approvals remain intact:
 
@@ -329,6 +416,7 @@ and provisioned secrets separately; they are not in the application backup.
 
    This also clears pending logins. If testing an upgrade, take a copy of this
    recovered data first, then run the new version's migration against that copy.
+
 4. Run the matching application/assets on loopback in explicit development mode,
    with production Google/SMTP credentials removed. Use the local run instructions
    in [README.md](README.md#runtime-configuration), selecting the recovered root;
@@ -437,6 +525,7 @@ See [Fly release command behavior](https://fly.io/docs/reference/configuration/#
    spare creation; it does not remove existing replicas. Require one intended
    serving Machine and the recorded volume. Do not use a second empty volume or
    a parallel old/new server to avoid the planned downtime.
+
 5. Check health, migration/startup logs, public content, canonical-origin sign-in,
    and editors. Verify that saved records/photos and approvals survived; restart
    the Machine and verify again when validating a new persistence setup. Confirm
@@ -520,18 +609,18 @@ project if the only administrator loses their Google account.
 
 ## Troubleshooting and cleanup
 
-| Symptom | First action |
-| --- | --- |
-| Startup refuses storage/mount | Confirm the actual `/data` mount, volume ID, runtime owner, and the exact path named in the error; preserve existing data |
-| Migration failure/checksum mismatch | Keep the server stopped; compare the release's immutable migrations and backup history, then fix forward or restore a compatible pair |
-| Backup/import reports storage busy | Stop HTTP, watchers, and other operator commands; do not remove `admin.lock` |
-| Content disappears after deploy | Check Machine count and volume attachment before creating/importing anything; an empty new database is not recovery |
-| Browser displays old styles or scripts after a release | Confirm the deployed image and built assets match; check in a fresh private window or hard-refresh to bypass cached assets |
-| Google login fails | Compare canonical origin/callback/client pairing, account approval, cookies, system time, and outbound HTTPS; use the real-login guide |
-| Content mutation is forbidden | Refresh the form/sign-in and use the canonical origin; do not disable Origin/CSRF checks |
-| Contact mail fails | Check provisioned SMTP credentials and provider availability; failures/timeouts consume the shared ten-attempt hourly allowance |
-| Disk full or upload/write failure | Pause edits, inspect `df`/`du`, transfer backups, and expand storage; do not delete SQLite companion files |
-| Repeated cleanup warnings | Investigate database access/capacity; expired authentication data is normally cleaned every five minutes |
+| Symptom                                                | First action                                                                                                                           |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Startup refuses storage/mount                          | Confirm the actual `/data` mount, volume ID, runtime owner, and the exact path named in the error; preserve existing data              |
+| Migration failure/checksum mismatch                    | Keep the server stopped; compare the release's immutable migrations and backup history, then fix forward or restore a compatible pair  |
+| Backup/import reports storage busy                     | Stop HTTP, watchers, and other operator commands; do not remove `admin.lock`                                                           |
+| Content disappears after deploy                        | Check Machine count and volume attachment before creating/importing anything; an empty new database is not recovery                    |
+| Browser displays old styles or scripts after a release | Confirm the deployed image and built assets match; check in a fresh private window or hard-refresh to bypass cached assets             |
+| Google login fails                                     | Compare canonical origin/callback/client pairing, account approval, cookies, system time, and outbound HTTPS; use the real-login guide |
+| Content mutation is forbidden                          | Refresh the form/sign-in and use the canonical origin; do not disable Origin/CSRF checks                                               |
+| Contact mail fails                                     | Check provisioned SMTP credentials and provider availability; failures/timeouts consume the shared ten-attempt hourly allowance        |
+| Disk full or upload/write failure                      | Pause edits, inspect `df`/`du`, transfer backups, and expand storage; do not delete SQLite companion files                             |
+| Repeated cleanup warnings                              | Investigate database access/capacity; expired authentication data is normally cleaned every five minutes                               |
 
 Deleted images and interrupted uploads may leave private unreferenced files.
 There is no orphan-cleanup command. Under an offline maintenance lock/window,
